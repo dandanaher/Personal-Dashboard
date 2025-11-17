@@ -1,44 +1,157 @@
-import { CheckSquare, Plus } from 'lucide-react';
-import { Card, Button } from '@/components/ui';
+import { useState } from 'react';
+import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { format, addDays, subDays, isToday, isTomorrow, isYesterday } from 'date-fns';
+import { Button, Card } from '@/components/ui';
+import { useTasks } from './hooks/useTasks';
+import { TaskList } from './components/TaskList';
+import { AddTaskForm } from './components/AddTaskForm';
+import { ToastProvider, useToast } from './components/Toast';
+
+function TasksPageContent() {
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const { tasks, loading, error, addTask, toggleTask, deleteTask, refetch } = useTasks(selectedDate);
+  const { showToast } = useToast();
+
+  // Navigate to previous day
+  const goToPreviousDay = () => {
+    setSelectedDate(prev => subDays(prev, 1));
+  };
+
+  // Navigate to next day
+  const goToNextDay = () => {
+    setSelectedDate(prev => addDays(prev, 1));
+  };
+
+  // Go to today
+  const goToToday = () => {
+    setSelectedDate(new Date());
+  };
+
+  // Format display date
+  const getDisplayDate = () => {
+    if (isToday(selectedDate)) {
+      return `Today, ${format(selectedDate, 'MMM d')}`;
+    }
+    if (isTomorrow(selectedDate)) {
+      return `Tomorrow, ${format(selectedDate, 'MMM d')}`;
+    }
+    if (isYesterday(selectedDate)) {
+      return `Yesterday, ${format(selectedDate, 'MMM d')}`;
+    }
+    return format(selectedDate, 'EEEE, MMM d');
+  };
+
+  // Handle add task with toast feedback
+  const handleAddTask = async (title: string, description?: string) => {
+    const success = await addTask(title, description);
+    if (success) {
+      showToast('Task added', 'success');
+    } else {
+      showToast('Failed to add task', 'error');
+    }
+    return success;
+  };
+
+  // Handle toggle task
+  const handleToggleTask = async (taskId: string) => {
+    await toggleTask(taskId);
+  };
+
+  // Handle delete task with confirmation
+  const handleDeleteTask = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    // Simple confirmation
+    const confirmed = window.confirm(`Delete "${task.title}"?`);
+    if (!confirmed) return;
+
+    await deleteTask(taskId);
+    showToast('Task deleted', 'success');
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Date Navigation */}
+      <Card variant="default" padding="md">
+        <div className="flex items-center justify-between">
+          {/* Previous day button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={goToPreviousDay}
+            aria-label="Previous day"
+            className="p-2"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+
+          {/* Date display and Today button */}
+          <div className="flex flex-col items-center gap-1">
+            <h1 className="text-lg font-semibold text-secondary-900 dark:text-white">
+              {getDisplayDate()}
+            </h1>
+            {!isToday(selectedDate) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={goToToday}
+                className="text-xs text-primary-500 hover:text-primary-600 p-1"
+              >
+                <Calendar className="h-3 w-3 mr-1" />
+                Today
+              </Button>
+            )}
+          </div>
+
+          {/* Next day button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={goToNextDay}
+            aria-label="Next day"
+            className="p-2"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+        </div>
+      </Card>
+
+      {/* Add Task Form */}
+      <Card variant="default" padding="md">
+        <AddTaskForm onAdd={handleAddTask} />
+      </Card>
+
+      {/* Task List */}
+      <TaskList
+        tasks={tasks}
+        loading={loading}
+        error={error}
+        onToggle={handleToggleTask}
+        onDelete={handleDeleteTask}
+        onRetry={refetch}
+      />
+
+      {/* Task count */}
+      {!loading && !error && tasks.length > 0 && (
+        <div className="text-center">
+          <p className="text-sm text-secondary-400 dark:text-secondary-500">
+            {tasks.filter(t => !t.completed).length} remaining
+            {tasks.filter(t => t.completed).length > 0 &&
+              ` • ${tasks.filter(t => t.completed).length} completed`
+            }
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function TasksPage() {
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">Tasks</h1>
-        <Button size="sm" className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add
-        </Button>
-      </div>
-
-      {/* Placeholder content */}
-      <Card variant="outlined" className="text-center py-12">
-        <CheckSquare className="h-12 w-12 mx-auto text-secondary-400 dark:text-secondary-500 mb-4" />
-        <h2 className="text-lg font-semibold text-secondary-700 dark:text-secondary-300 mb-2">
-          No tasks yet
-        </h2>
-        <p className="text-secondary-500 dark:text-secondary-400 mb-4">
-          Start by adding your first task to stay organized.
-        </p>
-        <Button variant="primary">
-          <Plus className="h-4 w-4 mr-2" />
-          Create Task
-        </Button>
-      </Card>
-
-      {/* Feature info */}
-      <Card variant="default" padding="md">
-        <h3 className="font-semibold text-secondary-900 dark:text-white mb-2">Coming Soon</h3>
-        <ul className="text-sm text-secondary-600 dark:text-secondary-400 space-y-1">
-          <li>Create and manage tasks</li>
-          <li>Set priorities and due dates</li>
-          <li>Mark tasks as complete</li>
-          <li>Filter and sort tasks</li>
-        </ul>
-      </Card>
-    </div>
+    <ToastProvider>
+      <TasksPageContent />
+    </ToastProvider>
   );
 }
 
