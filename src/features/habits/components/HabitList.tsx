@@ -11,6 +11,7 @@ interface HabitListProps {
   onDelete: (habit: Habit) => void;
   onRetry: () => void;
   onAddClick: () => void;
+  onCompletionChange?: (habitId: string, isCompleted: boolean) => void;
 }
 
 // Loading skeleton for habit card
@@ -54,6 +55,7 @@ export function HabitList({
   onDelete,
   onRetry,
   onAddClick,
+  onCompletionChange,
 }: HabitListProps) {
   // Error state
   if (error) {
@@ -124,6 +126,7 @@ export function HabitList({
           habit={habit}
           onEdit={() => onEdit(habit)}
           onDelete={() => onDelete(habit)}
+          onCompletionChange={onCompletionChange}
         />
       ))}
     </div>

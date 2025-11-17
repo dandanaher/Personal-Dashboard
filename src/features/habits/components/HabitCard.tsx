@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Edit2, Trash2, Check } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { Card, Button } from '@/components/ui';
 import { useHabitLogs } from '../hooks';
@@ -11,28 +11,26 @@ interface HabitCardProps {
   habit: Habit;
   onEdit: () => void;
   onDelete: () => void;
+  onCompletionChange?: (habitId: string, isCompleted: boolean) => void;
 }
 
-export function HabitCard({ habit, onEdit, onDelete }: HabitCardProps) {
+export function HabitCard({ habit, onEdit, onDelete, onCompletionChange }: HabitCardProps) {
   const { logs, stats, toggleLog, loading } = useHabitLogs(habit.id);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const isCompletedToday = logs.some(log => log.date === today && log.completed);
 
+  // Report completion status changes to parent
+  useEffect(() => {
+    if (onCompletionChange && !loading) {
+      onCompletionChange(habit.id, isCompletedToday);
+    }
+  }, [habit.id, isCompletedToday, loading, onCompletionChange]);
+
   const handleTodayToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     await toggleLog(today);
-  };
-
-  const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onEdit();
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onDelete();
   };
 
   const handleCardClick = () => {
@@ -56,20 +54,9 @@ export function HabitCard({ habit, onEdit, onDelete }: HabitCardProps) {
               aria-hidden="true"
             />
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-secondary-900 dark:text-white truncate">
-                  {habit.name}
-                </h3>
-                {/* Inline stats */}
-                <div className="flex items-center gap-2 text-sm text-secondary-600 dark:text-secondary-400 flex-shrink-0">
-                  <span title="Current streak">
-                    <span aria-hidden="true">🔥</span> {stats.currentStreak}
-                  </span>
-                  <span title="Longest streak">
-                    <span aria-hidden="true">🏆</span> {stats.longestStreak}
-                  </span>
-                </div>
-              </div>
+              <h3 className="font-semibold text-secondary-900 dark:text-white truncate">
+                {habit.name}
+              </h3>
               {habit.description && (
                 <p className="text-sm text-secondary-500 dark:text-secondary-400 truncate">
                   {habit.description}
@@ -78,7 +65,17 @@ export function HabitCard({ habit, onEdit, onDelete }: HabitCardProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {/* Inline stats */}
+            <div className="flex items-center gap-2 text-sm text-secondary-600 dark:text-secondary-400">
+              <span title="Current streak">
+                <span aria-hidden="true">🔥</span> {stats.currentStreak}
+              </span>
+              <span title="Longest streak">
+                <span aria-hidden="true">🏆</span> {stats.longestStreak}
+              </span>
+            </div>
+
             {/* Quick toggle for today */}
             <Button
               variant={isCompletedToday ? 'primary' : 'outline'}
@@ -88,24 +85,6 @@ export function HabitCard({ habit, onEdit, onDelete }: HabitCardProps) {
               className={isCompletedToday ? '' : 'border-secondary-300 dark:border-secondary-600'}
             >
               <Check className="w-4 h-4" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleEditClick}
-              aria-label="Edit habit"
-            >
-              <Edit2 className="w-4 h-4 text-secondary-500" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDeleteClick}
-              aria-label="Delete habit"
-            >
-              <Trash2 className="w-4 h-4 text-red-500" />
             </Button>
           </div>
         </div>
@@ -134,6 +113,8 @@ export function HabitCard({ habit, onEdit, onDelete }: HabitCardProps) {
         logs={logs}
         stats={stats}
         onDayClick={toggleLog}
+        onEdit={onEdit}
+        onDelete={onDelete}
       />
     </>
   );

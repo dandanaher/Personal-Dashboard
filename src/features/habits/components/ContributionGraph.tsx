@@ -6,21 +6,76 @@ interface ContributionGraphProps {
   logs: HabitLog[];
   color: string;
   onDayClick: (date: string) => void;
+  showMonthLabels?: boolean;
+  allowDragScroll?: boolean;
 }
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-export function ContributionGraph({ logs, color, onDayClick }: ContributionGraphProps) {
+export function ContributionGraph({ logs, color, onDayClick, showMonthLabels = false, allowDragScroll = false }: ContributionGraphProps) {
   const [hoveredDate, setHoveredDate] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const scrollLeft = useRef(0);
 
-  // Auto-scroll to the right (current day) on mount
+  // Auto-scroll to the right (current day) on mount and when logs change
   useEffect(() => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
     }
-  }, []);
+  }, [logs]);
+
+  // Mouse drag handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollContainerRef.current) return;
+    isDragging.current = true;
+    startX.current = e.pageX - scrollContainerRef.current.offsetLeft;
+    scrollLeft.current = scrollContainerRef.current.scrollLeft;
+    scrollContainerRef.current.style.cursor = 'grabbing';
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging.current || !scrollContainerRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollContainerRef.current.offsetLeft;
+    const walk = (x - startX.current) * 1.5;
+    scrollContainerRef.current.scrollLeft = scrollLeft.current - walk;
+  };
+
+  const handleMouseUp = () => {
+    isDragging.current = false;
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.style.cursor = 'grab';
+    }
+  };
+
+  const handleMouseLeave = () => {
+    isDragging.current = false;
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.style.cursor = 'grab';
+    }
+  };
+
+  // Touch drag handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!scrollContainerRef.current) return;
+    isDragging.current = true;
+    startX.current = e.touches[0].pageX - scrollContainerRef.current.offsetLeft;
+    scrollLeft.current = scrollContainerRef.current.scrollLeft;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging.current || !scrollContainerRef.current) return;
+    const x = e.touches[0].pageX - scrollContainerRef.current.offsetLeft;
+    const walk = (x - startX.current) * 1.5;
+    scrollContainerRef.current.scrollLeft = scrollLeft.current - walk;
+  };
+
+  const handleTouchEnd = () => {
+    isDragging.current = false;
+  };
 
   // Create a Set of completed dates for quick lookup
   const completedDates = useMemo(() => {
@@ -30,7 +85,6 @@ export function ContributionGraph({ logs, color, onDayClick }: ContributionGraph
   // Generate the grid data (52 weeks + partial week)
   const { weeks, monthLabels } = useMemo(() => {
     const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
 
     // Start from 52 weeks ago, aligned to Sunday
     const startDate = startOfWeek(subDays(today, 364), { weekStartsOn: 0 });
@@ -96,22 +150,9 @@ export function ContributionGraph({ logs, color, onDayClick }: ContributionGraph
 
   return (
     <div className="relative">
-      {/* Month labels */}
-      <div className="flex ml-8 mb-1 text-xs text-secondary-500 dark:text-secondary-400">
-        {monthLabels.map((label, idx) => (
-          <div
-            key={idx}
-            className="absolute"
-            style={{ left: `calc(${label.weekIndex * 14}px + 32px)` }}
-          >
-            {label.month}
-          </div>
-        ))}
-      </div>
-
-      <div className="flex mt-6">
+      <div className="flex">
         {/* Day labels */}
-        <div className="flex flex-col gap-[3px] mr-2 text-xs text-secondary-500 dark:text-secondary-400">
+        <div className={`flex flex-col gap-[3px] mr-2 text-xs text-secondary-500 dark:text-secondary-400 ${showMonthLabels ? 'mt-5' : ''}`}>
           {DAYS_OF_WEEK.map((day, idx) => (
             <div
               key={day}
@@ -123,13 +164,20 @@ export function ContributionGraph({ logs, color, onDayClick }: ContributionGraph
           ))}
         </div>
 
-        {/* Graph grid */}
+        {/* Scrollable graph container */}
         <div
           ref={scrollContainerRef}
-          className="overflow-x-auto scrollbar-hide"
+          className={`overflow-x-auto scrollbar-hide select-none ${allowDragScroll ? 'cursor-grab' : ''}`}
+          onMouseDown={allowDragScroll ? handleMouseDown : undefined}
+          onMouseMove={allowDragScroll ? handleMouseMove : undefined}
+          onMouseUp={allowDragScroll ? handleMouseUp : undefined}
+          onMouseLeave={allowDragScroll ? handleMouseLeave : undefined}
+          onTouchStart={allowDragScroll ? handleTouchStart : undefined}
+          onTouchMove={allowDragScroll ? handleTouchMove : undefined}
+          onTouchEnd={allowDragScroll ? handleTouchEnd : undefined}
         >
           <div
-            className="inline-flex gap-[3px]"
+            className="inline-block"
             style={{
               '--graph-empty': 'rgb(229 231 235)',
             } as React.CSSProperties}
@@ -148,34 +196,54 @@ export function ContributionGraph({ logs, color, onDayClick }: ContributionGraph
                 }
               `}
             </style>
-            {weeks.map((week, weekIdx) => (
-              <div key={weekIdx} className="flex flex-col gap-[3px]">
-                {week.map((date, dayIdx) => {
-                  const dateStr = format(date, 'yyyy-MM-dd');
-                  const isCompleted = completedDates.has(dateStr);
-                  const isFuture = isFutureDate(date);
 
+            {/* Month labels - inside scrollable area */}
+            {showMonthLabels && (
+              <div className="flex mb-1 text-xs text-secondary-500 dark:text-secondary-400 h-4">
+                {weeks.map((week, weekIdx) => {
+                  const monthLabel = monthLabels.find(m => m.weekIndex === weekIdx);
                   return (
-                    <button
-                      key={dayIdx}
-                      type="button"
-                      className={`
-                        w-[11px] h-[11px] md:w-[13px] md:h-[13px] rounded-sm
-                        transition-all duration-100
-                        ${isFuture ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer hover:ring-2 hover:ring-offset-1 hover:ring-secondary-400 dark:hover:ring-secondary-500'}
-                        focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary-500
-                      `}
-                      style={{ backgroundColor: getCellColor(date) }}
-                      onClick={() => !isFuture && onDayClick(dateStr)}
-                      onMouseEnter={() => setHoveredDate(dateStr)}
-                      onMouseLeave={() => setHoveredDate(null)}
-                      disabled={isFuture}
-                      aria-label={`${format(date, 'MMMM d, yyyy')} - ${isCompleted ? 'Completed' : 'Not completed'}`}
-                    />
+                    <div key={weekIdx} className="w-[14px] flex-shrink-0">
+                      {monthLabel && (
+                        <span className="whitespace-nowrap">{monthLabel.month}</span>
+                      )}
+                    </div>
                   );
                 })}
               </div>
-            ))}
+            )}
+
+            {/* Graph grid */}
+            <div className="inline-flex gap-[3px]">
+              {weeks.map((week, weekIdx) => (
+                <div key={weekIdx} className="flex flex-col gap-[3px]">
+                  {week.map((date, dayIdx) => {
+                    const dateStr = format(date, 'yyyy-MM-dd');
+                    const isCompleted = completedDates.has(dateStr);
+                    const isFuture = isFutureDate(date);
+
+                    return (
+                      <button
+                        key={dayIdx}
+                        type="button"
+                        className={`
+                          w-[11px] h-[11px] md:w-[13px] md:h-[13px] rounded-sm
+                          transition-all duration-100
+                          ${isFuture ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer hover:ring-2 hover:ring-offset-1 hover:ring-secondary-400 dark:hover:ring-secondary-500'}
+                          focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary-500
+                        `}
+                        style={{ backgroundColor: getCellColor(date) }}
+                        onClick={() => !isFuture && onDayClick(dateStr)}
+                        onMouseEnter={() => setHoveredDate(dateStr)}
+                        onMouseLeave={() => setHoveredDate(null)}
+                        disabled={isFuture}
+                        aria-label={`${format(date, 'MMMM d, yyyy')} - ${isCompleted ? 'Completed' : 'Not completed'}`}
+                      />
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -187,29 +255,6 @@ export function ContributionGraph({ logs, color, onDayClick }: ContributionGraph
         </div>
       )}
 
-      {/* Legend */}
-      <div className="flex items-center justify-end gap-2 mt-3 text-xs text-secondary-500 dark:text-secondary-400">
-        <span>Less</span>
-        <div className="flex gap-1">
-          <div
-            className="w-[11px] h-[11px] md:w-[13px] md:h-[13px] rounded-sm"
-            style={{ backgroundColor: 'var(--graph-empty)' }}
-          />
-          <div
-            className="w-[11px] h-[11px] md:w-[13px] md:h-[13px] rounded-sm"
-            style={{ backgroundColor: color, opacity: 0.4 }}
-          />
-          <div
-            className="w-[11px] h-[11px] md:w-[13px] md:h-[13px] rounded-sm"
-            style={{ backgroundColor: color, opacity: 0.7 }}
-          />
-          <div
-            className="w-[11px] h-[11px] md:w-[13px] md:h-[13px] rounded-sm"
-            style={{ backgroundColor: color }}
-          />
-        </div>
-        <span>More</span>
-      </div>
     </div>
   );
 }

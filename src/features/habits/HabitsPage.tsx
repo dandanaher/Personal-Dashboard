@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useHabits } from './hooks';
@@ -10,6 +10,31 @@ function HabitsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [deleteConfirmHabit, setDeleteConfirmHabit] = useState<Habit | null>(null);
+  const [completionStatus, setCompletionStatus] = useState<Record<string, boolean>>({});
+
+  // Handle completion status changes from HabitCards
+  const handleCompletionChange = useCallback((habitId: string, isCompleted: boolean) => {
+    setCompletionStatus(prev => {
+      if (prev[habitId] === isCompleted) return prev;
+      return { ...prev, [habitId]: isCompleted };
+    });
+  }, []);
+
+  // Sort habits: incomplete first, completed last
+  const sortedHabits = useMemo(() => {
+    return [...habits].sort((a, b) => {
+      const aCompleted = completionStatus[a.id] ?? false;
+      const bCompleted = completionStatus[b.id] ?? false;
+
+      if (aCompleted === bCompleted) {
+        // Keep original order if both have same completion status
+        return 0;
+      }
+
+      // Incomplete habits come first
+      return aCompleted ? 1 : -1;
+    });
+  }, [habits, completionStatus]);
 
   const handleAddClick = () => {
     setEditingHabit(null);
@@ -59,13 +84,14 @@ function HabitsPage() {
 
       {/* Habit List */}
       <HabitList
-        habits={habits}
+        habits={sortedHabits}
         loading={loading}
         error={error}
         onEdit={handleEditClick}
         onDelete={handleDeleteClick}
         onRetry={refetch}
         onAddClick={handleAddClick}
+        onCompletionChange={handleCompletionChange}
       />
 
       {/* Add/Edit Modal */}
