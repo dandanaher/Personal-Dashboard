@@ -11,6 +11,7 @@ export type WorkoutPhase =
   | { type: 'ready'; exerciseIdx: number; setIdx: number }
   | { type: 'active'; exerciseIdx: number; setIdx: number }
   | { type: 'resting'; exerciseIdx: number; setIdx: number; remainingSeconds: number }
+  | { type: 'resting_for_failure'; exerciseIdx: number; remainingSeconds: number }
   | { type: 'failure_set'; exerciseIdx: number }
   | { type: 'failure_input'; exerciseIdx: number }
   | { type: 'complete' }

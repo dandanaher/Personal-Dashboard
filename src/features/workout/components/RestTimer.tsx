@@ -19,7 +19,7 @@ export default function RestTimer({
 
   return (
     <div className="text-center">
-      <div className="text-xl font-semibold text-primary-600 dark:text-primary-400 mb-6">
+      <div className="text-xl font-semibold text-white mb-6">
         REST
       </div>
 
@@ -34,7 +34,7 @@ export default function RestTimer({
             stroke="currentColor"
             strokeWidth="8"
             fill="none"
-            className="text-secondary-200 dark:text-secondary-700"
+            className="text-primary-400"
           />
           {/* Progress circle */}
           <circle
@@ -47,26 +47,26 @@ export default function RestTimer({
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
-            className="text-primary-500 transition-all duration-1000 ease-linear"
+            className="text-white transition-all duration-1000 ease-linear"
           />
         </svg>
         {/* Timer text */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-5xl font-bold text-secondary-900 dark:text-secondary-100 tabular-nums">
+          <span className="text-5xl font-bold text-white tabular-nums">
             {formatRestTime(remainingSeconds)}
           </span>
         </div>
       </div>
 
       {/* Next set info */}
-      <div className="text-secondary-600 dark:text-secondary-400 mb-6">
+      <div className="text-primary-100 mb-6">
         Next: {nextSetInfo}
       </div>
 
       {/* Skip button */}
       <button
         onClick={onSkip}
-        className="px-6 py-2 text-sm font-medium text-secondary-600 dark:text-secondary-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+        className="px-6 py-2 text-sm font-medium text-primary-100 hover:text-white transition-colors"
       >
         Skip Rest
       </button>

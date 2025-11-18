@@ -207,6 +207,43 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
     }, 1000);
   }, []);
 
+  // Start rest timer before failure set
+  const startRestTimerForFailure = useCallback((seconds: number, exerciseIdx: number) => {
+    // Clear any existing rest interval
+    if (restIntervalRef.current) {
+      clearInterval(restIntervalRef.current);
+    }
+
+    setPhase({
+      type: 'resting_for_failure',
+      exerciseIdx,
+      remainingSeconds: seconds,
+    });
+
+    restIntervalRef.current = setInterval(() => {
+      setPhase(prev => {
+        if (prev.type !== 'resting_for_failure') {
+          if (restIntervalRef.current) {
+            clearInterval(restIntervalRef.current);
+            restIntervalRef.current = null;
+          }
+          return prev;
+        }
+
+        if (prev.remainingSeconds <= 1) {
+          if (restIntervalRef.current) {
+            clearInterval(restIntervalRef.current);
+            restIntervalRef.current = null;
+          }
+          vibrateRestComplete();
+          return { type: 'failure_set', exerciseIdx };
+        }
+
+        return { ...prev, remainingSeconds: prev.remainingSeconds - 1 };
+      });
+    }, 1000);
+  }, []);
+
   // Complete current set
   const completeSet = useCallback((actualReps?: number) => {
     if (phase.type !== 'active') return;
@@ -236,8 +273,8 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
       // More main sets to do
       startRestTimer(exercise.rest_time, exerciseIdx, setIdx + 1);
     } else if (exercise.to_failure) {
-      // Show failure set
-      setPhase({ type: 'failure_set', exerciseIdx });
+      // Rest before failure set
+      startRestTimerForFailure(exercise.rest_time, exerciseIdx);
     } else if (exerciseIdx < template.exercises.length - 1) {
       // Next exercise
       const nextIdx = exerciseIdx + 1;
@@ -248,7 +285,7 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
       vibrateWorkoutComplete();
       setPhase({ type: 'complete' });
     }
-  }, [phase, template.exercises, currentWeight, currentReps, startRestTimer, initializeExerciseState]);
+  }, [phase, template.exercises, currentWeight, currentReps, startRestTimer, startRestTimerForFailure, initializeExerciseState]);
 
   // Complete failure set
   const completeFailureSet = useCallback((reps: number) => {
@@ -285,15 +322,17 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
 
   // Skip rest
   const skipRest = useCallback(() => {
-    if (phase.type !== 'resting') return;
-
     // Clear rest interval
     if (restIntervalRef.current) {
       clearInterval(restIntervalRef.current);
       restIntervalRef.current = null;
     }
 
-    setPhase({ type: 'active', exerciseIdx: phase.exerciseIdx, setIdx: phase.setIdx });
+    if (phase.type === 'resting') {
+      setPhase({ type: 'active', exerciseIdx: phase.exerciseIdx, setIdx: phase.setIdx });
+    } else if (phase.type === 'resting_for_failure') {
+      setPhase({ type: 'failure_set', exerciseIdx: phase.exerciseIdx });
+    }
   }, [phase]);
 
   // Toggle pause
@@ -309,6 +348,11 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
           previousPhase.exerciseIdx,
           previousPhase.setIdx
         );
+      } else if (previousPhase.type === 'resting_for_failure') {
+        startRestTimerForFailure(
+          previousPhase.remainingSeconds,
+          previousPhase.exerciseIdx
+        );
       } else {
         setPhase(previousPhase);
       }
@@ -322,7 +366,7 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
 
       setPhase({ type: 'paused', previousPhase: phase });
     }
-  }, [phase, startRestTimer]);
+  }, [phase, startRestTimer, startRestTimerForFailure]);
 
   // End workout and save
   const endWorkout = useCallback(async (): Promise<string | null> => {

@@ -102,9 +102,9 @@ export default function LiveWorkout({
     const totalReps = calculateTotalReps(sessionData);
 
     return (
-      <div className="fixed inset-0 z-50 bg-white dark:bg-secondary-900 flex flex-col">
-        <div className="flex-1 flex items-center justify-center p-6">
-          <div className="text-center max-w-sm">
+      <div className="pb-20">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center max-w-sm w-full">
             <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-6">
               <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
@@ -162,15 +162,16 @@ export default function LiveWorkout({
 
   // Render paused overlay
   const isPaused = phase.type === 'paused';
+  const isResting = phase.type === 'resting' || phase.type === 'resting_for_failure';
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-white dark:bg-secondary-900 flex flex-col select-none"
+      className="pb-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-8rem)] bg-primary-500 flex flex-col select-none"
       onClick={handleScreenTap}
       onTouchEnd={handleScreenTap}
     >
       {/* Header controls */}
-      <div className="flex-shrink-0 p-4 border-b border-secondary-200 dark:border-secondary-700">
+      <div className="flex-shrink-0 py-4 border-b border-primary-400">
         <WorkoutControls
           isPaused={isPaused}
           elapsedTime={formatTime(elapsedSeconds)}
@@ -181,14 +182,14 @@ export default function LiveWorkout({
       </div>
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6">
+      <div className="flex-1 flex flex-col items-center justify-center py-6">
         {/* Paused overlay */}
         {isPaused && (
           <div className="text-center">
-            <div className="text-3xl font-bold text-secondary-900 dark:text-secondary-100 mb-4">
+            <div className="text-3xl font-bold text-white mb-4">
               PAUSED
             </div>
-            <Button onClick={togglePause} size="lg">
+            <Button onClick={togglePause} size="lg" variant="secondary">
               Resume
             </Button>
           </div>
@@ -200,6 +201,16 @@ export default function LiveWorkout({
             remainingSeconds={phase.remainingSeconds}
             totalSeconds={currentExercise.exercise.rest_time}
             nextSetInfo={`Set ${phase.setIdx + 1}/${currentExercise.exercise.sets} • ${currentExercise.currentReps} reps @ ${currentExercise.currentWeight}kg`}
+            onSkip={skipRest}
+          />
+        )}
+
+        {/* Resting before failure set */}
+        {phase.type === 'resting_for_failure' && currentExercise && (
+          <RestTimer
+            remainingSeconds={phase.remainingSeconds}
+            totalSeconds={currentExercise.exercise.rest_time}
+            nextSetInfo={`Failure Set • ${currentExercise.currentWeight}kg`}
             onSkip={skipRest}
           />
         )}
@@ -216,7 +227,7 @@ export default function LiveWorkout({
             />
 
             <div className="mt-8 text-center">
-              <p className="text-sm text-secondary-500 dark:text-secondary-400 mb-2">
+              <p className="text-sm text-primary-100 mb-2">
                 Tap anywhere to complete set
               </p>
             </div>
@@ -228,10 +239,10 @@ export default function LiveWorkout({
           <div className="w-full max-w-sm">
             {showFailureInput ? (
               <div className="text-center" data-no-tap>
-                <h2 className="text-2xl font-bold text-secondary-900 dark:text-secondary-100 mb-2">
+                <h2 className="text-2xl font-bold text-white mb-2">
                   {currentExercise.exercise.name}
                 </h2>
-                <p className="text-secondary-600 dark:text-secondary-400 mb-6">
+                <p className="text-primary-100 mb-6">
                   How many reps did you get?
                 </p>
 
@@ -243,13 +254,14 @@ export default function LiveWorkout({
                     value={failureReps}
                     onChange={e => setFailureReps(e.target.value)}
                     placeholder="Enter reps"
-                    className="text-center text-2xl"
+                    className="text-center text-2xl bg-white"
                     autoFocus
                   />
                   <Button
                     type="submit"
                     size="lg"
                     fullWidth
+                    variant="secondary"
                     disabled={!failureReps || parseInt(failureReps) < 1}
                   >
                     Confirm
@@ -268,7 +280,7 @@ export default function LiveWorkout({
                 />
 
                 <div className="mt-8 text-center">
-                  <p className="text-sm text-secondary-500 dark:text-secondary-400 mb-2">
+                  <p className="text-sm text-primary-100 mb-2">
                     Tap when complete
                   </p>
                 </div>
@@ -280,7 +292,7 @@ export default function LiveWorkout({
 
       {/* Quick adjust footer */}
       {(phase.type === 'active' || phase.type === 'ready') && currentExercise && (
-        <div className="flex-shrink-0 p-4 border-t border-secondary-200 dark:border-secondary-700" data-no-tap>
+        <div className="flex-shrink-0 py-4 border-t border-primary-400" data-no-tap>
           <QuickAdjust
             weight={currentExercise.currentWeight}
             reps={currentExercise.currentReps}
