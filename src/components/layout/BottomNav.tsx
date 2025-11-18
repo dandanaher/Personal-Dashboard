@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { CheckSquare, Target, Grid, Dumbbell, Home } from 'lucide-react';
 import { useThemeStore } from '@/stores/themeStore';
 
@@ -38,27 +38,59 @@ const navItems: NavItem[] = [
 
 function BottomNav() {
   const { accentColor } = useThemeStore();
+  const location = useLocation();
+
+  // Find the active index
+  const activeIndex = navItems.findIndex(item => location.pathname.startsWith(item.path));
+  const safeActiveIndex = activeIndex === -1 ? 0 : activeIndex;
+
+  // Circle size matches the nav bar height minus padding
+  const circleSize = 48; // pixels
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-secondary-900/80 backdrop-blur-lg border-t border-secondary-200 dark:border-secondary-700 pb-safe-bottom">
-      <div className="max-w-lg mx-auto flex items-center justify-between h-14 px-2">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center min-h-touch px-2 py-1 rounded-lg transition-colors duration-200 touch-manipulation ${
-                isActive
+    <nav className="fixed bottom-4 left-0 right-0 z-50 pb-safe-bottom flex justify-center pointer-events-none">
+      <div
+        className="relative bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/40 dark:border-white/20 shadow-lg shadow-black/5 pointer-events-auto"
+        style={{ borderRadius: `${(circleSize + 8) / 2}px` }}
+      >
+        {/* Animated circle indicator */}
+        <div
+          className="absolute top-1 transition-all duration-300 ease-out pointer-events-none"
+          style={{
+            left: `${4 + safeActiveIndex * circleSize}px`,
+            width: `${circleSize}px`,
+            height: `${circleSize}px`,
+          }}
+        >
+          <div
+            className="w-full h-full rounded-full"
+            style={{
+              backgroundColor: `${accentColor}20`,
+            }}
+          />
+        </div>
+
+        {/* Navigation items */}
+        <div className="relative flex items-center p-1">
+          {navItems.map((item, index) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={`flex items-center justify-center rounded-full transition-colors duration-200 touch-manipulation ${
+                index === safeActiveIndex
                   ? ''
-                  : 'text-secondary-500 dark:text-secondary-400 hover:text-secondary-700 dark:hover:text-secondary-300'
-              }`
-            }
-            style={({ isActive }) => isActive ? { color: accentColor } : {}}
-          >
-            {item.icon}
-            <span className="text-[10px] mt-0.5 font-medium">{item.label}</span>
-          </NavLink>
-        ))}
+                  : 'text-secondary-500 dark:text-secondary-400'
+              }`}
+              style={{
+                width: `${circleSize}px`,
+                height: `${circleSize}px`,
+                ...(index === safeActiveIndex ? { color: accentColor } : {}),
+              }}
+            >
+              {item.icon}
+            </NavLink>
+          ))}
+        </div>
       </div>
     </nav>
   );

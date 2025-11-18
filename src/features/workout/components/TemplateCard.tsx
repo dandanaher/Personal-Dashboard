@@ -1,5 +1,6 @@
 import { Play, Edit2, Copy, Trash2, Clock, Dumbbell } from 'lucide-react';
 import { Card } from '@/components/ui';
+import { useThemeStore } from '@/stores/themeStore';
 import type { WorkoutTemplate } from '@/lib/types';
 import { calculateEstimatedDuration, formatTime } from '../lib/workoutEngine';
 
@@ -18,6 +19,7 @@ export default function TemplateCard({
   onDuplicate,
   onDelete,
 }: TemplateCardProps) {
+  const { accentColor } = useThemeStore();
   const estimatedDuration = calculateEstimatedDuration(template.exercises);
   const exerciseCount = template.exercises.length;
 
@@ -47,7 +49,8 @@ export default function TemplateCard({
 
         <button
           onClick={() => onStart(template)}
-          className="flex-shrink-0 w-12 h-12 rounded-full bg-primary-500 hover:bg-primary-600 text-white flex items-center justify-center transition-colors"
+          className="flex-shrink-0 w-12 h-12 rounded-full text-white flex items-center justify-center transition-opacity hover:opacity-80"
+          style={{ backgroundColor: accentColor }}
           aria-label={`Start ${template.name}`}
         >
           <Play className="h-5 w-5 ml-0.5" />
