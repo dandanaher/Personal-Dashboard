@@ -207,40 +207,37 @@ export function GoalCard({
 
       {/* Footer with Progress Controls */}
       <div className="flex items-center justify-between text-sm">
-        {/* Progress Controls (if not completed and not habit-linked) */}
+        {/* Left side: Days left (for non-habit-linked) or full date info (for habit-linked/completed) */}
         {!goal.completed && !isHabitLinked ? (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleDecrement}
-              onMouseDown={() => handleHoldStart(-1)}
-              onMouseUp={handleHoldEnd}
-              onMouseLeave={handleHoldEnd}
-              onTouchStart={() => handleHoldStart(-1)}
-              onTouchEnd={handleHoldEnd}
-              disabled={goal.progress <= 0}
-              className="p-2 rounded-full bg-secondary-100 dark:bg-secondary-800 hover:bg-secondary-200 dark:hover:bg-secondary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-none select-none"
-              aria-label="Decrease progress"
-            >
-              <Minus className="w-4 h-4 text-secondary-700 dark:text-secondary-300" />
-            </button>
-
-            <span className="text-lg font-bold text-secondary-900 dark:text-white min-w-[3rem] text-center">
-              {goal.progress}%
-            </span>
-
-            <button
-              onClick={handleIncrement}
-              onMouseDown={() => handleHoldStart(1)}
-              onMouseUp={handleHoldEnd}
-              onMouseLeave={handleHoldEnd}
-              onTouchStart={() => handleHoldStart(1)}
-              onTouchEnd={handleHoldEnd}
-              disabled={goal.progress >= 100}
-              className="p-2 rounded-full bg-secondary-100 dark:bg-secondary-800 hover:bg-secondary-200 dark:hover:bg-secondary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-none select-none"
-              aria-label="Increase progress"
-            >
-              <Plus className="w-4 h-4 text-secondary-700 dark:text-secondary-300" />
-            </button>
+          <div className="flex items-center gap-1">
+            {goal.target_date && (
+              <div
+                className={`flex items-center gap-1 text-xs ${
+                  isOverdue
+                    ? 'text-red-600 dark:text-red-400 font-semibold'
+                    : 'text-secondary-600 dark:text-secondary-400'
+                }`}
+              >
+                {isOverdue ? (
+                  <>
+                    <AlertTriangle className="w-3 h-3" />
+                    <span>-{Math.abs(daysUntilTarget!)}d</span>
+                  </>
+                ) : daysUntilTarget === 0 ? (
+                  <span>Today</span>
+                ) : (
+                  <>
+                    <Calendar className="w-3 h-3" />
+                    <span>{daysUntilTarget}d</span>
+                  </>
+                )}
+              </div>
+            )}
+            {!goal.target_date && (
+              <span className="text-secondary-500 dark:text-secondary-500 text-xs">
+                No target date
+              </span>
+            )}
           </div>
         ) : (
           <div className="flex items-center gap-1">
@@ -278,26 +275,41 @@ export function GoalCard({
           </div>
         )}
 
-        {/* Right side: Days left + Complete button */}
+        {/* Right side: Progress controls (for non-habit-linked) + Complete button */}
         <div className="flex items-center gap-2">
-          {!goal.completed && !isHabitLinked && goal.target_date && (
-            <div
-              className={`flex items-center gap-1 text-xs ${
-                isOverdue
-                  ? 'text-red-600 dark:text-red-400 font-semibold'
-                  : 'text-secondary-600 dark:text-secondary-400'
-              }`}
-            >
-              {isOverdue ? (
-                <>
-                  <AlertTriangle className="w-3 h-3" />
-                  <span>-{Math.abs(daysUntilTarget!)}d</span>
-                </>
-              ) : daysUntilTarget === 0 ? (
-                <span>Today</span>
-              ) : (
-                <span>{daysUntilTarget}d</span>
-              )}
+          {!goal.completed && !isHabitLinked && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDecrement}
+                onMouseDown={() => handleHoldStart(-1)}
+                onMouseUp={handleHoldEnd}
+                onMouseLeave={handleHoldEnd}
+                onTouchStart={() => handleHoldStart(-1)}
+                onTouchEnd={handleHoldEnd}
+                disabled={goal.progress <= 0}
+                className="p-2 rounded-full bg-secondary-100 dark:bg-secondary-800 hover:bg-secondary-200 dark:hover:bg-secondary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-none select-none"
+                aria-label="Decrease progress"
+              >
+                <Minus className="w-4 h-4 text-secondary-700 dark:text-secondary-300" />
+              </button>
+
+              <span className="text-lg font-bold text-secondary-900 dark:text-white min-w-[3rem] text-center">
+                {goal.progress}%
+              </span>
+
+              <button
+                onClick={handleIncrement}
+                onMouseDown={() => handleHoldStart(1)}
+                onMouseUp={handleHoldEnd}
+                onMouseLeave={handleHoldEnd}
+                onTouchStart={() => handleHoldStart(1)}
+                onTouchEnd={handleHoldEnd}
+                disabled={goal.progress >= 100}
+                className="p-2 rounded-full bg-secondary-100 dark:bg-secondary-800 hover:bg-secondary-200 dark:hover:bg-secondary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-none select-none"
+                aria-label="Increase progress"
+              >
+                <Plus className="w-4 h-4 text-secondary-700 dark:text-secondary-300" />
+              </button>
             </div>
           )}
 
