@@ -184,7 +184,7 @@ export default function LiveWorkout({
 
   return (
     <div
-      className="pb-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-8rem)] flex flex-col select-none"
+      className="fixed inset-0 z-[60] flex flex-col select-none overflow-hidden pt-safe-top pb-safe-bottom px-4"
       style={{ backgroundColor: accentColor }}
       onClick={handleScreenTap}
       onTouchEnd={handleScreenTap}
@@ -323,7 +323,7 @@ export default function LiveWorkout({
 
       {/* End workout confirmation */}
       {showEndConfirm && (
-        <div className="fixed inset-0 z-60 bg-black/50 flex items-center justify-center p-4" data-no-tap>
+        <div className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4" data-no-tap>
           <Card className="w-full max-w-sm p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">

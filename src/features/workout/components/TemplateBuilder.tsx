@@ -84,7 +84,7 @@ export default function TemplateBuilder({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
       <div className="w-full max-w-lg max-h-[90vh] overflow-hidden bg-white dark:bg-secondary-900 rounded-xl shadow-xl flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-secondary-200 dark:border-secondary-700">

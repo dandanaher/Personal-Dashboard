@@ -49,7 +49,7 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={{ showToast }}>
       {children}
       {/* Toast container */}
-      <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 space-y-2">
+      <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-[60] space-y-2">
         {toasts.map(toast => (
           <div
             key={toast.id}
@@ -293,7 +293,7 @@ function WorkoutPageContent() {
 
       {/* Progressive overload suggestions modal */}
       {showOverloadSuggestions && selectedTemplateForWorkout && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
           <Card className="w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
             <div className="p-4 border-b border-secondary-200 dark:border-secondary-700">
               <div className="flex items-center gap-2 mb-1">

@@ -46,7 +46,7 @@ export function HabitDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50"
+      className="fixed inset-0 z-[60] flex items-end md:items-center justify-center bg-black/50"
       onClick={handleBackdropClick}
     >
       <div
