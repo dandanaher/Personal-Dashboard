@@ -92,6 +92,10 @@ export interface Goal {
   completed: boolean;
   /** Progress percentage (0-100) */
   progress: number;
+  /** Optional linked habit ID for automatic progress tracking */
+  linked_habit_id: string | null;
+  /** Target number of habit completions to reach 100% */
+  target_completions: number | null;
   created_at: string;
   updated_at: string;
 }
