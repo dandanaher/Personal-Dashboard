@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Goal } from '@/lib/types';
 import { useAuthStore } from '@/stores/authStore';
@@ -39,6 +39,13 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
   const [error, setError] = useState<string | null>(null);
   const [habitData, setHabitData] = useState<Map<string, HabitCompletionData>>(new Map());
   const { user } = useAuthStore();
+
+  // Track goals currently being toggled to prevent double-toggling
+  const togglingRef = useRef<Set<string>>(new Set());
+
+  // Debounce timers for progress updates
+  const progressDebounceRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const pendingProgressRef = useRef<Map<string, { progress: number; completed: boolean }>>(new Map());
 
   // Fetch habit completion counts for linked goals
   const fetchHabitData = useCallback(async (goalsData: Goal[]) => {
@@ -228,26 +235,81 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
     }
   }, [goals, fetchHabitData]);
 
-  // Update progress (quick action)
+  // Update progress (quick action) with debouncing for database updates
   const updateProgress = useCallback(async (id: string, progress: number): Promise<boolean> => {
     const clampedProgress = Math.min(100, Math.max(0, progress));
     const completed = clampedProgress >= 100;
-    return updateGoal(id, { progress: clampedProgress, completed });
-  }, [updateGoal]);
+
+    // Optimistic update immediately for responsive UI
+    setGoals(prev => prev.map(g =>
+      g.id === id ? { ...g, progress: clampedProgress, completed, updated_at: new Date().toISOString() } : g
+    ));
+
+    // Store pending update
+    pendingProgressRef.current.set(id, { progress: clampedProgress, completed });
+
+    // Clear existing debounce timer for this goal
+    const existingTimer = progressDebounceRef.current.get(id);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    // Set new debounce timer to save to database
+    const timer = setTimeout(async () => {
+      const pending = pendingProgressRef.current.get(id);
+      if (!pending) return;
+
+      progressDebounceRef.current.delete(id);
+      pendingProgressRef.current.delete(id);
+
+      try {
+        const { error: updateError } = await supabase
+          .from('goals')
+          .update({ progress: pending.progress, completed: pending.completed })
+          .eq('id', id);
+
+        if (updateError) {
+          setError(updateError.message);
+          // Could refetch here to get correct state, but optimistic update might be acceptable
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to update progress');
+      }
+    }, 300); // Debounce for 300ms
+
+    progressDebounceRef.current.set(id, timer);
+    return true;
+  }, []);
 
   // Toggle completion
   const toggleComplete = useCallback(async (id: string): Promise<boolean> => {
+    // Prevent double-toggling
+    if (togglingRef.current.has(id)) {
+      return false;
+    }
+
     const goal = goals.find(g => g.id === id);
     if (!goal) return false;
+
+    // Mark as toggling
+    togglingRef.current.add(id);
 
     const newCompleted = !goal.completed;
     // When reopening, set to 99% if was at 100% to prevent immediate re-completion
     const newProgress = newCompleted ? 100 : (goal.progress >= 100 ? 99 : goal.progress);
 
-    return updateGoal(id, {
-      completed: newCompleted,
-      progress: newProgress,
-    });
+    try {
+      const result = await updateGoal(id, {
+        completed: newCompleted,
+        progress: newProgress,
+      });
+      return result;
+    } finally {
+      // Clear toggling state after a short delay to allow state to propagate
+      setTimeout(() => {
+        togglingRef.current.delete(id);
+      }, 300);
+    }
   }, [goals, updateGoal]);
 
   // Delete goal with optimistic update
@@ -284,6 +346,15 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
   useEffect(() => {
     fetchGoals();
   }, [fetchGoals]);
+
+  // Cleanup debounce timers on unmount
+  useEffect(() => {
+    return () => {
+      progressDebounceRef.current.forEach(timer => clearTimeout(timer));
+      progressDebounceRef.current.clear();
+      pendingProgressRef.current.clear();
+    };
+  }, []);
 
   // Real-time subscription for goals
   useEffect(() => {
