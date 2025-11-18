@@ -208,6 +208,16 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -243,7 +253,7 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto max-h-[calc(90vh-8rem)]">
+        <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto overflow-x-hidden max-h-[calc(90vh-8rem)]">
           {/* Error message */}
           {error && (
             <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
@@ -266,7 +276,6 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Launch website redesign"
               required
-              autoFocus
             />
           </div>
 

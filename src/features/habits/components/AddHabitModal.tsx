@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { ColorPicker, HABIT_COLORS } from './ColorPicker';
@@ -23,7 +23,6 @@ export function AddHabitModal({
   const [description, setDescription] = useState('');
   const [color, setColor] = useState<string>(HABIT_COLORS[0].value);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const isEditing = !!editingHabit;
 
@@ -39,12 +38,18 @@ export function AddHabitModal({
         setDescription('');
         setColor(HABIT_COLORS[0].value);
       }
-      // Focus input after a brief delay for animation
-      setTimeout(() => {
-        nameInputRef.current?.focus();
-      }, 100);
     }
   }, [isOpen, editingHabit]);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,7 +132,6 @@ export function AddHabitModal({
               Habit Name
             </label>
             <Input
-              ref={nameInputRef}
               id="habit-name"
               type="text"
               placeholder="e.g., Meditation, Exercise, Read..."

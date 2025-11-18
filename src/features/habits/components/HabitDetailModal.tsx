@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { X, Edit2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { HabitStats } from './HabitStats';
@@ -41,6 +42,16 @@ export function HabitDetailModal({
     onClose();
     onDelete();
   };
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
