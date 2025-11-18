@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { ColorPicker, HABIT_COLORS } from './ColorPicker';
@@ -85,9 +86,9 @@ export function AddHabitModal({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-end md:items-center justify-center bg-black/50"
+      className="fixed top-0 left-0 w-full h-full z-[60] flex items-end md:items-center justify-center bg-black/50"
       onClick={handleBackdropClick}
     >
       <div
@@ -231,6 +232,7 @@ export function AddHabitModal({
           animation: fade-in 0.2s ease-out;
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 }

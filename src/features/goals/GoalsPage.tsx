@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { Goal } from '@/lib/types';
+import type { Goal } from '@/lib/types';
 import { useGoals, FilterType } from './hooks/useGoals';
 import { GoalFilters } from './components/GoalFilters';
 import { GoalsList } from './components/GoalsList';
@@ -12,7 +12,6 @@ function GoalsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   // Get goals from hook
   const {
@@ -93,20 +92,11 @@ function GoalsPage() {
     }
   }, [editingGoal, addGoal, updateGoal]);
 
-  const handleDeleteClick = useCallback((goalId: string) => {
-    setDeleteConfirm(goalId);
-  }, []);
-
-  const handleDeleteConfirm = useCallback(async () => {
-    if (deleteConfirm) {
-      await deleteGoal(deleteConfirm);
-      setDeleteConfirm(null);
+  const handleDeleteClick = useCallback(async (goalId: string) => {
+    if (window.confirm('Are you sure you want to delete this goal? This action cannot be undone.')) {
+      await deleteGoal(goalId);
     }
-  }, [deleteConfirm, deleteGoal]);
-
-  const handleDeleteCancel = useCallback(() => {
-    setDeleteConfirm(null);
-  }, []);
+  }, [deleteGoal]);
 
   const handleProgressChange = useCallback(async (goalId: string, progress: number) => {
     await updateProgress(goalId, progress);
@@ -161,43 +151,6 @@ function GoalsPage() {
         onSave={handleSave}
         editingGoal={editingGoal}
       />
-
-      {/* Delete Confirmation Dialog */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={handleDeleteCancel}
-          />
-
-          {/* Dialog */}
-          <div className="relative bg-white dark:bg-secondary-800 rounded-xl p-6 mx-4 max-w-sm w-full shadow-xl">
-            <h3 className="text-lg font-semibold text-secondary-900 dark:text-white mb-2">
-              Delete Goal
-            </h3>
-            <p className="text-secondary-600 dark:text-secondary-400 mb-4">
-              Are you sure you want to delete this goal? This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={handleDeleteCancel}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleDeleteConfirm}
-                className="flex-1 bg-red-500 hover:bg-red-600"
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Edit2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { HabitStats } from './HabitStats';
@@ -55,9 +56,9 @@ export function HabitDetailModal({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-end md:items-center justify-center bg-black/50"
+      className="fixed top-0 left-0 w-full h-full z-[60] flex items-end md:items-center justify-center bg-black/50"
       onClick={handleBackdropClick}
     >
       <div
@@ -178,6 +179,7 @@ export function HabitDetailModal({
           animation: fade-in 0.2s ease-out;
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Calendar, Target, Link, Unlink, AlertTriangle } from 'lucide-react';
 import { endOfWeek, endOfMonth, endOfQuarter, endOfYear, format, differenceInDays, parseISO } from 'date-fns';
-import { Card, Button, Input } from '@/components/ui';
+import { Button, Input } from '@/components/ui';
 import { Goal, Habit } from '@/lib/types';
-import { ProgressBar } from './ProgressBar';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
+import { useThemeStore } from '@/stores/themeStore';
 
 type GoalType = Goal['type'];
 
@@ -51,6 +52,7 @@ function getDefaultTargetDate(type: GoalType): string {
 
 export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalModalProps) {
   const { user } = useAuthStore();
+  const { accentColor } = useThemeStore();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<GoalType>('monthly');
@@ -220,32 +222,50 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
 
+  return createPortal(
+    <div
+      className="fixed top-0 left-0 w-full h-full z-[60] flex items-end md:items-center justify-center bg-black/50"
+      onClick={handleBackdropClick}
+    >
       {/* Modal */}
-      <Card
-        variant="default"
-        padding="none"
-        className="relative w-full sm:max-w-md sm:mx-4 max-h-[90vh] overflow-hidden rounded-t-2xl sm:rounded-2xl animate-slide-up"
+      <div
+        className="
+          w-full md:max-w-md
+          bg-white dark:bg-secondary-900
+          rounded-t-2xl md:rounded-2xl
+          shadow-xl
+          animate-slide-up md:animate-fade-in
+          max-h-[90vh] overflow-hidden
+        "
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="goal-modal-title"
       >
+        {/* Handle bar for mobile */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 bg-secondary-300 dark:bg-secondary-600 rounded-full" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-secondary-200 dark:border-secondary-700">
+        <div className="flex items-center justify-between px-4 pb-3 border-b border-secondary-200 dark:border-secondary-700">
           <div className="flex items-center gap-2">
-            <Target className="w-5 h-5 text-primary-500" />
-            <h2 className="text-lg font-semibold text-secondary-900 dark:text-white">
+            <Target className="w-5 h-5" style={{ color: accentColor }} />
+            <h2
+              id="goal-modal-title"
+              className="text-lg font-semibold text-secondary-900 dark:text-white"
+            >
               {editingGoal ? 'Edit Goal' : 'New Goal'}
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors"
+            className="p-2 rounded-full hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors"
             aria-label="Close modal"
           >
             <X className="w-5 h-5 text-secondary-500" />
@@ -310,9 +330,10 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
                   onClick={() => handleTypeChange(goalType)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
                     type === goalType
-                      ? 'bg-primary-500 text-white'
+                      ? 'text-white'
                       : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
                   }`}
+                  style={type === goalType ? { backgroundColor: accentColor } : undefined}
                 >
                   {goalType}
                 </button>
@@ -434,17 +455,22 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
           {/* Initial Progress (only if not linked to habit) */}
           {!linkToHabit && (
             <div>
-              <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-2">
-                Initial Progress
-              </label>
-              <ProgressBar progress={progress} showLabel />
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-secondary-700 dark:text-secondary-300">
+                  Initial Progress
+                </label>
+                <span className="text-sm font-semibold text-secondary-900 dark:text-white">
+                  {progress}%
+                </span>
+              </div>
               <input
                 type="range"
                 min="0"
                 max="100"
                 value={progress}
                 onChange={(e) => setProgress(Number(e.target.value))}
-                className="w-full h-2 mt-2 bg-secondary-200 dark:bg-secondary-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+                className="w-full h-2 bg-secondary-200 dark:bg-secondary-700 rounded-lg appearance-none cursor-pointer"
+                style={{ accentColor }}
                 aria-label="Initial progress"
               />
             </div>
@@ -472,24 +498,39 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
             </Button>
           </div>
         </form>
-      </Card>
+      </div>
 
       <style>{`
         @keyframes slide-up {
           from {
             transform: translateY(100%);
-            opacity: 0;
           }
           to {
             transform: translateY(0);
-            opacity: 1;
           }
         }
+
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
         .animate-slide-up {
           animation: slide-up 0.3s ease-out;
         }
+
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out;
+        }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 }
 

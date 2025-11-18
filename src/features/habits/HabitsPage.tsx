@@ -9,7 +9,6 @@ function HabitsPage() {
   const { habits, loading, error, addHabit, updateHabit, deleteHabit, refetch } = useHabits();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
-  const [deleteConfirmHabit, setDeleteConfirmHabit] = useState<Habit | null>(null);
   const [completionStatus, setCompletionStatus] = useState<Record<string, boolean>>({});
 
   // Handle completion status changes from HabitCards
@@ -46,15 +45,10 @@ function HabitsPage() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteClick = (habit: Habit) => {
-    setDeleteConfirmHabit(habit);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!deleteConfirmHabit) return;
-
-    await deleteHabit(deleteConfirmHabit.id);
-    setDeleteConfirmHabit(null);
+  const handleDeleteClick = async (habit: Habit) => {
+    if (window.confirm(`Are you sure you want to delete "${habit.name}"? This will also delete all completion history. This action cannot be undone.`)) {
+      await deleteHabit(habit.id);
+    }
   };
 
   const handleModalClose = () => {
@@ -102,56 +96,6 @@ function HabitsPage() {
         editingHabit={editingHabit}
         onUpdate={handleUpdate}
       />
-
-      {/* Delete Confirmation Modal */}
-      {deleteConfirmHabit && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setDeleteConfirmHabit(null);
-            }
-          }}
-        >
-          <div
-            className="w-full max-w-sm bg-white dark:bg-secondary-900 rounded-xl shadow-xl p-6"
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="delete-title"
-            aria-describedby="delete-description"
-          >
-            <h2
-              id="delete-title"
-              className="text-lg font-semibold text-secondary-900 dark:text-white mb-2"
-            >
-              Delete Habit
-            </h2>
-            <p
-              id="delete-description"
-              className="text-secondary-600 dark:text-secondary-400 mb-6"
-            >
-              Are you sure you want to delete "{deleteConfirmHabit.name}"? This will also delete all completion history. This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setDeleteConfirmHabit(null)}
-                fullWidth
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleConfirmDelete}
-                fullWidth
-                className="bg-red-600 hover:bg-red-700 focus:ring-red-500"
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

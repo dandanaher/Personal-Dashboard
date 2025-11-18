@@ -1,6 +1,7 @@
+import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import { X, TrendingUp, Award } from 'lucide-react';
-import { Card } from '@/components/ui';
 import type { CompletedExercise } from '@/lib/types';
 
 interface ExerciseHistoryProps {
@@ -16,19 +17,57 @@ export default function ExerciseHistory({
     set => set.reps >= exercise.target_reps
   );
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
-      <Card className="w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  return createPortal(
+    <div
+      className="fixed top-0 left-0 w-full h-full z-[60] flex items-end md:items-center justify-center bg-black/50"
+      onClick={handleBackdropClick}
+    >
+      <div
+        className="
+          w-full md:max-w-md
+          bg-white dark:bg-secondary-900
+          rounded-t-2xl md:rounded-2xl
+          shadow-xl
+          animate-slide-up md:animate-fade-in
+          max-h-[80vh] overflow-hidden flex flex-col
+        "
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="exercise-history-title"
+      >
+        {/* Handle bar for mobile */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 bg-secondary-300 dark:bg-secondary-600 rounded-full" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-secondary-200 dark:border-secondary-700">
-          <h2 className="text-lg font-semibold text-secondary-900 dark:text-secondary-100">
+        <div className="flex items-center justify-between px-4 pb-3 border-b border-secondary-200 dark:border-secondary-700">
+          <h2
+            id="exercise-history-title"
+            className="text-lg font-semibold text-secondary-900 dark:text-secondary-100"
+          >
             {exercise.name}
           </h2>
           <button
             onClick={onClose}
-            className="p-2 text-secondary-500 hover:text-secondary-700 dark:hover:text-secondary-300 rounded-lg transition-colors"
+            className="p-2 rounded-full hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors"
+            aria-label="Close modal"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5 text-secondary-500" />
           </button>
         </div>
 
@@ -109,8 +148,39 @@ export default function ExerciseHistory({
             </div>
           )}
         </div>
-      </Card>
-    </div>
+      </div>
+
+      <style>{`
+        @keyframes slide-up {
+          from {
+            transform: translateY(100%);
+          }
+          to {
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out;
+        }
+      `}</style>
+    </div>,
+    document.body
   );
 }
 
@@ -143,13 +213,50 @@ export function SessionDetail({
     return total + mainVolume + failureVolume;
   }, 0);
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
-      <Card className="w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  return createPortal(
+    <div
+      className="fixed top-0 left-0 w-full h-full z-[60] flex items-end md:items-center justify-center bg-black/50"
+      onClick={handleBackdropClick}
+    >
+      <div
+        className="
+          w-full md:max-w-lg
+          bg-white dark:bg-secondary-900
+          rounded-t-2xl md:rounded-2xl
+          shadow-xl
+          animate-slide-up md:animate-fade-in
+          max-h-[90vh] overflow-hidden flex flex-col
+        "
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="session-detail-title"
+      >
+        {/* Handle bar for mobile */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 bg-secondary-300 dark:bg-secondary-600 rounded-full" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-secondary-200 dark:border-secondary-700">
+        <div className="flex items-center justify-between px-4 pb-3 border-b border-secondary-200 dark:border-secondary-700">
           <div>
-            <h2 className="text-lg font-semibold text-secondary-900 dark:text-secondary-100">
+            <h2
+              id="session-detail-title"
+              className="text-lg font-semibold text-secondary-900 dark:text-secondary-100"
+            >
               {templateName}
             </h2>
             <p className="text-sm text-secondary-500 dark:text-secondary-400">
@@ -158,9 +265,10 @@ export function SessionDetail({
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-secondary-500 hover:text-secondary-700 dark:hover:text-secondary-300 rounded-lg transition-colors"
+            className="p-2 rounded-full hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors"
+            aria-label="Close modal"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5 text-secondary-500" />
           </button>
         </div>
 
@@ -260,7 +368,38 @@ export function SessionDetail({
             </p>
           </div>
         )}
-      </Card>
-    </div>
+      </div>
+
+      <style>{`
+        @keyframes slide-up {
+          from {
+            transform: translateY(100%);
+          }
+          to {
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out;
+        }
+      `}</style>
+    </div>,
+    document.body
   );
 }

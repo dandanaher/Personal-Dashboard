@@ -293,7 +293,7 @@ function WorkoutPageContent() {
 
       {/* Progressive overload suggestions modal */}
       {showOverloadSuggestions && selectedTemplateForWorkout && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+        <div className="fixed top-0 left-0 w-full h-full z-[60] flex items-center justify-center p-4 bg-black/50">
           <Card className="w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
             <div className="p-4 border-b border-secondary-200 dark:border-secondary-700">
               <div className="flex items-center gap-2 mb-1">
