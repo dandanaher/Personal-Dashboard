@@ -1,5 +1,4 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from './types';
+import { createClient } from '@supabase/supabase-js';
 
 console.log('Supabase client initializing...');
 
@@ -23,7 +22,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   // Don't throw - allow app to load but auth will fail
 }
 
-export const supabase: SupabaseClient<Database> = createClient<Database>(
+export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabaseAnonKey || 'placeholder-key',
   {

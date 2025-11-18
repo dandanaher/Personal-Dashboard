@@ -21,7 +21,7 @@ export function AddHabitModal({
 }: AddHabitModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [color, setColor] = useState(HABIT_COLORS[0].value);
+  const [color, setColor] = useState<string>(HABIT_COLORS[0].value);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
 

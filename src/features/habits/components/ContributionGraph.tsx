@@ -200,7 +200,7 @@ export function ContributionGraph({ logs, color, onDayClick, showMonthLabels = f
             {/* Month labels - inside scrollable area */}
             {showMonthLabels && (
               <div className="flex mb-1 text-xs text-secondary-500 dark:text-secondary-400 h-4">
-                {weeks.map((week, weekIdx) => {
+                {weeks.map((_week, weekIdx) => {
                   const monthLabel = monthLabels.find(m => m.weekIndex === weekIdx);
                   return (
                     <div key={weekIdx} className="w-[14px] flex-shrink-0">

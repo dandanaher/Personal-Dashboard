@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Check, AlertTriangle } from 'lucide-react';
+import { Check, AlertTriangle } from 'lucide-react';
 import { Button, Input, Card } from '@/components/ui';
 import type { WorkoutTemplate } from '@/lib/types';
 import { useWorkoutSession } from '../hooks';
@@ -24,7 +24,7 @@ interface LiveWorkoutProps {
 export default function LiveWorkout({
   template,
   onComplete,
-  onCancel,
+  onCancel: _onCancel,
 }: LiveWorkoutProps) {
   const {
     phase,
@@ -178,7 +178,6 @@ export default function LiveWorkout({
 
   // Render paused overlay
   const isPaused = phase.type === 'paused';
-  const isResting = phase.type === 'resting' || phase.type === 'resting_for_failure';
 
   // Create a slightly darker border color
   const borderColor = `${accentColor}cc`;

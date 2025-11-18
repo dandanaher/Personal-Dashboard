@@ -185,31 +185,37 @@ export interface Database {
         Row: Task;
         Insert: Omit<Task, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Task, 'id' | 'created_at'>>;
+        Relationships: [];
       };
       goals: {
         Row: Goal;
         Insert: Omit<Goal, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Goal, 'id' | 'created_at'>>;
+        Relationships: [];
       };
       habits: {
         Row: Habit;
         Insert: Omit<Habit, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Habit, 'id' | 'created_at'>>;
+        Relationships: [];
       };
       habit_logs: {
         Row: HabitLog;
         Insert: Omit<HabitLog, 'id' | 'created_at'>;
         Update: Partial<Omit<HabitLog, 'id' | 'created_at'>>;
+        Relationships: [];
       };
       workout_templates: {
         Row: WorkoutTemplate;
         Insert: Omit<WorkoutTemplate, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<WorkoutTemplate, 'id' | 'created_at'>>;
+        Relationships: [];
       };
       workout_sessions: {
         Row: WorkoutSession;
         Insert: Omit<WorkoutSession, 'id' | 'created_at'>;
         Update: Partial<Omit<WorkoutSession, 'id' | 'created_at'>>;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;

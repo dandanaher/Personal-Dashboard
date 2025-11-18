@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { format, subDays, parseISO, differenceInDays, isAfter, isBefore, startOfDay } from 'date-fns';
+import { format, subDays, parseISO, differenceInDays, startOfDay } from 'date-fns';
 import supabase from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { HabitLog } from '@/lib/types';
