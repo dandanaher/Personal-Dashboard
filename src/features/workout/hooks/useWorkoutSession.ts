@@ -34,6 +34,7 @@ interface UseWorkoutSessionReturn {
   phase: WorkoutPhase;
   sessionData: CompletedExercise[];
   elapsedSeconds: number;
+  actualDuration: number;
   currentExercise: CurrentExerciseState | null;
 
   // Actions
@@ -379,6 +380,7 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
       restIntervalRef.current = null;
     }
 
+    // Calculate duration (wall clock time is already accurate - it only includes actual time spent)
     const duration = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
 
     try {
@@ -443,6 +445,7 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
     phase,
     sessionData,
     elapsedSeconds,
+    actualDuration: elapsedSeconds,
     currentExercise,
     startWorkout,
     completeSet,

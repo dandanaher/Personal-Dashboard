@@ -3,7 +3,9 @@
     "allow": [
       "Bash(cd:*)",
       "Bash(tree:*)",
-      "Bash(nul)"
+      "Bash(nul)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

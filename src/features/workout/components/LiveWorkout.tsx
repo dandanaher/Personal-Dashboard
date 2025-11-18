@@ -29,6 +29,7 @@ export default function LiveWorkout({
     phase,
     sessionData,
     elapsedSeconds,
+    actualDuration,
     currentExercise,
     startWorkout,
     completeSet,
@@ -43,6 +44,7 @@ export default function LiveWorkout({
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [failureReps, setFailureReps] = useState('');
   const [showFailureInput, setShowFailureInput] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   // Auto-start workout
   useEffect(() => {
@@ -50,6 +52,17 @@ export default function LiveWorkout({
       startWorkout();
     }
   }, [phase.type, startWorkout]);
+
+  // Auto-save when workout completes naturally
+  useEffect(() => {
+    if (phase.type === 'complete' && !isSaved) {
+      endWorkout().then((sessionId) => {
+        if (sessionId) {
+          setIsSaved(true);
+        }
+      });
+    }
+  }, [phase.type, isSaved, endWorkout]);
 
   // Handle end workout
   const handleEndWorkout = async () => {
@@ -119,7 +132,7 @@ export default function LiveWorkout({
             <div className="grid grid-cols-2 gap-4 mb-8">
               <Card className="p-4 text-center">
                 <div className="text-2xl font-bold text-secondary-900 dark:text-secondary-100">
-                  {formatTime(elapsedSeconds)}
+                  {formatTime(actualDuration)}
                 </div>
                 <div className="text-xs text-secondary-500 dark:text-secondary-400">
                   Duration
