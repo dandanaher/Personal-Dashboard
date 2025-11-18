@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useThemeStore } from '@/stores/themeStore';
@@ -6,11 +6,18 @@ import { Button, Input, Card } from '@/components/ui';
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { signIn, signUp, loading, error, clearError } = useAuth();
+  const { user, signIn, signUp, loading, error, clearError } = useAuth();
   const { accentColor } = useThemeStore();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // Navigate to home when user is authenticated
+  useEffect(() => {
+    if (user) {
+      navigate('/home', { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -22,7 +29,7 @@ function LoginPage() {
       } else {
         await signIn(email, password);
       }
-      navigate('/home');
+      // Navigation is handled by useEffect when user state updates
     } catch {
       // Error is handled by the store
     }
@@ -93,11 +100,6 @@ function LoginPage() {
             </button>
           </div>
         </Card>
-
-        {/* Demo notice */}
-        <p className="mt-4 text-xs text-center text-secondary-500 dark:text-secondary-400">
-          Note: Configure Supabase credentials in .env to enable authentication
-        </p>
       </div>
     </div>
   );

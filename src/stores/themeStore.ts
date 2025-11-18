@@ -17,17 +17,51 @@ export const APP_COLORS = [
 
 interface ThemeState {
   accentColor: string;
+  darkMode: boolean;
   setAccentColor: (color: string) => void;
+  toggleDarkMode: () => void;
+  setDarkMode: (isDark: boolean) => void;
 }
+
+// Get initial dark mode state from localStorage or system preference
+const getInitialDarkMode = () => {
+  if (typeof window === 'undefined') return false;
+  return (
+    localStorage.theme === 'dark' ||
+    (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  );
+};
 
 export const useThemeStore = create<ThemeState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       accentColor: '#3b82f6', // Default blue
+      darkMode: getInitialDarkMode(),
       setAccentColor: (color: string) => {
         set({ accentColor: color });
         // Update CSS custom property for global access
         document.documentElement.style.setProperty('--accent-color', color);
+      },
+      toggleDarkMode: () => {
+        const newDarkMode = !get().darkMode;
+        set({ darkMode: newDarkMode });
+        if (newDarkMode) {
+          document.documentElement.classList.add('dark');
+          localStorage.theme = 'dark';
+        } else {
+          document.documentElement.classList.remove('dark');
+          localStorage.theme = 'light';
+        }
+      },
+      setDarkMode: (isDark: boolean) => {
+        set({ darkMode: isDark });
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+          localStorage.theme = 'dark';
+        } else {
+          document.documentElement.classList.remove('dark');
+          localStorage.theme = 'light';
+        }
       },
     }),
     {
@@ -36,6 +70,16 @@ export const useThemeStore = create<ThemeState>()(
         // Apply the persisted color on rehydration
         if (state?.accentColor) {
           document.documentElement.style.setProperty('--accent-color', state.accentColor);
+        }
+        // Apply the persisted dark mode on rehydration
+        if (state?.darkMode !== undefined) {
+          if (state.darkMode) {
+            document.documentElement.classList.add('dark');
+            localStorage.theme = 'dark';
+          } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.theme = 'light';
+          }
         }
       },
     }

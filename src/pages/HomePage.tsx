@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CheckSquare, Target, Grid, Dumbbell, User, Palette, LogOut, Check } from 'lucide-react';
+import { CheckSquare, Target, Grid, Dumbbell, User, Palette, LogOut, Check, Sun, Moon } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore, APP_COLORS } from '@/stores/themeStore';
 
@@ -35,7 +35,7 @@ function NavCard({ to, icon, label, description, accentColor }: NavCardProps) {
 
 function HomePage() {
   const { user, signOut } = useAuthStore();
-  const { accentColor, setAccentColor } = useThemeStore();
+  const { accentColor, setAccentColor, darkMode, toggleDarkMode } = useThemeStore();
 
   const handleSignOut = async () => {
     try {
@@ -115,10 +115,10 @@ function HomePage() {
               </div>
               <button
                 onClick={handleSignOut}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                className="flex items-center justify-center w-10 h-10 rounded-full text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                aria-label="Sign out"
               >
-                <LogOut className="h-4 w-4" />
-                Sign out
+                <LogOut className="h-5 w-5" />
               </button>
             </div>
           </div>
@@ -132,11 +132,45 @@ function HomePage() {
               <h2 className="font-semibold text-secondary-900 dark:text-white">Customization</h2>
             </div>
           </div>
-          <div className="p-4">
-            <p className="text-sm text-secondary-500 dark:text-secondary-400 mb-3">
-              App accent color
-            </p>
-            <div className="grid grid-cols-5 gap-3">
+          <div className="p-4 space-y-4">
+            {/* Theme Toggle */}
+            <div>
+              <p className="text-sm text-secondary-500 dark:text-secondary-400 mb-3">
+                Theme
+              </p>
+              <button
+                onClick={toggleDarkMode}
+                className="flex items-center gap-3 w-full p-3 rounded-lg border border-secondary-200 dark:border-secondary-700 hover:bg-secondary-50 dark:hover:bg-secondary-700/50 transition-colors"
+                aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                <div
+                  className="relative w-12 h-7 rounded-full transition-colors duration-200"
+                  style={{ backgroundColor: darkMode ? accentColor : '#d1d5db' }}
+                >
+                  <div
+                    className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-sm transition-transform duration-200 flex items-center justify-center ${
+                      darkMode ? 'translate-x-5' : 'translate-x-0.5'
+                    }`}
+                  >
+                    {darkMode ? (
+                      <Moon className="w-3.5 h-3.5 text-secondary-600" />
+                    ) : (
+                      <Sun className="w-3.5 h-3.5 text-secondary-600" />
+                    )}
+                  </div>
+                </div>
+                <span className="text-sm text-secondary-700 dark:text-secondary-300">
+                  {darkMode ? 'Dark mode' : 'Light mode'}
+                </span>
+              </button>
+            </div>
+
+            {/* Accent Color */}
+            <div>
+              <p className="text-sm text-secondary-500 dark:text-secondary-400 mb-3">
+                Accent color
+              </p>
+              <div className="grid grid-cols-5 gap-3">
               {APP_COLORS.map((color) => (
                 <button
                   key={color.value}
@@ -164,6 +198,7 @@ function HomePage() {
                   )}
                 </button>
               ))}
+              </div>
             </div>
           </div>
         </div>
