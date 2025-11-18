@@ -1,11 +1,13 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useThemeStore } from '@/stores/themeStore';
 import { Button, Input, Card } from '@/components/ui';
 
 function LoginPage() {
   const navigate = useNavigate();
   const { signIn, signUp, loading, error, clearError } = useAuth();
+  const { accentColor } = useThemeStore();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,7 +22,7 @@ function LoginPage() {
       } else {
         await signIn(email, password);
       }
-      navigate('/tasks');
+      navigate('/home');
     } catch {
       // Error is handled by the store
     }
@@ -36,7 +38,7 @@ function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo/Brand */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary-500 mb-2">MyDash</h1>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: accentColor }}>MyDash</h1>
           <p className="text-secondary-600 dark:text-secondary-400">
             Your personal productivity dashboard
           </p>
@@ -84,7 +86,8 @@ function LoginPage() {
             <button
               type="button"
               onClick={toggleMode}
-              className="text-sm text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 touch-manipulation"
+              className="text-sm hover:opacity-80 touch-manipulation"
+              style={{ color: accentColor }}
             >
               {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
             </button>

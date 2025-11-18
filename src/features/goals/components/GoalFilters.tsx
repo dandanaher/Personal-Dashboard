@@ -1,4 +1,5 @@
 import { Goal } from '@/lib/types';
+import { useThemeStore } from '@/stores/themeStore';
 
 export type FilterType = 'all' | Goal['type'];
 
@@ -9,6 +10,8 @@ interface GoalFiltersProps {
 }
 
 export function GoalFilters({ activeFilter, onFilterChange, counts }: GoalFiltersProps) {
+  const { accentColor } = useThemeStore();
+
   const filters: { value: FilterType; label: string }[] = [
     { value: 'all', label: 'All' },
     { value: 'weekly', label: 'Weekly' },
@@ -24,9 +27,10 @@ export function GoalFilters({ activeFilter, onFilterChange, counts }: GoalFilter
           key={filter.value}
           className={`px-4 py-2 rounded-lg whitespace-nowrap text-sm font-medium transition-colors flex-shrink-0 ${
             activeFilter === filter.value
-              ? 'bg-primary-500 text-white shadow-sm'
+              ? 'text-white shadow-sm'
               : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
           }`}
+          style={activeFilter === filter.value ? { backgroundColor: accentColor } : undefined}
           onClick={() => onFilterChange(filter.value)}
           aria-pressed={activeFilter === filter.value}
           aria-label={`Filter by ${filter.label} goals (${counts[filter.value] || 0} goals)`}

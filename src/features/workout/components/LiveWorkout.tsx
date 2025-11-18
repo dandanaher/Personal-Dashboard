@@ -3,6 +3,7 @@ import { X, Check, AlertTriangle } from 'lucide-react';
 import { Button, Input, Card } from '@/components/ui';
 import type { WorkoutTemplate } from '@/lib/types';
 import { useWorkoutSession } from '../hooks';
+import { useThemeStore } from '@/stores/themeStore';
 import {
   formatTime,
   calculateTotalVolume,
@@ -40,6 +41,8 @@ export default function LiveWorkout({
     adjustWeight,
     adjustReps,
   } = useWorkoutSession(template);
+
+  const { accentColor } = useThemeStore();
 
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [failureReps, setFailureReps] = useState('');
@@ -177,14 +180,18 @@ export default function LiveWorkout({
   const isPaused = phase.type === 'paused';
   const isResting = phase.type === 'resting' || phase.type === 'resting_for_failure';
 
+  // Create a slightly darker border color
+  const borderColor = `${accentColor}cc`;
+
   return (
     <div
-      className="pb-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-8rem)] bg-primary-500 flex flex-col select-none"
+      className="pb-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-8rem)] flex flex-col select-none"
+      style={{ backgroundColor: accentColor }}
       onClick={handleScreenTap}
       onTouchEnd={handleScreenTap}
     >
       {/* Header controls */}
-      <div className="flex-shrink-0 py-4 border-b border-primary-400">
+      <div className="flex-shrink-0 py-4 border-b" style={{ borderColor }}>
         <WorkoutControls
           isPaused={isPaused}
           elapsedTime={formatTime(elapsedSeconds)}
@@ -305,7 +312,7 @@ export default function LiveWorkout({
 
       {/* Quick adjust footer */}
       {(phase.type === 'active' || phase.type === 'ready') && currentExercise && (
-        <div className="flex-shrink-0 py-4 border-t border-primary-400" data-no-tap>
+        <div className="flex-shrink-0 py-4 border-t" style={{ borderColor }} data-no-tap>
           <QuickAdjust
             weight={currentExercise.currentWeight}
             reps={currentExercise.currentReps}

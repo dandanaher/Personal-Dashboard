@@ -1,4 +1,5 @@
 import { ButtonHTMLAttributes, forwardRef } from 'react';
+import { useThemeStore } from '@/stores/themeStore';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
@@ -17,20 +18,23 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       fullWidth = false,
       disabled,
       children,
+      style,
       ...props
     },
     ref
   ) => {
+    const { accentColor } = useThemeStore();
+
     const baseStyles =
       'inline-flex items-center justify-center font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 touch-manipulation select-none';
 
     const variantStyles = {
       primary:
-        'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500 disabled:bg-primary-300 dark:disabled:bg-primary-800',
+        'text-white disabled:opacity-50',
       secondary:
         'bg-secondary-200 text-secondary-900 hover:bg-secondary-300 focus:ring-secondary-500 dark:bg-secondary-700 dark:text-white dark:hover:bg-secondary-600',
       outline:
-        'border-2 border-primary-500 text-primary-500 hover:bg-primary-50 focus:ring-primary-500 dark:hover:bg-primary-900/20',
+        'border-2 hover:bg-opacity-10 dark:hover:bg-opacity-20',
       ghost:
         'text-secondary-600 hover:bg-secondary-100 focus:ring-secondary-500 dark:text-secondary-400 dark:hover:bg-secondary-800',
     };
@@ -43,11 +47,29 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     const widthStyles = fullWidth ? 'w-full' : '';
 
+    // Dynamic styles for primary and outline variants
+    const dynamicStyle: React.CSSProperties = {
+      ...style,
+    };
+
+    if (variant === 'primary') {
+      dynamicStyle.backgroundColor = disabled || isLoading ? undefined : accentColor;
+      dynamicStyle.boxShadow = `0 0 0 2px ${accentColor}`;
+      if (disabled || isLoading) {
+        dynamicStyle.backgroundColor = `${accentColor}80`;
+      }
+    } else if (variant === 'outline') {
+      dynamicStyle.borderColor = accentColor;
+      dynamicStyle.color = accentColor;
+      dynamicStyle.boxShadow = `0 0 0 2px ${accentColor}`;
+    }
+
     return (
       <button
         ref={ref}
         className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${widthStyles} ${className}`}
         disabled={disabled || isLoading}
+        style={dynamicStyle}
         {...props}
       >
         {isLoading ? (

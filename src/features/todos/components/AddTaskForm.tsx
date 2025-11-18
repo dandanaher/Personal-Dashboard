@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
+import { useThemeStore } from '@/stores/themeStore';
 
 interface AddTaskFormProps {
   onAdd: (title: string, description?: string) => Promise<boolean>;
@@ -12,6 +13,7 @@ export function AddTaskForm({ onAdd }: AddTaskFormProps) {
   const [showDescription, setShowDescription] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const { accentColor } = useThemeStore();
 
   // Auto-focus title input when form is rendered
   useEffect(() => {
@@ -116,11 +118,12 @@ export function AddTaskForm({ onAdd }: AddTaskFormProps) {
                 border border-secondary-300 dark:border-secondary-700
                 text-secondary-900 dark:text-white
                 placeholder-secondary-400 dark:placeholder-secondary-500
-                focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+                focus:outline-none focus:ring-2 focus:border-transparent
                 disabled:opacity-50 disabled:cursor-not-allowed
                 resize-none
                 text-sm
               "
+              style={{ '--tw-ring-color': accentColor } as React.CSSProperties}
               aria-label="Task description"
             />
           </div>

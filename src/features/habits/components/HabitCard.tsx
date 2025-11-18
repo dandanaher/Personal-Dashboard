@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { Card, Button } from '@/components/ui';
+import { useThemeStore } from '@/stores/themeStore';
 import { useHabitLogs } from '../hooks';
 import { ContributionGraph } from './ContributionGraph';
 import { HabitDetailModal } from './HabitDetailModal';
@@ -17,6 +18,7 @@ interface HabitCardProps {
 export function HabitCard({ habit, onEdit, onDelete, onCompletionChange }: HabitCardProps) {
   const { logs, stats, toggleLog, loading } = useHabitLogs(habit.id);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const { accentColor } = useThemeStore();
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const isCompletedToday = logs.some(log => log.date === today && log.completed);
@@ -92,7 +94,10 @@ export function HabitCard({ habit, onEdit, onDelete, onCompletionChange }: Habit
         {/* Contribution Graph */}
         {loading ? (
           <div className="h-32 flex items-center justify-center">
-            <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+            <div
+              className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin"
+              style={{ borderColor: `${accentColor} transparent transparent transparent` }}
+            />
           </div>
         ) : (
           <div onClick={(e) => e.stopPropagation()}>

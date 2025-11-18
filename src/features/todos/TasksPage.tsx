@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { format, addDays, subDays, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { Button, Card } from '@/components/ui';
+import { useThemeStore } from '@/stores/themeStore';
 import { useTasks } from './hooks/useTasks';
 import { TaskList } from './components/TaskList';
 import { AddTaskForm } from './components/AddTaskForm';
@@ -11,6 +12,7 @@ function TasksPageContent() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const { tasks, loading, error, addTask, toggleTask, deleteTask, refetch } = useTasks(selectedDate);
   const { showToast } = useToast();
+  const { accentColor } = useThemeStore();
 
   // Navigate to previous day
   const goToPreviousDay = () => {
@@ -96,7 +98,8 @@ function TasksPageContent() {
                 variant="ghost"
                 size="sm"
                 onClick={goToToday}
-                className="text-xs text-primary-500 hover:text-primary-600 p-1"
+                className="text-xs p-1"
+                style={{ color: accentColor }}
               >
                 <Calendar className="h-3 w-3 mr-1" />
                 Today

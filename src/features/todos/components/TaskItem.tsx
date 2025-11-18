@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Check, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { useThemeStore } from '@/stores/themeStore';
 import type { Task } from '@/lib/types';
 
 interface TaskItemProps {
@@ -16,6 +17,7 @@ export function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const isSwiping = useRef(false);
+  const { accentColor } = useThemeStore();
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -100,12 +102,17 @@ export function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
               flex-shrink-0 w-6 h-6 rounded-md border-2
               flex items-center justify-center
               transition-all duration-200 ease-in-out
-              focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+              focus:outline-none focus:ring-2 focus:ring-offset-2
               ${task.completed
-                ? 'bg-primary-500 border-primary-500 text-white'
-                : 'border-secondary-300 dark:border-secondary-600 hover:border-primary-400'
+                ? 'text-white'
+                : 'border-secondary-300 dark:border-secondary-600'
               }
             `}
+            style={{
+              backgroundColor: task.completed ? accentColor : undefined,
+              borderColor: task.completed ? accentColor : undefined,
+              '--tw-ring-color': accentColor,
+            } as React.CSSProperties}
             aria-label={task.completed ? 'Mark as incomplete' : 'Mark as complete'}
           >
             {task.completed && <Check className="h-4 w-4" />}

@@ -1,4 +1,5 @@
 import { InputHTMLAttributes, forwardRef } from 'react';
+import { useThemeStore } from '@/stores/themeStore';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -7,7 +8,8 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className = '', label, error, helperText, id, ...props }, ref) => {
+  ({ className = '', label, error, helperText, id, style, ...props }, ref) => {
+    const { accentColor } = useThemeStore();
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
 
     return (
@@ -35,10 +37,14 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             ${
               error
                 ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-                : 'border-secondary-300 dark:border-secondary-600 focus:ring-primary-500 focus:border-primary-500'
+                : 'border-secondary-300 dark:border-secondary-600'
             }
             ${className}
           `}
+          style={{
+            ...style,
+            '--tw-ring-color': error ? undefined : accentColor,
+          } as React.CSSProperties}
           {...props}
         />
         {error && <p className="mt-1.5 text-sm text-red-500">{error}</p>}

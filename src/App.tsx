@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import { useThemeStore } from '@/stores/themeStore';
 import { AppShell } from '@/components/layout';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { LoadingSpinner } from '@/components/ui';
@@ -8,6 +9,7 @@ import { LoadingSpinner } from '@/components/ui';
 // Pages
 import LoginPage from '@/pages/LoginPage';
 import NotFoundPage from '@/pages/NotFoundPage';
+import HomePage from '@/pages/HomePage';
 
 // Feature pages
 import TasksPage from '@/features/todos/TasksPage';
@@ -46,6 +48,7 @@ function ProtectedRoute({ children }: ProtectedRouteProps) {
 
 function App() {
   const { loading, error, initialize, user } = useAuthStore();
+  const { accentColor } = useThemeStore();
 
   console.log('App: Render - loading =', loading, ', user =', user?.email || 'none', ', error =', error);
 
@@ -56,21 +59,27 @@ function App() {
     });
   }, [initialize]);
 
+  // Initialize theme color CSS variable
+  useEffect(() => {
+    document.documentElement.style.setProperty('--accent-color', accentColor);
+  }, [accentColor]);
+
   // Show loading screen while initializing auth
   if (loading) {
     console.log('App: Showing loading screen');
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-primary-500">
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: accentColor }}>
         <h1 className="text-4xl font-bold text-white mb-4">MyDash</h1>
         <LoadingSpinner size="md" className="[&_svg]:text-white" />
-        <p className="mt-4 text-sm text-primary-100">Loading: {loading.toString()}</p>
-        <p className="text-xs text-primary-200">Check console for details</p>
+        <p className="mt-4 text-sm text-white/70">Loading: {loading.toString()}</p>
+        <p className="text-xs text-white/50">Check console for details</p>
         {error && (
           <div className="mt-4 text-center">
             <p className="text-sm text-red-200">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="mt-2 px-4 py-2 bg-white text-primary-500 rounded-lg text-sm font-medium"
+              className="mt-2 px-4 py-2 bg-white rounded-lg text-sm font-medium"
+              style={{ color: accentColor }}
             >
               Retry
             </button>
@@ -102,7 +111,8 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Navigate to="/tasks" replace />} />
+            <Route index element={<Navigate to="/home" replace />} />
+            <Route path="/home" element={<HomePage />} />
             <Route path="/tasks" element={<TasksPage />} />
             <Route path="/goals" element={<GoalsPage />} />
             <Route path="/habits" element={<HabitsPage />} />
