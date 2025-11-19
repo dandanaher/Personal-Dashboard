@@ -72,11 +72,11 @@ export async function calculateProgressiveOverload(
       if (!exercise || exercise.main_sets.length === 0) return null;
 
       const avgReps =
-        exercise.main_sets.reduce((sum: number, s: CompletedSet) => sum + s.reps, 0) /
+        exercise.main_sets.reduce((sum: number, s: CompletedSet) => sum + (s.reps || 0), 0) /
         exercise.main_sets.length;
 
       const allTargetHit = exercise.main_sets.every(
-        (s: CompletedSet) => s.reps >= exercise.target_reps
+        (s: CompletedSet) => (s.reps || 0) >= exercise.target_reps
       );
 
       return {
@@ -194,11 +194,11 @@ export async function getExerciseHistory(
       }
 
       const avgReps =
-        exercise.main_sets.reduce((sum: number, s: CompletedSet) => sum + s.reps, 0) /
+        exercise.main_sets.reduce((sum: number, s: CompletedSet) => sum + (s.reps || 0), 0) /
         exercise.main_sets.length;
 
       const allTargetHit = exercise.main_sets.every(
-        (s: CompletedSet) => s.reps >= exercise.target_reps
+        (s: CompletedSet) => (s.reps || 0) >= exercise.target_reps
       );
 
       return {

@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { X, TrendingUp, Award, Route, Timer } from 'lucide-react';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import type { CompletedExercise, ExerciseType } from '@/lib/types';
-import { calculateWorkoutVolume, getVolumeLabel } from '../lib/workoutEngine';
+import { getVolumeLabel } from '../lib/workoutEngine';
 
 // Helper to format duration
 const formatDuration = (seconds: number): string => {
@@ -242,7 +242,6 @@ export function SessionDetail({
   notes,
   onClose,
 }: SessionDetailProps) {
-  const volume = calculateWorkoutVolume(exercises);
   const volumeLabel = getVolumeLabel(exercises);
 
   // Prevent body scroll when modal is open

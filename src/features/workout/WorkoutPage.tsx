@@ -153,11 +153,13 @@ function WorkoutPageContent() {
     // Calculate progressive overload suggestions
     const suggestions = await calculateTemplateOverloads(
       user.id,
-      template.exercises.map(e => ({
-        name: e.name,
-        weight: e.weight,
-        reps_per_set: e.reps_per_set,
-      }))
+      template.exercises
+        .filter(e => e.weight !== undefined && e.reps_per_set !== undefined)
+        .map(e => ({
+          name: e.name,
+          weight: e.weight!,
+          reps_per_set: e.reps_per_set!,
+        }))
     );
 
     // Check if any suggestions recommend increasing

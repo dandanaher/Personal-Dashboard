@@ -1,6 +1,6 @@
 // Workout state machine and engine utilities
 
-import type { Exercise, CompletedExercise, CompletedSet, WorkoutSession, WorkoutTemplate, ExerciseType } from '@/lib/types';
+import type { Exercise, CompletedExercise, CompletedSet, WorkoutSession, WorkoutTemplate } from '@/lib/types';
 
 // =============================================================================
 // Volume Aggregation Types
