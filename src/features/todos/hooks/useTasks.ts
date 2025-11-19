@@ -3,6 +3,8 @@ import { format } from 'date-fns';
 import supabase from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { Task, TaskInsert } from '@/lib/types';
+import { incrementXP } from '@/features/gamification/hooks/useProfileStats';
+import { XP_REWARDS } from '@/features/gamification/utils';
 
 interface UseTasksReturn {
   tasks: Task[];
@@ -158,6 +160,11 @@ export function useTasks(date: Date): UseTasksReturn {
 
       if (updateError) {
         throw updateError;
+      }
+
+      // Award XP for completing a task (Focus)
+      if (newCompleted && user) {
+        await incrementXP(user.id, 'focus', XP_REWARDS.TASK_COMPLETE);
       }
     } catch (err) {
       // Rollback optimistic update

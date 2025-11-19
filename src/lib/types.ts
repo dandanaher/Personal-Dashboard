@@ -261,3 +261,44 @@ export type WorkoutTemplateInsert = Database['public']['Tables']['workout_templa
 export type WorkoutTemplateUpdate = Database['public']['Tables']['workout_templates']['Update'];
 export type WorkoutSessionInsert = Database['public']['Tables']['workout_sessions']['Insert'];
 export type WorkoutSessionUpdate = Database['public']['Tables']['workout_sessions']['Update'];
+
+// =============================================================================
+// Gamification Types
+// =============================================================================
+
+/**
+ * Attribute type IDs for the 4 pillars
+ */
+export type AttributeId = 'consistency' | 'vitality' | 'focus' | 'drive';
+
+/**
+ * Attribute definition from the attributes table.
+ * Defines a Life Balance stat pillar.
+ */
+export interface Attribute {
+  id: AttributeId;
+  name: string;
+  description: string | null;
+  /** Hex color code for UI */
+  color: string;
+  /** Lucide icon name string */
+  icon: string;
+}
+
+/**
+ * User XP tracking for each attribute.
+ */
+export interface UserXP {
+  user_id: string;
+  attribute_id: AttributeId;
+  current_xp: number;
+}
+
+/**
+ * Combined attribute with user's XP data for display.
+ */
+export interface AttributeWithXP extends Attribute {
+  current_xp: number;
+  level: number;
+  progress: number;
+}

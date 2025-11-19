@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Goal } from '@/lib/types';
 import { useAuthStore } from '@/stores/authStore';
+import { incrementXP } from '@/features/gamification/hooks/useProfileStats';
+import { XP_REWARDS } from '@/features/gamification/utils';
 
 export type GoalType = Goal['type'];
 export type FilterType = 'all' | GoalType;
@@ -303,6 +305,12 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
         completed: newCompleted,
         progress: newProgress,
       });
+
+      // Award XP for completing a goal (Drive)
+      if (result && newCompleted && user) {
+        await incrementXP(user.id, 'drive', XP_REWARDS.GOAL_COMPLETE);
+      }
+
       return result;
     } finally {
       // Clear toggling state after a short delay to allow state to propagate
@@ -310,7 +318,7 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
         togglingRef.current.delete(id);
       }, 300);
     }
-  }, [goals, updateGoal]);
+  }, [goals, updateGoal, user]);
 
   // Delete goal with optimistic update
   const deleteGoal = useCallback(async (id: string): Promise<boolean> => {

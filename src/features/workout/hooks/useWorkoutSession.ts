@@ -15,6 +15,8 @@ import {
   addSetToExercise,
   addFailureSetToExercise,
 } from '../lib/workoutEngine';
+import { incrementXP } from '@/features/gamification/hooks/useProfileStats';
+import { XP_REWARDS } from '@/features/gamification/utils';
 
 // =============================================================================
 // Types
@@ -469,6 +471,9 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
         .single();
 
       if (error) throw error;
+
+      // Award XP for completing a workout (Vitality)
+      await incrementXP(user.id, 'vitality', XP_REWARDS.WORKOUT_COMPLETE);
 
       setPhase({ type: 'complete' });
       return data.id;
