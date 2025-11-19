@@ -48,7 +48,7 @@ function BottomNav() {
   const circleSize = 48; // pixels
 
   return (
-    <nav className="fixed bottom-2 left-0 right-0 z-50 pb-safe-bottom flex justify-center pointer-events-none">
+    <nav className="fixed bottom-1 left-0 right-0 z-50 pb-safe-bottom flex justify-center pointer-events-none">
       <div
         className="relative bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/40 dark:border-white/20 shadow-lg shadow-black/5 pointer-events-auto"
         style={{ borderRadius: `${(circleSize + 8) / 2}px` }}
