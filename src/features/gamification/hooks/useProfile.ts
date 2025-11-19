@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { useProfileStore } from '@/stores/profileStore';
 import type { Profile } from '@/lib/types';
 
 interface UseProfileReturn {
@@ -12,71 +12,30 @@ interface UseProfileReturn {
 
 /**
  * Hook to fetch user's profile (username, avatar)
+ * Uses global profile store so all components share the same state
  */
 export function useProfile(): UseProfileReturn {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { user } = useAuthStore();
+  const { profile, loading, error, fetchProfile } = useProfileStore();
 
-  const fetchProfile = useCallback(async () => {
-    if (!user) {
-      setProfile(null);
-      setLoading(false);
-      return;
+  const refetch = useCallback(async () => {
+    if (user) {
+      await fetchProfile(user.id);
     }
+  }, [user, fetchProfile]);
 
-    try {
-      setError(null);
-
-      const { data, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (fetchError) {
-        // Profile might not exist yet for older users
-        if (fetchError.code === 'PGRST116') {
-          // No rows returned - create a default profile
-          const { data: newProfile, error: insertError } = await supabase
-            .from('profiles')
-            .insert({
-              id: user.id,
-              username: null,
-            })
-            .select()
-            .single();
-
-          if (insertError) {
-            throw insertError;
-          }
-
-          setProfile(newProfile);
-        } else {
-          throw fetchError;
-        }
-      } else {
-        setProfile(data);
-      }
-    } catch (err) {
-      console.error('Error fetching profile:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch profile');
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  // Initial fetch
+  // Initial fetch when user changes
   useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+    if (user) {
+      fetchProfile(user.id);
+    }
+  }, [user, fetchProfile]);
 
   return {
     profile,
     loading,
     error,
-    refetch: fetchProfile,
+    refetch,
   };
 }
 

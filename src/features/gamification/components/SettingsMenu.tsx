@@ -2,8 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Settings, LogOut, Sun, Moon, Check, Palette, User, Pencil } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore, APP_COLORS } from '@/stores/themeStore';
-import { useProfile } from '@/features/gamification/hooks';
-import { supabase } from '@/lib/supabase';
+import { useProfileStore } from '@/stores/profileStore';
 
 export function SettingsMenu() {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,7 +13,7 @@ export function SettingsMenu() {
   const inputRef = useRef<HTMLInputElement>(null);
   const { user, signOut } = useAuthStore();
   const { accentColor, setAccentColor, darkMode, toggleDarkMode } = useThemeStore();
-  const { profile, refetch: refetchProfile } = useProfile();
+  const { profile, updateProfile } = useProfileStore();
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -54,14 +53,7 @@ export function SettingsMenu() {
 
     setSavingUsername(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ username: newUsername.trim() || null })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      await refetchProfile();
+      await updateProfile(user.id, { username: newUsername.trim() || null });
       setIsEditingUsername(false);
     } catch (error) {
       console.error('Error saving username:', error);

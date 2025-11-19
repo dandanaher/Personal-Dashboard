@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabaseAuth, supabase } from '@/lib/supabase';
+import { useProfileStore } from '@/stores/profileStore';
 
 interface AuthState {
   user: User | null;
@@ -101,6 +102,9 @@ export const useAuthStore = create<AuthStore>()(
             if (profileError) {
               console.error('Auth store: profile creation error:', profileError.message);
               // Don't throw - user is created, profile can be added later
+            } else {
+              // Fetch profile into global store so it's immediately available
+              await useProfileStore.getState().fetchProfile(data.user.id);
             }
           }
 
@@ -133,6 +137,10 @@ export const useAuthStore = create<AuthStore>()(
           }
 
           console.log('Auth store: signOut success');
+
+          // Clear profile from global store
+          useProfileStore.getState().clearProfile();
+
           set({
             user: null,
             session: null,
