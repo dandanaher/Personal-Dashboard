@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { X, Plus, AlertCircle } from 'lucide-react';
+import { X, Plus, AlertCircle, Link2 } from 'lucide-react';
 import { Button, Input, Card } from '@/components/ui';
 import { useScrollLock } from '@/hooks/useScrollLock';
+import { useHabits } from '@/features/habits/hooks/useHabits';
 import type { WorkoutTemplate, Exercise } from '@/lib/types';
 import ExerciseBuilder, { ExerciseItem } from './ExerciseBuilder';
 
 interface TemplateBuilderProps {
   template?: WorkoutTemplate;
-  onSave: (name: string, description: string | null, exercises: Exercise[]) => Promise<boolean>;
+  onSave: (name: string, description: string | null, exercises: Exercise[], linkedHabitId: string | null) => Promise<boolean>;
   onClose: () => void;
 }
 
@@ -19,10 +20,13 @@ export default function TemplateBuilder({
   const [name, setName] = useState(template?.name || '');
   const [description, setDescription] = useState(template?.description || '');
   const [exercises, setExercises] = useState<Exercise[]>(template?.exercises || []);
+  const [linkedHabitId, setLinkedHabitId] = useState<string | null>(template?.linked_habit_id || null);
   const [editingExerciseIndex, setEditingExerciseIndex] = useState<number | null>(null);
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { habits } = useHabits();
 
   const handleAddExercise = (exercise: Exercise) => {
     setExercises(prev => [...prev, exercise]);
@@ -69,7 +73,8 @@ export default function TemplateBuilder({
       const success = await onSave(
         name.trim(),
         description.trim() || null,
-        exercises
+        exercises,
+        linkedHabitId
       );
 
       if (success) {
@@ -157,6 +162,31 @@ export default function TemplateBuilder({
               value={description}
               onChange={e => setDescription(e.target.value)}
             />
+
+            {/* Linked Habit Selector */}
+            <div>
+              <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">
+                <span className="flex items-center gap-1">
+                  <Link2 className="h-4 w-4" />
+                  Link to Habit (optional)
+                </span>
+              </label>
+              <select
+                value={linkedHabitId || ''}
+                onChange={e => setLinkedHabitId(e.target.value || null)}
+                className="w-full px-3 py-2 rounded-lg border border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 text-secondary-900 dark:text-secondary-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="">No linked habit</option>
+                {habits.map(habit => (
+                  <option key={habit.id} value={habit.id}>
+                    {habit.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-secondary-500 dark:text-secondary-400">
+                Completing this workout will automatically check the linked habit for today
+              </p>
+            </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">

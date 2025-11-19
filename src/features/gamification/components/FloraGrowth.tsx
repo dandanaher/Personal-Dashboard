@@ -45,7 +45,7 @@ export function FloraGrowth({ totalLevel }: FloraGrowthProps) {
   const FloraIcon = flora.icon;
 
   return (
-    <div className="py-6">
+    <div className="pb-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-semibold text-secondary-900 dark:text-white">Your Growth</h2>

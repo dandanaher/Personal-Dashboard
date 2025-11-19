@@ -1,6 +1,6 @@
 // Workout state machine and engine utilities
 
-import type { Exercise, CompletedExercise, CompletedSet } from '@/lib/types';
+import type { Exercise, CompletedExercise, CompletedSet, WorkoutSession, WorkoutTemplate } from '@/lib/types';
 
 // =============================================================================
 // Workout Phase State Machine
@@ -135,6 +135,59 @@ export function calculateTotalReps(exercises: CompletedExercise[]): number {
     const failureReps = exercise.failure_set?.reps || 0;
     return total + mainReps + failureReps;
   }, 0);
+}
+
+/**
+ * Check if a workout session was fully completed (all sets done for all exercises)
+ */
+export function isSessionFullyCompleted(session: WorkoutSession, template: WorkoutTemplate): boolean {
+  // Session must have completed_at and duration
+  if (!session.completed_at || !session.duration) return false;
+
+  const completedExercises = session.data.exercises;
+  const templateExercises = template.exercises;
+
+  // Must have same number of exercises
+  if (completedExercises.length !== templateExercises.length) return false;
+
+  // Check each exercise
+  for (let i = 0; i < templateExercises.length; i++) {
+    const templateEx = templateExercises[i];
+    const completedEx = completedExercises[i];
+
+    // Must have all main sets completed
+    if (completedEx.main_sets.length < templateEx.sets) return false;
+
+    // If to_failure is set, must have failure set
+    if (templateEx.to_failure && !completedEx.failure_set) return false;
+  }
+
+  return true;
+}
+
+/**
+ * Calculate average duration from fully completed sessions for a template
+ */
+export function calculateAverageDuration(
+  sessions: WorkoutSession[],
+  template: WorkoutTemplate
+): number | null {
+  // Filter sessions for this template that were fully completed
+  const completedSessions = sessions.filter(session =>
+    session.template_id === template.id &&
+    session.duration &&
+    isSessionFullyCompleted(session, template)
+  );
+
+  if (completedSessions.length === 0) return null;
+
+  // Calculate average duration
+  const totalDuration = completedSessions.reduce(
+    (sum, session) => sum + (session.duration || 0),
+    0
+  );
+
+  return Math.round(totalDuration / completedSessions.length);
 }
 
 // =============================================================================

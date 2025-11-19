@@ -13,8 +13,8 @@ interface UseWorkoutTemplatesReturn {
   templates: WorkoutTemplate[];
   loading: boolean;
   error: string | null;
-  createTemplate: (name: string, description: string | null, exercises: Exercise[]) => Promise<WorkoutTemplate | null>;
-  updateTemplate: (id: string, updates: Partial<{ name: string; description: string | null; exercises: Exercise[] }>) => Promise<boolean>;
+  createTemplate: (name: string, description: string | null, exercises: Exercise[], linkedHabitId?: string | null) => Promise<WorkoutTemplate | null>;
+  updateTemplate: (id: string, updates: Partial<{ name: string; description: string | null; exercises: Exercise[]; linked_habit_id: string | null }>) => Promise<boolean>;
   deleteTemplate: (id: string) => Promise<boolean>;
   duplicateTemplate: (id: string, newName: string) => Promise<WorkoutTemplate | null>;
   refetch: () => Promise<void>;
@@ -91,7 +91,8 @@ export function useWorkoutTemplates(): UseWorkoutTemplatesReturn {
     async (
       name: string,
       description: string | null,
-      exercises: Exercise[]
+      exercises: Exercise[],
+      linkedHabitId?: string | null
     ): Promise<WorkoutTemplate | null> => {
       if (!user) return null;
 
@@ -101,6 +102,7 @@ export function useWorkoutTemplates(): UseWorkoutTemplatesReturn {
           name,
           description,
           exercises,
+          linked_habit_id: linkedHabitId || null,
         };
 
         const { data, error: insertError } = await supabase
@@ -210,7 +212,7 @@ export function useWorkoutTemplates(): UseWorkoutTemplatesReturn {
         return null;
       }
 
-      return createTemplate(newName, template.description, template.exercises);
+      return createTemplate(newName, template.description, template.exercises, template.linked_habit_id);
     },
     [user, templates, createTemplate]
   );

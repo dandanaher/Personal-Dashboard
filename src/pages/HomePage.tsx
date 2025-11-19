@@ -43,9 +43,9 @@ function HomePage() {
 
   return (
     <div className="min-h-full pb-20">
-      <div className="max-w-lg mx-auto px-4 py-6">
+      <div className="max-w-lg mx-auto px-4 pt-2 pb-4">
         {/* Header with Settings */}
-        <div className="flex items-start justify-between mb-6">
+        <div className="flex items-start justify-between mb-3">
           <div>
             <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">
               {greeting}, {userName}

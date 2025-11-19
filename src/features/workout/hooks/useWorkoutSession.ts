@@ -1,6 +1,7 @@
 // Custom hook for managing live workout session state
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { WorkoutTemplate, Exercise, CompletedExercise, CompletedSet, WorkoutSessionData } from '@/lib/types';
@@ -474,6 +475,37 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
 
       // Award XP for completing a workout (Vitality)
       await incrementXP(user.id, 'vitality', XP_REWARDS.WORKOUT_COMPLETE);
+
+      // Auto-complete linked habit if configured
+      if (template.linked_habit_id) {
+        const today = format(new Date(), 'yyyy-MM-dd');
+
+        // Check if habit is already completed for today
+        const { data: existingLog } = await supabase
+          .from('habit_logs')
+          .select('id')
+          .eq('habit_id', template.linked_habit_id)
+          .eq('user_id', user.id)
+          .eq('date', today)
+          .single();
+
+        // Only create log if not already completed
+        if (!existingLog) {
+          const { error: habitError } = await supabase
+            .from('habit_logs')
+            .insert({
+              habit_id: template.linked_habit_id,
+              user_id: user.id,
+              date: today,
+              completed: true,
+            });
+
+          if (!habitError) {
+            // Award XP for completing a habit (Consistency)
+            await incrementXP(user.id, 'consistency', XP_REWARDS.HABIT_COMPLETE);
+          }
+        }
+      }
 
       setPhase({ type: 'complete' });
       return data.id;

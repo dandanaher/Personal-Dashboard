@@ -147,6 +147,8 @@ export interface WorkoutTemplate {
   description: string | null;
   /** Array of exercise definitions */
   exercises: Exercise[];
+  /** Optional linked habit ID for automatic habit completion on workout finish */
+  linked_habit_id: string | null;
   created_at: string;
   updated_at: string;
 }

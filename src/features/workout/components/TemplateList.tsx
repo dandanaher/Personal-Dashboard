@@ -1,10 +1,11 @@
 import { Plus, Dumbbell } from 'lucide-react';
 import { Button, Card } from '@/components/ui';
-import type { WorkoutTemplate } from '@/lib/types';
+import type { WorkoutTemplate, WorkoutSession } from '@/lib/types';
 import TemplateCard from './TemplateCard';
 
 interface TemplateListProps {
   templates: WorkoutTemplate[];
+  sessions: WorkoutSession[];
   loading: boolean;
   onStart: (template: WorkoutTemplate) => void;
   onEdit: (template: WorkoutTemplate) => void;
@@ -34,6 +35,7 @@ function TemplateSkeleton() {
 
 export default function TemplateList({
   templates,
+  sessions,
   loading,
   onStart,
   onEdit,
@@ -85,6 +87,7 @@ export default function TemplateList({
         <TemplateCard
           key={template.id}
           template={template}
+          sessions={sessions}
           onStart={onStart}
           onEdit={onEdit}
           onDuplicate={onDuplicate}

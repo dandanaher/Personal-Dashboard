@@ -1,11 +1,13 @@
-import { Play, Edit2, Copy, Trash2, Clock, Dumbbell } from 'lucide-react';
+import { Play, Edit2, Copy, Trash2, Clock, Dumbbell, Link } from 'lucide-react';
 import { Card } from '@/components/ui';
 import { useThemeStore } from '@/stores/themeStore';
-import type { WorkoutTemplate } from '@/lib/types';
-import { calculateEstimatedDuration, formatTime } from '../lib/workoutEngine';
+import { useHabits } from '@/features/habits/hooks/useHabits';
+import type { WorkoutTemplate, WorkoutSession } from '@/lib/types';
+import { calculateEstimatedDuration, calculateAverageDuration, formatTime } from '../lib/workoutEngine';
 
 interface TemplateCardProps {
   template: WorkoutTemplate;
+  sessions: WorkoutSession[];
   onStart: (template: WorkoutTemplate) => void;
   onEdit: (template: WorkoutTemplate) => void;
   onDuplicate: (template: WorkoutTemplate) => void;
@@ -14,14 +16,26 @@ interface TemplateCardProps {
 
 export default function TemplateCard({
   template,
+  sessions,
   onStart,
   onEdit,
   onDuplicate,
   onDelete,
 }: TemplateCardProps) {
   const { accentColor } = useThemeStore();
-  const estimatedDuration = calculateEstimatedDuration(template.exercises);
+  const { habits } = useHabits();
   const exerciseCount = template.exercises.length;
+
+  // Calculate duration - use historical average if available, otherwise estimate
+  const averageDuration = calculateAverageDuration(sessions, template);
+  const estimatedDuration = calculateEstimatedDuration(template.exercises);
+  const displayDuration = averageDuration ?? estimatedDuration;
+  const isHistoricalAverage = averageDuration !== null;
+
+  // Find the linked habit name if template has one
+  const linkedHabit = template.linked_habit_id
+    ? habits.find(h => h.id === template.linked_habit_id)
+    : null;
 
   return (
     <Card className="p-4">
@@ -40,10 +54,16 @@ export default function TemplateCard({
               <Dumbbell className="h-3.5 w-3.5" />
               {exerciseCount} {exerciseCount === 1 ? 'exercise' : 'exercises'}
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1" title={isHistoricalAverage ? 'Average from completed workouts' : 'Estimated duration'}>
               <Clock className="h-3.5 w-3.5" />
-              ~{formatTime(estimatedDuration)}
+              {isHistoricalAverage ? '' : '~'}{formatTime(displayDuration)}
             </span>
+            {linkedHabit && (
+              <span className="flex items-center gap-1 text-primary-600 dark:text-primary-400">
+                <Link className="h-3.5 w-3.5" />
+                {linkedHabit.name}
+              </span>
+            )}
           </div>
         </div>
 

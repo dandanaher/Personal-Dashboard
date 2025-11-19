@@ -103,8 +103,8 @@ function WorkoutPageContent() {
   const [selectedTemplateForWorkout, setSelectedTemplateForWorkout] = useState<WorkoutTemplate | null>(null);
 
   // Handle template actions
-  const handleCreateTemplate = async (name: string, description: string | null, exercises: Exercise[]) => {
-    const result = await createTemplate(name, description, exercises);
+  const handleCreateTemplate = async (name: string, description: string | null, exercises: Exercise[], linkedHabitId: string | null) => {
+    const result = await createTemplate(name, description, exercises, linkedHabitId);
     if (result) {
       showToast('Template created');
       return true;
@@ -113,10 +113,10 @@ function WorkoutPageContent() {
     return false;
   };
 
-  const handleUpdateTemplate = async (name: string, description: string | null, exercises: Exercise[]) => {
+  const handleUpdateTemplate = async (name: string, description: string | null, exercises: Exercise[], linkedHabitId: string | null) => {
     if (!editingTemplate) return false;
 
-    const result = await updateTemplate(editingTemplate.id, { name, description, exercises });
+    const result = await updateTemplate(editingTemplate.id, { name, description, exercises, linked_habit_id: linkedHabitId });
     if (result) {
       showToast('Template updated');
       setEditingTemplate(null);
@@ -260,6 +260,7 @@ function WorkoutPageContent() {
       {activeTab === 'templates' && (
         <TemplateList
           templates={templates}
+          sessions={sessions}
           loading={templatesLoading}
           onStart={handleStartWorkout}
           onEdit={setEditingTemplate}
