@@ -1,8 +1,53 @@
 import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
-import { X, TrendingUp, Award } from 'lucide-react';
+import { X, TrendingUp, Award, Route, Timer } from 'lucide-react';
 import { useScrollLock } from '@/hooks/useScrollLock';
-import type { CompletedExercise } from '@/lib/types';
+import type { CompletedExercise, ExerciseType } from '@/lib/types';
+import { calculateWorkoutVolume, getVolumeLabel } from '../lib/workoutEngine';
+
+// Helper to format duration
+const formatDuration = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins > 0) {
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${secs}s`;
+};
+
+// Helper to get set display based on exercise type
+const getSetDisplay = (set: { reps?: number; weight?: number; distance?: number; time?: number }, type: ExerciseType): string => {
+  switch (type) {
+    case 'strength':
+      return `${set.reps || 0} × ${set.weight || 0}kg`;
+    case 'cardio':
+      return `${set.distance || 0}km in ${formatDuration(set.time || 0)}`;
+    case 'timed':
+      const timeStr = formatDuration(set.time || 0);
+      const weightStr = set.weight ? ` @ ${set.weight}kg` : '';
+      return `${timeStr}${weightStr}`;
+    default:
+      return `${set.reps || 0} reps`;
+  }
+};
+
+// Helper to get target display based on exercise type
+const getTargetDisplay = (exercise: CompletedExercise): string => {
+  const type = exercise.type || 'strength';
+
+  switch (type) {
+    case 'strength':
+      return `${exercise.target_sets} × ${exercise.target_reps || 0} @ ${exercise.weight || 0}kg`;
+    case 'cardio':
+      return `${exercise.target_distance || 0}${exercise.distance_unit || 'km'} in ${formatDuration(exercise.target_time || 0)}`;
+    case 'timed':
+      const timeStr = formatDuration(exercise.target_time || 0);
+      const weightStr = exercise.weight ? ` @ ${exercise.weight}kg` : '';
+      return `${exercise.target_sets} × ${timeStr}${weightStr}`;
+    default:
+      return `${exercise.target_sets} sets`;
+  }
+};
 
 interface ExerciseHistoryProps {
   exercise: CompletedExercise;
@@ -13,9 +58,12 @@ export default function ExerciseHistory({
   exercise,
   onClose,
 }: ExerciseHistoryProps) {
-  const allSetsHitTarget = exercise.main_sets.every(
-    set => set.reps >= exercise.target_reps
-  );
+  const exerciseType = exercise.type || 'strength';
+
+  // Check if all sets hit target based on exercise type
+  const allSetsHitTarget = exerciseType === 'strength'
+    ? exercise.main_sets.every(set => (set.reps || 0) >= (exercise.target_reps || 0))
+    : true; // For non-strength, just completing is success
 
   // Prevent body scroll when modal is open
   useScrollLock(true);
@@ -71,14 +119,16 @@ export default function ExerciseHistory({
           {/* Target info */}
           <div className="mb-4 p-3 bg-secondary-50 dark:bg-secondary-800 rounded-lg">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-secondary-600 dark:text-secondary-400">
+              <span className="text-secondary-600 dark:text-secondary-400 flex items-center gap-1">
+                {exerciseType === 'cardio' && <Route className="h-3.5 w-3.5" />}
+                {exerciseType === 'timed' && <Timer className="h-3.5 w-3.5" />}
                 Target
               </span>
               <span className="font-medium text-secondary-900 dark:text-secondary-100">
-                {exercise.target_sets} × {exercise.target_reps} @ {exercise.weight}kg
+                {getTargetDisplay(exercise)}
               </span>
             </div>
-            {allSetsHitTarget && (
+            {allSetsHitTarget && exerciseType === 'strength' && (
               <div className="flex items-center gap-1.5 mt-2 text-green-600 dark:text-green-400 text-sm">
                 <TrendingUp className="h-4 w-4" />
                 All sets hit target!
@@ -89,7 +139,7 @@ export default function ExerciseHistory({
           {/* Main sets */}
           <div className="space-y-2 mb-4">
             <h3 className="text-sm font-medium text-secondary-700 dark:text-secondary-300">
-              Main Sets
+              {exerciseType === 'cardio' ? 'Results' : 'Sets'}
             </h3>
             {exercise.main_sets.map((set, index) => (
               <div
@@ -100,14 +150,9 @@ export default function ExerciseHistory({
                   <span className="w-6 h-6 flex items-center justify-center rounded-full bg-secondary-200 dark:bg-secondary-700 text-xs font-medium">
                     {index + 1}
                   </span>
-                  <div>
-                    <span className="font-medium text-secondary-900 dark:text-secondary-100">
-                      {set.reps} reps
-                    </span>
-                    <span className="text-secondary-500 dark:text-secondary-400">
-                      {' '}@ {set.weight}kg
-                    </span>
-                  </div>
+                  <span className="font-medium text-secondary-900 dark:text-secondary-100">
+                    {getSetDisplay(set, exerciseType)}
+                  </span>
                 </div>
                 <div className="text-xs text-secondary-500 dark:text-secondary-400">
                   {format(new Date(set.completed_at), 'h:mm:ss a')}
@@ -197,16 +242,8 @@ export function SessionDetail({
   notes,
   onClose,
 }: SessionDetailProps) {
-  const totalVolume = exercises.reduce((total, exercise) => {
-    const mainVolume = exercise.main_sets.reduce(
-      (sum, set) => sum + set.reps * set.weight,
-      0
-    );
-    const failureVolume = exercise.failure_set
-      ? exercise.failure_set.reps * exercise.failure_set.weight
-      : 0;
-    return total + mainVolume + failureVolume;
-  }, 0);
+  const volume = calculateWorkoutVolume(exercises);
+  const volumeLabel = getVolumeLabel(exercises);
 
   // Prevent body scroll when modal is open
   useScrollLock(true);
@@ -283,7 +320,7 @@ export function SessionDetail({
             </div>
             <div>
               <div className="text-lg font-bold text-secondary-900 dark:text-secondary-100">
-                {(totalVolume / 1000).toFixed(1)}k
+                {volumeLabel}
               </div>
               <div className="text-xs text-secondary-500 dark:text-secondary-400">
                 Volume
@@ -295,9 +332,10 @@ export function SessionDetail({
         {/* Exercises */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {exercises.map((exercise, index) => {
-            const allSetsHit = exercise.main_sets.every(
-              s => s.reps >= exercise.target_reps
-            );
+            const exerciseType = exercise.type || 'strength';
+            const allSetsHit = exerciseType === 'strength'
+              ? exercise.main_sets.every(s => (s.reps || 0) >= (exercise.target_reps || 0))
+              : true;
 
             return (
               <div
@@ -305,39 +343,49 @@ export function SessionDetail({
                 className="p-3 bg-secondary-50 dark:bg-secondary-800 rounded-lg"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium text-secondary-900 dark:text-secondary-100">
-                    {exercise.name}
-                  </h3>
-                  {allSetsHit && (
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium text-secondary-900 dark:text-secondary-100">
+                      {exercise.name}
+                    </h3>
+                    {exerciseType === 'cardio' && <Route className="h-3.5 w-3.5 text-blue-500" />}
+                    {exerciseType === 'timed' && <Timer className="h-3.5 w-3.5 text-purple-500" />}
+                  </div>
+                  {allSetsHit && exerciseType === 'strength' && (
                     <Award className="h-4 w-4 text-green-500" />
                   )}
                 </div>
 
                 <div className="space-y-1">
-                  {exercise.main_sets.map((set, setIdx) => (
-                    <div
-                      key={setIdx}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <span className="text-secondary-600 dark:text-secondary-400">
-                        Set {setIdx + 1}
-                      </span>
-                      <span className={`font-medium ${
-                        set.reps >= exercise.target_reps
-                          ? 'text-green-600 dark:text-green-400'
-                          : 'text-secondary-900 dark:text-secondary-100'
-                      }`}>
-                        {set.reps} × {set.weight}kg
-                      </span>
-                    </div>
-                  ))}
+                  {exercise.main_sets.map((set, setIdx) => {
+                    const hitTarget = exerciseType === 'strength'
+                      ? (set.reps || 0) >= (exercise.target_reps || 0)
+                      : true;
+
+                    return (
+                      <div
+                        key={setIdx}
+                        className="flex items-center justify-between text-sm"
+                      >
+                        <span className="text-secondary-600 dark:text-secondary-400">
+                          {exerciseType === 'cardio' ? 'Result' : `Set ${setIdx + 1}`}
+                        </span>
+                        <span className={`font-medium ${
+                          hitTarget
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-secondary-900 dark:text-secondary-100'
+                        }`}>
+                          {getSetDisplay(set, exerciseType)}
+                        </span>
+                      </div>
+                    );
+                  })}
                   {exercise.failure_set && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-orange-600 dark:text-orange-400">
                         Failure
                       </span>
                       <span className="font-medium text-orange-600 dark:text-orange-400">
-                        {exercise.failure_set.reps} × {exercise.failure_set.weight}kg
+                        {getSetDisplay(exercise.failure_set, exerciseType)}
                       </span>
                     </div>
                   )}

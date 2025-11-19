@@ -1,8 +1,8 @@
 import { format } from 'date-fns';
-import { Clock, Dumbbell, ChevronRight, Trash2 } from 'lucide-react';
+import { Clock, Dumbbell, ChevronRight, Trash2, Route, Timer } from 'lucide-react';
 import { Card } from '@/components/ui';
 import type { WorkoutSession } from '@/lib/types';
-import { formatTime, calculateTotalVolume, calculateTotalSets } from '../lib/workoutEngine';
+import { formatTime, calculateTotalSets, calculateWorkoutVolume, getVolumeLabel } from '../lib/workoutEngine';
 
 interface SessionCardProps {
   session: WorkoutSession;
@@ -16,8 +16,25 @@ export default function SessionCard({
   onDelete,
 }: SessionCardProps) {
   const totalSets = calculateTotalSets(session.data.exercises);
-  const totalVolume = calculateTotalVolume(session.data.exercises);
+  const volume = calculateWorkoutVolume(session.data.exercises);
+  const volumeLabel = getVolumeLabel(session.data.exercises);
   const exerciseCount = session.data.exercises.length;
+  const { exerciseCount: typeCounts } = volume;
+
+  // Determine dominant type for icon display
+  const hasCardio = typeCounts.cardio > 0;
+  const hasTimed = typeCounts.timed > 0;
+  const hasStrength = typeCounts.strength > 0;
+
+  // Get volume label text based on workout type
+  const getVolumeTypeLabel = () => {
+    if (typeCounts.cardio > typeCounts.strength && typeCounts.cardio > typeCounts.timed) {
+      return 'Total Distance';
+    } else if (typeCounts.timed > typeCounts.strength && typeCounts.timed > typeCounts.cardio) {
+      return 'Total Time';
+    }
+    return 'Total Volume';
+  };
 
   return (
     <Card
@@ -68,11 +85,14 @@ export default function SessionCard({
       {/* Volume summary */}
       <div className="mt-3 pt-3 border-t border-secondary-200 dark:border-secondary-700">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-secondary-500 dark:text-secondary-400">
-            Total Volume
+          <span className="text-secondary-500 dark:text-secondary-400 flex items-center gap-1">
+            {hasCardio && typeCounts.cardio >= typeCounts.strength && <Route className="h-3.5 w-3.5" />}
+            {hasTimed && typeCounts.timed >= typeCounts.strength && !hasCardio && <Timer className="h-3.5 w-3.5" />}
+            {hasStrength && typeCounts.strength > typeCounts.cardio && typeCounts.strength > typeCounts.timed && <Dumbbell className="h-3.5 w-3.5" />}
+            {getVolumeTypeLabel()}
           </span>
           <span className="font-semibold text-secondary-900 dark:text-secondary-100">
-            {totalVolume.toLocaleString()} kg
+            {volumeLabel}
           </span>
         </div>
       </div>

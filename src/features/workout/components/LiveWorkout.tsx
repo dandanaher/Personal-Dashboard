@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Check, AlertTriangle } from 'lucide-react';
-import { Button, Card } from '@/components/ui';
-import type { WorkoutTemplate } from '@/lib/types';
+import { Button, Card, Input } from '@/components/ui';
+import type { WorkoutTemplate, ExerciseType } from '@/lib/types';
 import { useWorkoutSession } from '../hooks';
 import { useThemeStore } from '@/stores/themeStore';
 import {
   formatTime,
-  calculateTotalVolume,
   calculateTotalSets,
-  calculateTotalReps,
+  calculateWorkoutVolume,
+  getVolumeLabel,
 } from '../lib/workoutEngine';
 import WorkoutControls from './WorkoutControls';
 import SetDisplay from './SetDisplay';
 import RestTimer from './RestTimer';
 import QuickAdjust from './QuickAdjust';
+import WorkoutTimer from './WorkoutTimer';
 
 interface LiveWorkoutProps {
   template: WorkoutTemplate;
@@ -49,6 +50,11 @@ export default function LiveWorkout({
   const [showFailureInput, setShowFailureInput] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
+  // Cardio input state
+  const [cardioDistance, setCardioDistance] = useState('');
+  const [cardioTime, setCardioTime] = useState('');
+  const [showCardioInput, setShowCardioInput] = useState(false);
+
   // Auto-start workout
   useEffect(() => {
     if (phase.type === 'idle') {
@@ -75,6 +81,11 @@ export default function LiveWorkout({
     }
   };
 
+  // Get current exercise type
+  const getExerciseType = (): ExerciseType => {
+    return currentExercise?.exercise.type || 'strength';
+  };
+
   // Handle screen tap for completing set
   const handleScreenTap = (e: React.MouseEvent | React.TouchEvent) => {
     // Don't trigger if clicking on buttons or inputs
@@ -88,10 +99,35 @@ export default function LiveWorkout({
     }
 
     if (phase.type === 'active') {
-      completeSet();
+      const exerciseType = getExerciseType();
+
+      if (exerciseType === 'strength') {
+        completeSet();
+      } else if (exerciseType === 'cardio') {
+        // Show cardio input modal
+        setShowCardioInput(true);
+      }
+      // Timed exercises use the timer component, not tap
     } else if (phase.type === 'failure_set') {
       setShowFailureInput(true);
     }
+  };
+
+  // Handle cardio set completion
+  const handleCardioSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const distance = parseFloat(cardioDistance) || currentExercise?.exercise.distance || 0;
+    const time = parseInt(cardioTime) || currentExercise?.exercise.target_time || 0;
+
+    completeSet({ distance, time });
+    setCardioDistance('');
+    setCardioTime('');
+    setShowCardioInput(false);
+  };
+
+  // Handle timed exercise completion
+  const handleTimedComplete = (actualTime: number) => {
+    completeSet({ time: actualTime, weight: currentExercise?.currentWeight });
   };
 
   // Handle failure set completion
@@ -112,9 +148,15 @@ export default function LiveWorkout({
 
   // Render complete screen
   if (phase.type === 'complete') {
-    const totalVolume = calculateTotalVolume(sessionData);
+    const volume = calculateWorkoutVolume(sessionData);
     const totalSets = calculateTotalSets(sessionData);
-    const totalReps = calculateTotalReps(sessionData);
+    const volumeLabel = getVolumeLabel(sessionData);
+    const { exerciseCount } = volume;
+
+    // Determine what metrics to show based on workout composition
+    const hasStrength = exerciseCount.strength > 0;
+    const hasCardio = exerciseCount.cardio > 0;
+    const hasTimed = exerciseCount.timed > 0;
 
     return (
       <div className="pb-20">
@@ -148,22 +190,42 @@ export default function LiveWorkout({
                   Sets
                 </div>
               </Card>
-              <Card className="p-4 text-center">
-                <div className="text-2xl font-bold text-secondary-900 dark:text-secondary-100">
-                  {totalReps}
-                </div>
-                <div className="text-xs text-secondary-500 dark:text-secondary-400">
-                  Reps
-                </div>
-              </Card>
-              <Card className="p-4 text-center">
-                <div className="text-2xl font-bold text-secondary-900 dark:text-secondary-100">
-                  {(totalVolume / 1000).toFixed(1)}k
-                </div>
-                <div className="text-xs text-secondary-500 dark:text-secondary-400">
-                  Volume (kg)
-                </div>
-              </Card>
+
+              {/* Show distance for cardio workouts */}
+              {hasCardio && (
+                <Card className="p-4 text-center">
+                  <div className="text-2xl font-bold text-secondary-900 dark:text-secondary-100">
+                    {volume.totalDistance.toFixed(1)}
+                  </div>
+                  <div className="text-xs text-secondary-500 dark:text-secondary-400">
+                    Distance ({volume.distanceUnit})
+                  </div>
+                </Card>
+              )}
+
+              {/* Show time for timed workouts */}
+              {hasTimed && (
+                <Card className="p-4 text-center">
+                  <div className="text-2xl font-bold text-secondary-900 dark:text-secondary-100">
+                    {formatTime(volume.totalTime)}
+                  </div>
+                  <div className="text-xs text-secondary-500 dark:text-secondary-400">
+                    Hold Time
+                  </div>
+                </Card>
+              )}
+
+              {/* Show volume for strength workouts */}
+              {hasStrength && (
+                <Card className="p-4 text-center">
+                  <div className="text-2xl font-bold text-secondary-900 dark:text-secondary-100">
+                    {volumeLabel}
+                  </div>
+                  <div className="text-xs text-secondary-500 dark:text-secondary-400">
+                    Volume
+                  </div>
+                </Card>
+              )}
             </div>
 
             <Button onClick={onComplete} size="lg" fullWidth>
@@ -249,19 +311,65 @@ export default function LiveWorkout({
         {/* Active state */}
         {phase.type === 'active' && currentExercise && (
           <div className="w-full max-w-sm">
-            <SetDisplay
-              exerciseName={currentExercise.exercise.name}
-              currentSet={currentExercise.setIdx + 1}
-              totalSets={currentExercise.exercise.sets}
-              reps={currentExercise.currentReps}
-              weight={currentExercise.currentWeight}
-            />
+            {/* Strength exercises */}
+            {getExerciseType() === 'strength' && (
+              <>
+                <SetDisplay
+                  exerciseName={currentExercise.exercise.name}
+                  currentSet={currentExercise.setIdx + 1}
+                  totalSets={currentExercise.exercise.sets}
+                  exerciseType="strength"
+                  reps={currentExercise.currentReps}
+                  weight={currentExercise.currentWeight}
+                />
+                <div className="mt-8 text-center">
+                  <p className="text-sm text-white/70 mb-2">
+                    Tap anywhere to complete set
+                  </p>
+                </div>
+              </>
+            )}
 
-            <div className="mt-8 text-center">
-              <p className="text-sm text-white/70 mb-2">
-                Tap anywhere to complete set
-              </p>
-            </div>
+            {/* Cardio exercises */}
+            {getExerciseType() === 'cardio' && (
+              <>
+                <SetDisplay
+                  exerciseName={currentExercise.exercise.name}
+                  currentSet={currentExercise.setIdx + 1}
+                  totalSets={currentExercise.exercise.sets}
+                  exerciseType="cardio"
+                  distance={currentExercise.exercise.distance}
+                  distanceUnit={currentExercise.exercise.distance_unit}
+                  targetTime={currentExercise.exercise.target_time}
+                />
+                <div className="mt-8 text-center">
+                  <p className="text-sm text-white/70 mb-2">
+                    Tap when complete to log results
+                  </p>
+                </div>
+              </>
+            )}
+
+            {/* Timed exercises */}
+            {getExerciseType() === 'timed' && (
+              <div data-no-tap>
+                <SetDisplay
+                  exerciseName={currentExercise.exercise.name}
+                  currentSet={currentExercise.setIdx + 1}
+                  totalSets={currentExercise.exercise.sets}
+                  exerciseType="timed"
+                  targetTime={currentExercise.exercise.target_time}
+                  weight={currentExercise.currentWeight}
+                />
+                <div className="mt-6">
+                  <WorkoutTimer
+                    targetTime={currentExercise.exercise.target_time || 60}
+                    onComplete={handleTimedComplete}
+                    accentColor={highlightColor}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -329,8 +437,8 @@ export default function LiveWorkout({
         )}
       </div>
 
-      {/* Quick adjust footer */}
-      {(phase.type === 'active' || phase.type === 'ready') && currentExercise && (
+      {/* Quick adjust footer - only for strength exercises */}
+      {(phase.type === 'active' || phase.type === 'ready') && currentExercise && getExerciseType() === 'strength' && (
         <div className="flex-shrink-0 py-4 border-t" style={{ borderColor }} data-no-tap>
           <QuickAdjust
             weight={currentExercise.currentWeight}
@@ -340,6 +448,52 @@ export default function LiveWorkout({
             highlightColor={highlightColor}
             accentColor={accentColor}
           />
+        </div>
+      )}
+
+      {/* Cardio input modal */}
+      {showCardioInput && currentExercise && (
+        <div className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4" data-no-tap>
+          <Card className="w-full max-w-sm p-6">
+            <h3 className="font-semibold text-secondary-900 dark:text-secondary-100 mb-4">
+              Log {currentExercise.exercise.name}
+            </h3>
+
+            <form onSubmit={handleCardioSubmit} className="space-y-4">
+              <Input
+                label={`Distance (${currentExercise.exercise.distance_unit || 'km'})`}
+                type="number"
+                step="0.1"
+                min="0"
+                value={cardioDistance}
+                onChange={e => setCardioDistance(e.target.value)}
+                placeholder={currentExercise.exercise.distance?.toString() || '0'}
+              />
+              <Input
+                label="Time (seconds)"
+                type="number"
+                min="0"
+                value={cardioTime}
+                onChange={e => setCardioTime(e.target.value)}
+                placeholder={currentExercise.exercise.target_time?.toString() || '0'}
+                helperText={cardioTime ? `${Math.floor(parseInt(cardioTime) / 60)}:${(parseInt(cardioTime) % 60).toString().padStart(2, '0')}` : ''}
+              />
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  fullWidth
+                  onClick={() => setShowCardioInput(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" fullWidth>
+                  Complete
+                </Button>
+              </div>
+            </form>
+          </Card>
         </div>
       )}
 

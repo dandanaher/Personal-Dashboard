@@ -5,27 +5,72 @@
 // =============================================================================
 
 /**
+ * Exercise type categories.
+ * - strength: Traditional weight training (sets, reps, weight)
+ * - cardio: Distance/time based exercises (running, cycling)
+ * - timed: Duration based exercises (planks, carries)
+ */
+export type ExerciseType = 'strength' | 'cardio' | 'timed';
+
+/**
+ * Distance unit for cardio exercises.
+ */
+export type DistanceUnit = 'km' | 'm' | 'mi';
+
+/**
  * Exercise definition for workout templates.
  * Defines the target parameters for an exercise.
  */
 export interface Exercise {
+  /** Optional unique identifier for React keys */
+  id?: string;
   name: string;
+  /** Exercise type - defaults to 'strength' for backward compatibility */
+  type?: ExerciseType;
   sets: number;
-  reps_per_set: number;
-  weight: number;
+
+  // Strength fields (optional for other types)
+  /** Reps per set - used for strength exercises */
+  reps_per_set?: number;
+  /** Weight in kg - used for strength and optional for timed */
+  weight?: number;
+
+  // Cardio fields
+  /** Target distance - used for cardio exercises */
+  distance?: number;
+  /** Distance unit - defaults to 'km' */
+  distance_unit?: DistanceUnit;
+
+  // Timed/Cardio fields
+  /** Target time in seconds - used for cardio and timed exercises */
+  target_time?: number;
+
   /** Rest time between sets in seconds */
   rest_time: number;
-  /** Whether to perform a final set to failure */
+  /** Whether to perform a final set to failure (strength only) */
   to_failure: boolean;
   notes?: string;
 }
 
 /**
  * A single completed set during a workout session.
+ * Fields are optional to support different exercise types.
  */
 export interface CompletedSet {
-  reps: number;
-  weight: number;
+  // Strength fields
+  /** Reps completed - used for strength exercises */
+  reps?: number;
+  /** Weight used - used for strength and timed exercises */
+  weight?: number;
+
+  // Cardio fields
+  /** Distance covered - used for cardio exercises */
+  distance?: number;
+
+  // Timed/Cardio fields
+  /** Actual time taken in seconds */
+  time?: number;
+
   /** ISO timestamp when this set was completed */
   completed_at: string;
 }
@@ -36,12 +81,29 @@ export interface CompletedSet {
  */
 export interface CompletedExercise {
   name: string;
+  /** Exercise type for display and calculation purposes */
+  type?: ExerciseType;
   target_sets: number;
-  target_reps: number;
-  weight: number;
+
+  // Strength targets
+  /** Target reps per set - used for strength exercises */
+  target_reps?: number;
+  /** Target weight - used for strength and timed exercises */
+  weight?: number;
+
+  // Cardio targets
+  /** Target distance - used for cardio exercises */
+  target_distance?: number;
+  /** Distance unit */
+  distance_unit?: DistanceUnit;
+
+  // Timed/Cardio targets
+  /** Target time in seconds */
+  target_time?: number;
+
   /** Array of completed main sets */
   main_sets: CompletedSet[];
-  /** Optional failure set performed after main sets */
+  /** Optional failure set performed after main sets (strength only) */
   failure_set?: CompletedSet;
 }
 

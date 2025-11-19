@@ -32,6 +32,14 @@ interface CurrentExerciseState {
   currentReps: number;
 }
 
+// Type-specific set completion data
+interface SetCompletionData {
+  reps?: number;
+  weight?: number;
+  distance?: number;
+  time?: number;
+}
+
 interface UseWorkoutSessionReturn {
   // State
   phase: WorkoutPhase;
@@ -42,7 +50,7 @@ interface UseWorkoutSessionReturn {
 
   // Actions
   startWorkout: () => void;
-  completeSet: (actualReps?: number) => void;
+  completeSet: (data?: SetCompletionData | number) => void;
   completeFailureSet: (reps: number) => void;
   skipRest: () => void;
   togglePause: () => void;
@@ -121,8 +129,17 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
   const initializeExerciseState = useCallback((exerciseIdx: number) => {
     const exercise = template.exercises[exerciseIdx];
     if (exercise) {
-      setCurrentWeight(exercise.weight);
-      setCurrentReps(exercise.reps_per_set);
+      const exerciseType = exercise.type || 'strength';
+
+      // Set weight (used by strength and timed)
+      setCurrentWeight(exercise.weight || 0);
+
+      // Set reps (only meaningful for strength)
+      if (exerciseType === 'strength') {
+        setCurrentReps(exercise.reps_per_set || 8);
+      } else {
+        setCurrentReps(0);
+      }
     }
   }, [template.exercises]);
 
@@ -308,7 +325,7 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
   }, []);
 
   // Complete current set
-  const completeSet = useCallback((actualReps?: number) => {
+  const completeSet = useCallback((data?: SetCompletionData | number) => {
     if (phase.type !== 'active') return;
 
     const { exerciseIdx, setIdx } = phase;
@@ -317,12 +334,59 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
 
     vibrateSetComplete();
 
-    // Create completed set data
-    const completedSet: CompletedSet = {
-      reps: actualReps ?? currentReps,
-      weight: currentWeight,
-      completed_at: new Date().toISOString(),
-    };
+    const exerciseType = exercise.type || 'strength';
+
+    // Create completed set data based on exercise type
+    let completedSet: CompletedSet;
+
+    if (typeof data === 'number') {
+      // Legacy support: number = actualReps for strength
+      completedSet = {
+        reps: data,
+        weight: currentWeight,
+        completed_at: new Date().toISOString(),
+      };
+    } else if (data) {
+      // Type-specific data provided
+      completedSet = {
+        reps: data.reps,
+        weight: data.weight ?? currentWeight,
+        distance: data.distance,
+        time: data.time,
+        completed_at: new Date().toISOString(),
+      };
+    } else {
+      // Default based on exercise type
+      switch (exerciseType) {
+        case 'strength':
+          completedSet = {
+            reps: currentReps,
+            weight: currentWeight,
+            completed_at: new Date().toISOString(),
+          };
+          break;
+        case 'cardio':
+          completedSet = {
+            distance: exercise.distance,
+            time: exercise.target_time,
+            completed_at: new Date().toISOString(),
+          };
+          break;
+        case 'timed':
+          completedSet = {
+            time: exercise.target_time,
+            weight: currentWeight || undefined,
+            completed_at: new Date().toISOString(),
+          };
+          break;
+        default:
+          completedSet = {
+            reps: currentReps,
+            weight: currentWeight,
+            completed_at: new Date().toISOString(),
+          };
+      }
+    }
 
     // Update session data
     setSessionData(prev => {
@@ -335,8 +399,8 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
     if (setIdx < exercise.sets - 1) {
       // More main sets to do
       startRestTimer(exercise.rest_time, exerciseIdx, setIdx + 1);
-    } else if (exercise.to_failure) {
-      // Rest before failure set
+    } else if (exercise.to_failure && exerciseType === 'strength') {
+      // Rest before failure set (strength only)
       startRestTimerForFailure(exercise.rest_time, exerciseIdx);
     } else if (exerciseIdx < template.exercises.length - 1) {
       // Next exercise

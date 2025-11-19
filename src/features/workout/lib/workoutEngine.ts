@@ -1,6 +1,27 @@
 // Workout state machine and engine utilities
 
-import type { Exercise, CompletedExercise, CompletedSet, WorkoutSession, WorkoutTemplate } from '@/lib/types';
+import type { Exercise, CompletedExercise, CompletedSet, WorkoutSession, WorkoutTemplate, ExerciseType } from '@/lib/types';
+
+// =============================================================================
+// Volume Aggregation Types
+// =============================================================================
+
+export interface WorkoutVolume {
+  /** Total weight volume (reps × weight) for strength exercises */
+  weightVolume: number;
+  /** Total distance for cardio exercises */
+  totalDistance: number;
+  /** Distance unit for display */
+  distanceUnit: 'km' | 'm' | 'mi';
+  /** Total time in seconds for timed/cardio exercises */
+  totalTime: number;
+  /** Breakdown by exercise type */
+  exerciseCount: {
+    strength: number;
+    cardio: number;
+    timed: number;
+  };
+}
 
 // =============================================================================
 // Workout Phase State Machine
@@ -99,26 +120,144 @@ export function formatRestTime(seconds: number): string {
 // =============================================================================
 
 export function calculateEstimatedDuration(exercises: Exercise[]): number {
-  // Estimate: 30s per set + rest time between sets
   return exercises.reduce((total, exercise) => {
-    const setTime = exercise.sets * 30; // 30s per set execution
-    const restTime = (exercise.sets - 1) * exercise.rest_time; // Rest between sets
-    const failureTime = exercise.to_failure ? 30 + exercise.rest_time : 0;
-    return total + setTime + restTime + failureTime;
+    const type = exercise.type || 'strength';
+
+    switch (type) {
+      case 'strength': {
+        const setTime = exercise.sets * 30; // 30s per set execution
+        const restTime = (exercise.sets - 1) * exercise.rest_time;
+        const failureTime = exercise.to_failure ? 30 + exercise.rest_time : 0;
+        return total + setTime + restTime + failureTime;
+      }
+      case 'cardio': {
+        // Use target time directly for cardio
+        return total + (exercise.target_time || 0);
+      }
+      case 'timed': {
+        // Duration per set + rest time
+        const setTime = exercise.sets * (exercise.target_time || 60);
+        const restTime = (exercise.sets - 1) * exercise.rest_time;
+        return total + setTime + restTime;
+      }
+      default:
+        return total + exercise.sets * 30;
+    }
   }, 0);
 }
 
+/**
+ * Calculate weight volume (reps × weight) for strength exercises only
+ * Kept for backward compatibility
+ */
 export function calculateTotalVolume(exercises: CompletedExercise[]): number {
   return exercises.reduce((total, exercise) => {
+    const type = exercise.type || 'strength';
+    if (type !== 'strength') return total;
+
     const mainVolume = exercise.main_sets.reduce(
-      (sum, set) => sum + set.reps * set.weight,
+      (sum, set) => sum + (set.reps || 0) * (set.weight || 0),
       0
     );
     const failureVolume = exercise.failure_set
-      ? exercise.failure_set.reps * exercise.failure_set.weight
+      ? (exercise.failure_set.reps || 0) * (exercise.failure_set.weight || 0)
       : 0;
     return total + mainVolume + failureVolume;
   }, 0);
+}
+
+/**
+ * Calculate comprehensive volume data for all exercise types
+ */
+export function calculateWorkoutVolume(exercises: CompletedExercise[]): WorkoutVolume {
+  const result: WorkoutVolume = {
+    weightVolume: 0,
+    totalDistance: 0,
+    distanceUnit: 'km',
+    totalTime: 0,
+    exerciseCount: {
+      strength: 0,
+      cardio: 0,
+      timed: 0,
+    },
+  };
+
+  for (const exercise of exercises) {
+    const type = exercise.type || 'strength';
+    result.exerciseCount[type]++;
+
+    switch (type) {
+      case 'strength': {
+        const mainVolume = exercise.main_sets.reduce(
+          (sum, set) => sum + (set.reps || 0) * (set.weight || 0),
+          0
+        );
+        const failureVolume = exercise.failure_set
+          ? (exercise.failure_set.reps || 0) * (exercise.failure_set.weight || 0)
+          : 0;
+        result.weightVolume += mainVolume + failureVolume;
+        break;
+      }
+      case 'cardio': {
+        // Sum up actual distances covered
+        const distance = exercise.main_sets.reduce(
+          (sum, set) => sum + (set.distance || 0),
+          0
+        );
+        result.totalDistance += distance;
+        // Use the exercise's distance unit (prefer first cardio exercise's unit)
+        if (exercise.distance_unit) {
+          result.distanceUnit = exercise.distance_unit;
+        }
+        // Sum actual times
+        const time = exercise.main_sets.reduce(
+          (sum, set) => sum + (set.time || 0),
+          0
+        );
+        result.totalTime += time;
+        break;
+      }
+      case 'timed': {
+        // Sum actual hold times
+        const time = exercise.main_sets.reduce(
+          (sum, set) => sum + (set.time || 0),
+          0
+        );
+        result.totalTime += time;
+        // Timed exercises can also have weight volume
+        const weightVolume = exercise.main_sets.reduce(
+          (sum, set) => sum + (set.time || 0) * (set.weight || 0),
+          0
+        );
+        result.weightVolume += weightVolume;
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Get the primary volume label for a workout based on exercise composition
+ */
+export function getVolumeLabel(exercises: CompletedExercise[]): string {
+  const volume = calculateWorkoutVolume(exercises);
+  const { exerciseCount } = volume;
+
+  // Determine dominant type
+  if (exerciseCount.cardio > exerciseCount.strength && exerciseCount.cardio > exerciseCount.timed) {
+    // Cardio-dominant
+    return `${volume.totalDistance.toFixed(1)} ${volume.distanceUnit}`;
+  } else if (exerciseCount.timed > exerciseCount.strength && exerciseCount.timed > exerciseCount.cardio) {
+    // Timed-dominant
+    const mins = Math.floor(volume.totalTime / 60);
+    const secs = volume.totalTime % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')} total`;
+  } else {
+    // Strength-dominant or mixed
+    return `${(volume.weightVolume / 1000).toFixed(1)}k kg`;
+  }
 }
 
 export function calculateTotalSets(exercises: CompletedExercise[]): number {
@@ -131,9 +270,39 @@ export function calculateTotalSets(exercises: CompletedExercise[]): number {
 
 export function calculateTotalReps(exercises: CompletedExercise[]): number {
   return exercises.reduce((total, exercise) => {
-    const mainReps = exercise.main_sets.reduce((sum, set) => sum + set.reps, 0);
+    const type = exercise.type || 'strength';
+    // Only count reps for strength exercises
+    if (type !== 'strength') return total;
+
+    const mainReps = exercise.main_sets.reduce((sum, set) => sum + (set.reps || 0), 0);
     const failureReps = exercise.failure_set?.reps || 0;
     return total + mainReps + failureReps;
+  }, 0);
+}
+
+/**
+ * Calculate total distance for cardio exercises
+ */
+export function calculateTotalDistance(exercises: CompletedExercise[]): number {
+  return exercises.reduce((total, exercise) => {
+    const type = exercise.type || 'strength';
+    if (type !== 'cardio') return total;
+
+    const distance = exercise.main_sets.reduce((sum, set) => sum + (set.distance || 0), 0);
+    return total + distance;
+  }, 0);
+}
+
+/**
+ * Calculate total time for timed/cardio exercises
+ */
+export function calculateTotalTime(exercises: CompletedExercise[]): number {
+  return exercises.reduce((total, exercise) => {
+    const type = exercise.type || 'strength';
+    if (type !== 'timed' && type !== 'cardio') return total;
+
+    const time = exercise.main_sets.reduce((sum, set) => sum + (set.time || 0), 0);
+    return total + time;
   }, 0);
 }
 
@@ -257,14 +426,38 @@ export function getNextPhase(
 // =============================================================================
 
 export function createEmptyExerciseData(exercise: Exercise): CompletedExercise {
-  return {
+  const type = exercise.type || 'strength';
+  const base = {
     name: exercise.name,
+    type,
     target_sets: exercise.sets,
-    target_reps: exercise.reps_per_set,
-    weight: exercise.weight,
     main_sets: [],
     failure_set: undefined,
   };
+
+  switch (type) {
+    case 'strength':
+      return {
+        ...base,
+        target_reps: exercise.reps_per_set,
+        weight: exercise.weight,
+      };
+    case 'cardio':
+      return {
+        ...base,
+        target_distance: exercise.distance,
+        distance_unit: exercise.distance_unit || 'km',
+        target_time: exercise.target_time,
+      };
+    case 'timed':
+      return {
+        ...base,
+        target_time: exercise.target_time,
+        weight: exercise.weight,
+      };
+    default:
+      return base;
+  }
 }
 
 export function addSetToExercise(
