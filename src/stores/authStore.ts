@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, Session, AuthError } from '@supabase/supabase-js';
-import { supabaseAuth } from '@/lib/supabase';
+import { supabaseAuth, supabase } from '@/lib/supabase';
 
 interface AuthState {
   user: User | null;
@@ -17,7 +17,7 @@ interface AuthActions {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, username?: string) => Promise<void>;
   signOut: () => Promise<void>;
   initialize: () => Promise<void>;
   clearError: () => void;
@@ -76,7 +76,7 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      signUp: async (email: string, password: string) => {
+      signUp: async (email: string, password: string, username?: string) => {
         console.log('Auth store: signUp called');
         set({ loading: true, error: null });
         try {
@@ -87,6 +87,21 @@ export const useAuthStore = create<AuthStore>()(
 
           if (error) {
             throw error;
+          }
+
+          // Create profile with username
+          if (data.user) {
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .insert({
+                id: data.user.id,
+                username: username || null,
+              });
+
+            if (profileError) {
+              console.error('Auth store: profile creation error:', profileError.message);
+              // Don't throw - user is created, profile can be added later
+            }
           }
 
           console.log('Auth store: signUp success');

@@ -1,14 +1,15 @@
 import { useAuthStore } from '@/stores/authStore';
-import { useProfileStats } from '@/features/gamification/hooks/useProfileStats';
-import { BalanceChart, StatCard, SettingsMenu } from '@/features/gamification/components';
+import { useProfileStats, useProfile } from '@/features/gamification/hooks';
+import { FloraGrowth, StatCard, SettingsMenu } from '@/features/gamification/components';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 function HomePage() {
   const { user } = useAuthStore();
-  const { attributes, loading, error } = useProfileStats();
+  const { attributes, loading: statsLoading, error: statsError } = useProfileStats();
+  const { profile, loading: profileLoading } = useProfile();
 
-  // Get first name or email prefix for greeting
-  const userName = user?.email?.split('@')[0] || 'there';
+  // Get username with fallbacks: username -> email prefix -> "Traveler"
+  const userName = profile?.username || user?.email?.split('@')[0] || 'Traveler';
   const greeting = getGreeting();
 
   function getGreeting() {
@@ -18,7 +19,7 @@ function HomePage() {
     return 'Good evening';
   }
 
-  if (loading) {
+  if (statsLoading || profileLoading) {
     return (
       <div className="min-h-full flex items-center justify-center">
         <LoadingSpinner />
@@ -26,12 +27,12 @@ function HomePage() {
     );
   }
 
-  if (error) {
+  if (statsError) {
     return (
       <div className="min-h-full flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-500 dark:text-red-400 mb-2">Failed to load profile</p>
-          <p className="text-sm text-secondary-500 dark:text-secondary-400">{error}</p>
+          <p className="text-sm text-secondary-500 dark:text-secondary-400">{statsError}</p>
         </div>
       </div>
     );
@@ -56,9 +57,9 @@ function HomePage() {
           <SettingsMenu />
         </div>
 
-        {/* Balance Chart */}
+        {/* Flora Growth */}
         <div className="mb-4">
-          <BalanceChart attributes={attributes} />
+          <FloraGrowth totalLevel={totalLevel} />
         </div>
 
         {/* Stat Cards Grid */}

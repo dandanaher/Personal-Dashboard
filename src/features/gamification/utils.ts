@@ -3,12 +3,13 @@
 export const XP_PER_LEVEL_CONSTANT = 0.1;
 
 /**
- * Calculate the level from XP using the formula: Level = floor(0.1 * sqrt(XP)) + 1
+ * Calculate the level from XP using the formula: Level = floor(0.1 * sqrt(XP))
+ * Zero-based: 0 XP = Level 0
  * This creates a curve where higher levels require more XP
  */
 export function getLevelFromXP(xp: number): number {
-  if (xp === 0) return 1;
-  return Math.floor(XP_PER_LEVEL_CONSTANT * Math.sqrt(xp)) + 1;
+  if (!xp || xp < 0) return 0;
+  return Math.floor(XP_PER_LEVEL_CONSTANT * Math.sqrt(xp));
 }
 
 /**
@@ -16,8 +17,8 @@ export function getLevelFromXP(xp: number): number {
  * Inverse of the level formula
  */
 export function getXPForLevel(level: number): number {
-  if (level <= 1) return 0;
-  return Math.pow((level - 1) / XP_PER_LEVEL_CONSTANT, 2);
+  if (level <= 0) return 0;
+  return Math.pow(level / XP_PER_LEVEL_CONSTANT, 2);
 }
 
 /**

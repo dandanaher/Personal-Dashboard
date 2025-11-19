@@ -11,6 +11,7 @@ function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
 
   // Navigate to home when user is authenticated
   useEffect(() => {
@@ -25,7 +26,7 @@ function LoginPage() {
 
     try {
       if (isSignUp) {
-        await signUp(email, password);
+        await signUp(email, password, username);
       } else {
         await signIn(email, password);
       }
@@ -58,6 +59,18 @@ function LoginPage() {
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {isSignUp && (
+              <Input
+                label="Username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Choose a username"
+                required
+                autoComplete="username"
+              />
+            )}
+
             <Input
               label="Email"
               type="email"

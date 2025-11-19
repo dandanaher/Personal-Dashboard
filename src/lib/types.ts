@@ -236,6 +236,17 @@ export interface UserProfile {
   updated_at: string;
 }
 
+/**
+ * Public profile from the profiles table.
+ * Stores username and avatar accessible via foreign keys.
+ */
+export interface Profile {
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+  created_at: string;
+}
+
 // =============================================================================
 // Utility Types
 // =============================================================================

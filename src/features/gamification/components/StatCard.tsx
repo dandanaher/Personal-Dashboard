@@ -17,7 +17,7 @@ export function StatCard({ attribute }: StatCardProps) {
   const Icon = iconMap[attribute.icon] || Target;
 
   return (
-    <div className="bg-white dark:bg-secondary-800 rounded-xl border border-secondary-200 dark:border-secondary-700 p-4">
+    <div className="bg-white dark:bg-secondary-800 rounded-3xl border border-secondary-200 dark:border-secondary-700 p-4">
       <div className="flex items-center gap-3 mb-3">
         <div
           className="p-2 rounded-lg"
