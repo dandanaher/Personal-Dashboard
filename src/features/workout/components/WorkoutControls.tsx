@@ -20,7 +20,7 @@ export default function WorkoutControls({
       <div className="flex items-center gap-2">
         <button
           onClick={onTogglePause}
-          className="p-2 rounded-lg bg-primary-400 text-white hover:bg-primary-300 transition-colors"
+          className="p-2 rounded-full bg-primary-400 text-white hover:bg-primary-300 transition-colors"
           aria-label={isPaused ? 'Resume workout' : 'Pause workout'}
         >
           {isPaused ? (
@@ -31,7 +31,7 @@ export default function WorkoutControls({
         </button>
         <button
           onClick={onEnd}
-          className="p-2 rounded-lg bg-primary-400 text-white hover:bg-red-500 transition-colors"
+          className="p-2 rounded-full bg-primary-400 text-white hover:bg-red-500 transition-colors"
           aria-label="End workout"
         >
           <Square className="h-5 w-5" />

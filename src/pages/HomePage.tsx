@@ -140,7 +140,7 @@ function HomePage() {
               </p>
               <button
                 onClick={toggleDarkMode}
-                className="flex items-center gap-3 w-full p-3 rounded-lg border border-secondary-200 dark:border-secondary-700 hover:bg-secondary-50 dark:hover:bg-secondary-700/50 transition-colors"
+                className="flex items-center gap-3 w-full p-3 rounded-full border border-secondary-200 dark:border-secondary-700 hover:bg-secondary-50 dark:hover:bg-secondary-700/50 transition-colors"
                 aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
               >
                 <div

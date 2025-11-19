@@ -25,7 +25,7 @@ export function GoalFilters({ activeFilter, onFilterChange, counts }: GoalFilter
       {filters.map(filter => (
         <button
           key={filter.value}
-          className={`px-4 py-2 rounded-lg whitespace-nowrap text-sm font-medium transition-colors flex-shrink-0 ${
+          className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors flex-shrink-0 ${
             activeFilter === filter.value
               ? 'text-white shadow-sm'
               : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'

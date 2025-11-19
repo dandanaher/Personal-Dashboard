@@ -106,7 +106,7 @@ export default function ExerciseBuilder({
               type="button"
               onClick={() => setRestTime(preset.value.toString())}
               className={`
-                px-3 py-1.5 rounded-md text-sm font-medium transition-colors
+                px-3 py-1.5 rounded-full text-sm font-medium transition-colors
                 ${
                   restTime === preset.value.toString()
                     ? 'bg-primary-500 text-white'

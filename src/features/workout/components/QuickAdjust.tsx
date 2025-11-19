@@ -19,7 +19,7 @@ export default function QuickAdjust({
       <div className="flex items-center justify-between bg-primary-400 rounded-lg p-2">
         <button
           onClick={() => onAdjustWeight(-2.5)}
-          className="w-11 h-11 flex items-center justify-center rounded-lg bg-white text-primary-600 hover:bg-primary-50 active:scale-95 transition-all touch-manipulation"
+          className="w-11 h-11 flex items-center justify-center rounded-full bg-white text-primary-600 hover:bg-primary-50 active:scale-95 transition-all touch-manipulation"
           aria-label="Decrease weight"
         >
           <Minus className="h-5 w-5" />
@@ -34,7 +34,7 @@ export default function QuickAdjust({
         </div>
         <button
           onClick={() => onAdjustWeight(2.5)}
-          className="w-11 h-11 flex items-center justify-center rounded-lg bg-white text-primary-600 hover:bg-primary-50 active:scale-95 transition-all touch-manipulation"
+          className="w-11 h-11 flex items-center justify-center rounded-full bg-white text-primary-600 hover:bg-primary-50 active:scale-95 transition-all touch-manipulation"
           aria-label="Increase weight"
         >
           <Plus className="h-5 w-5" />
@@ -45,7 +45,7 @@ export default function QuickAdjust({
       <div className="flex items-center justify-between bg-primary-400 rounded-lg p-2">
         <button
           onClick={() => onAdjustReps(-1)}
-          className="w-11 h-11 flex items-center justify-center rounded-lg bg-white text-primary-600 hover:bg-primary-50 active:scale-95 transition-all touch-manipulation"
+          className="w-11 h-11 flex items-center justify-center rounded-full bg-white text-primary-600 hover:bg-primary-50 active:scale-95 transition-all touch-manipulation"
           aria-label="Decrease reps"
         >
           <Minus className="h-5 w-5" />
@@ -60,7 +60,7 @@ export default function QuickAdjust({
         </div>
         <button
           onClick={() => onAdjustReps(1)}
-          className="w-11 h-11 flex items-center justify-center rounded-lg bg-white text-primary-600 hover:bg-primary-50 active:scale-95 transition-all touch-manipulation"
+          className="w-11 h-11 flex items-center justify-center rounded-full bg-white text-primary-600 hover:bg-primary-50 active:scale-95 transition-all touch-manipulation"
           aria-label="Increase reps"
         >
           <Plus className="h-5 w-5" />

@@ -99,7 +99,7 @@ export function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
               }
             }}
             className={`
-              flex-shrink-0 w-6 h-6 rounded-md border-2
+              flex-shrink-0 w-6 h-6 rounded-full border-2
               flex items-center justify-center
               transition-all duration-200 ease-in-out
               focus:outline-none focus:ring-2 focus:ring-offset-2

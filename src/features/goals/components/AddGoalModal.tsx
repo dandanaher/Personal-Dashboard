@@ -328,7 +328,7 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
                   key={goalType}
                   type="button"
                   onClick={() => handleTypeChange(goalType)}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
+                  className={`px-3 py-2 rounded-full text-sm font-medium capitalize transition-colors ${
                     type === goalType
                       ? 'text-white'
                       : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
@@ -370,7 +370,7 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
               <button
                 type="button"
                 onClick={() => setLinkToHabit(!linkToHabit)}
-                className={`p-2 rounded-lg transition-colors ${
+                className={`p-2 rounded-full transition-colors ${
                   linkToHabit
                     ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
                     : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-500'

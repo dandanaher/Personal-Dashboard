@@ -82,21 +82,21 @@ export default function TemplateCard({
       <div className="mt-3 pt-3 border-t border-secondary-200 dark:border-secondary-700 flex items-center gap-2">
         <button
           onClick={() => onEdit(template)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-secondary-600 dark:text-secondary-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800 rounded-md transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-secondary-600 dark:text-secondary-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800 rounded-full transition-colors"
         >
           <Edit2 className="h-3.5 w-3.5" />
           Edit
         </button>
         <button
           onClick={() => onDuplicate(template)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-secondary-600 dark:text-secondary-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800 rounded-md transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-secondary-600 dark:text-secondary-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800 rounded-full transition-colors"
         >
           <Copy className="h-3.5 w-3.5" />
           Duplicate
         </button>
         <button
           onClick={() => onDelete(template)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-secondary-600 dark:text-secondary-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors ml-auto"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-secondary-600 dark:text-secondary-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors ml-auto"
         >
           <Trash2 className="h-3.5 w-3.5" />
           Delete

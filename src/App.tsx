@@ -78,7 +78,7 @@ function App() {
             <p className="text-sm text-red-200">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="mt-2 px-4 py-2 bg-white rounded-lg text-sm font-medium"
+              className="mt-2 px-4 py-2 bg-white rounded-full text-sm font-medium"
               style={{ color: accentColor }}
             >
               Retry
