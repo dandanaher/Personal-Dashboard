@@ -5,6 +5,7 @@ interface RestTimerProps {
   totalSeconds: number;
   nextSetInfo: string;
   onSkip: () => void;
+  highlightColor?: string;
 }
 
 export default function RestTimer({
@@ -12,6 +13,7 @@ export default function RestTimer({
   totalSeconds,
   nextSetInfo,
   onSkip,
+  highlightColor,
 }: RestTimerProps) {
   const progress = 1 - remainingSeconds / totalSeconds;
   const circumference = 2 * Math.PI * 140;
@@ -27,10 +29,9 @@ export default function RestTimer({
             cx="160"
             cy="160"
             r="140"
-            stroke="currentColor"
+            stroke={highlightColor || 'currentColor'}
             strokeWidth="8"
             fill="none"
-            className="text-primary-400"
           />
           {/* Progress circle */}
           <circle
@@ -56,13 +57,13 @@ export default function RestTimer({
             {formatRestTime(remainingSeconds)}
           </span>
 
-          <div className="text-sm text-primary-100 mb-4 text-center">
+          <div className="text-sm text-white/70 mb-4 text-center">
             Next: {nextSetInfo}
           </div>
 
           <button
             onClick={onSkip}
-            className="px-6 py-2 text-sm font-medium text-primary-100 hover:text-white transition-colors"
+            className="px-6 py-2 rounded-full text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
           >
             Skip Rest
           </button>

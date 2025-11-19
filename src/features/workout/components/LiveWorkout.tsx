@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Check, AlertTriangle } from 'lucide-react';
-import { Button, Input, Card } from '@/components/ui';
+import { Button, Card } from '@/components/ui';
 import type { WorkoutTemplate } from '@/lib/types';
 import { useWorkoutSession } from '../hooks';
 import { useThemeStore } from '@/stores/themeStore';
@@ -45,7 +45,7 @@ export default function LiveWorkout({
   const { accentColor } = useThemeStore();
 
   const [showEndConfirm, setShowEndConfirm] = useState(false);
-  const [failureReps, setFailureReps] = useState('');
+  const [failureReps, setFailureReps] = useState(10);
   const [showFailureInput, setShowFailureInput] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
@@ -97,10 +97,9 @@ export default function LiveWorkout({
   // Handle failure set completion
   const handleFailureSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const reps = parseInt(failureReps);
-    if (reps > 0) {
-      completeFailureSet(reps);
-      setFailureReps('');
+    if (failureReps > 0) {
+      completeFailureSet(failureReps);
+      setFailureReps(10);
       setShowFailureInput(false);
     }
   };
@@ -179,7 +178,17 @@ export default function LiveWorkout({
   // Render paused overlay
   const isPaused = phase.type === 'paused';
 
-  // Create a slightly darker border color
+  // Create a slightly darker shade for highlights
+  const darkenColor = (hex: string, percent: number) => {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = Math.max(0, (num >> 16) - amt);
+    const G = Math.max(0, ((num >> 8) & 0x00ff) - amt);
+    const B = Math.max(0, (num & 0x0000ff) - amt);
+    return `#${(0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1)}`;
+  };
+
+  const highlightColor = darkenColor(accentColor, 15);
   const borderColor = `${accentColor}cc`;
 
   return (
@@ -197,6 +206,7 @@ export default function LiveWorkout({
           exerciseProgress={getExerciseProgress()}
           onTogglePause={togglePause}
           onEnd={() => setShowEndConfirm(true)}
+          highlightColor={highlightColor}
         />
       </div>
 
@@ -221,6 +231,7 @@ export default function LiveWorkout({
             totalSeconds={currentExercise.exercise.rest_time}
             nextSetInfo={`Set ${phase.setIdx + 1}/${currentExercise.exercise.sets} • ${currentExercise.currentReps} reps @ ${currentExercise.currentWeight}kg`}
             onSkip={skipRest}
+            highlightColor={highlightColor}
           />
         )}
 
@@ -231,6 +242,7 @@ export default function LiveWorkout({
             totalSeconds={currentExercise.exercise.rest_time}
             nextSetInfo={`Failure Set • ${currentExercise.currentWeight}kg`}
             onSkip={skipRest}
+            highlightColor={highlightColor}
           />
         )}
 
@@ -246,7 +258,7 @@ export default function LiveWorkout({
             />
 
             <div className="mt-8 text-center">
-              <p className="text-sm text-primary-100 mb-2">
+              <p className="text-sm text-white/70 mb-2">
                 Tap anywhere to complete set
               </p>
             </div>
@@ -261,27 +273,35 @@ export default function LiveWorkout({
                 <h2 className="text-2xl font-bold text-white mb-2">
                   {currentExercise.exercise.name}
                 </h2>
-                <p className="text-primary-100 mb-6">
+                <p className="text-white/70 mb-6">
                   How many reps did you get?
                 </p>
 
-                <form onSubmit={handleFailureSubmit} className="space-y-4">
-                  <Input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={failureReps}
-                    onChange={e => setFailureReps(e.target.value)}
-                    placeholder="Enter reps"
-                    className="text-center text-2xl bg-white"
-                    autoFocus
-                  />
+                <form onSubmit={handleFailureSubmit} className="space-y-6">
+                  <div>
+                    <div className="text-5xl font-bold text-white mb-4">
+                      {failureReps}
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="30"
+                      value={failureReps}
+                      onChange={e => setFailureReps(Number(e.target.value))}
+                      className="w-full h-3 bg-white/30 rounded-full appearance-none cursor-pointer"
+                      style={{ accentColor: 'white' }}
+                    />
+                    <div className="flex justify-between text-xs text-white/70 mt-2">
+                      <span>1</span>
+                      <span>30</span>
+                    </div>
+                  </div>
                   <Button
                     type="submit"
                     size="lg"
                     fullWidth
                     variant="secondary"
-                    disabled={!failureReps || parseInt(failureReps) < 1}
+                    disabled={failureReps < 1}
                   >
                     Confirm
                   </Button>
@@ -299,7 +319,7 @@ export default function LiveWorkout({
                 />
 
                 <div className="mt-8 text-center">
-                  <p className="text-sm text-primary-100 mb-2">
+                  <p className="text-sm text-white/70 mb-2">
                     Tap when complete
                   </p>
                 </div>
@@ -317,6 +337,8 @@ export default function LiveWorkout({
             reps={currentExercise.currentReps}
             onAdjustWeight={adjustWeight}
             onAdjustReps={adjustReps}
+            highlightColor={highlightColor}
+            accentColor={accentColor}
           />
         </div>
       )}

@@ -6,6 +6,7 @@ interface WorkoutControlsProps {
   exerciseProgress: string;
   onTogglePause: () => void;
   onEnd: () => void;
+  highlightColor?: string;
 }
 
 export default function WorkoutControls({
@@ -14,13 +15,15 @@ export default function WorkoutControls({
   exerciseProgress,
   onTogglePause,
   onEnd,
+  highlightColor,
 }: WorkoutControlsProps) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
         <button
           onClick={onTogglePause}
-          className="p-2 rounded-full bg-primary-400 text-white hover:bg-primary-300 transition-colors"
+          className="p-2 rounded-full text-white hover:opacity-80 transition-colors"
+          style={{ backgroundColor: highlightColor }}
           aria-label={isPaused ? 'Resume workout' : 'Pause workout'}
         >
           {isPaused ? (
@@ -31,7 +34,8 @@ export default function WorkoutControls({
         </button>
         <button
           onClick={onEnd}
-          className="p-2 rounded-full bg-primary-400 text-white hover:bg-red-500 transition-colors"
+          className="p-2 rounded-full text-white hover:bg-red-500 transition-colors"
+          style={{ backgroundColor: highlightColor }}
           aria-label="End workout"
         >
           <Square className="h-5 w-5" />
@@ -39,7 +43,7 @@ export default function WorkoutControls({
       </div>
 
       <div className="text-center">
-        <div className="text-xs text-primary-100">
+        <div className="text-xs text-white/70">
           {exerciseProgress}
         </div>
       </div>
