@@ -100,11 +100,10 @@ export function HabitCard({ habit, onEdit, onDelete, onCompletionChange }: Habit
             />
           </div>
         ) : (
-          <div onClick={(e) => e.stopPropagation()}>
+          <div>
             <ContributionGraph
               logs={logs}
               color={habit.color}
-              onDayClick={toggleLog}
             />
           </div>
         )}

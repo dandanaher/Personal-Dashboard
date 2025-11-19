@@ -1,11 +1,10 @@
-import { useMemo, useState, useRef, useEffect } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import { format, addDays, subDays, startOfWeek } from 'date-fns';
 import type { HabitLog } from '@/lib/types';
 
 interface ContributionGraphProps {
   logs: HabitLog[];
   color: string;
-  onDayClick: (date: string) => void;
   showMonthLabels?: boolean;
   allowDragScroll?: boolean;
 }
@@ -13,8 +12,7 @@ interface ContributionGraphProps {
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-export function ContributionGraph({ logs, color, onDayClick, showMonthLabels = false, allowDragScroll = false }: ContributionGraphProps) {
-  const [hoveredDate, setHoveredDate] = useState<string | null>(null);
+export function ContributionGraph({ logs, color, showMonthLabels = false, allowDragScroll = false }: ContributionGraphProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const startX = useRef(0);
@@ -218,26 +216,16 @@ export function ContributionGraph({ logs, color, onDayClick, showMonthLabels = f
               {weeks.map((week, weekIdx) => (
                 <div key={weekIdx} className="flex flex-col gap-[3px]">
                   {week.map((date, dayIdx) => {
-                    const dateStr = format(date, 'yyyy-MM-dd');
-                    const isCompleted = completedDates.has(dateStr);
                     const isFuture = isFutureDate(date);
 
                     return (
-                      <button
+                      <div
                         key={dayIdx}
-                        type="button"
                         className={`
                           w-[11px] h-[11px] md:w-[13px] md:h-[13px] rounded-sm
-                          transition-all duration-100
-                          ${isFuture ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer hover:ring-2 hover:ring-offset-1 hover:ring-secondary-400 dark:hover:ring-secondary-500'}
-                          focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary-500
+                          ${isFuture ? 'opacity-30' : ''}
                         `}
                         style={{ backgroundColor: getCellColor(date) }}
-                        onClick={() => !isFuture && onDayClick(dateStr)}
-                        onMouseEnter={() => setHoveredDate(dateStr)}
-                        onMouseLeave={() => setHoveredDate(null)}
-                        disabled={isFuture}
-                        aria-label={`${format(date, 'MMMM d, yyyy')} - ${isCompleted ? 'Completed' : 'Not completed'}`}
                       />
                     );
                   })}
@@ -247,14 +235,6 @@ export function ContributionGraph({ logs, color, onDayClick, showMonthLabels = f
           </div>
         </div>
       </div>
-
-      {/* Tooltip */}
-      {hoveredDate && (
-        <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-secondary-900 dark:bg-secondary-700 text-white text-xs rounded shadow-lg whitespace-nowrap pointer-events-none z-10">
-          {format(new Date(hoveredDate + 'T00:00:00'), 'MMM d, yyyy')} - {completedDates.has(hoveredDate) ? 'Completed' : 'Not completed'}
-        </div>
-      )}
-
     </div>
   );
 }

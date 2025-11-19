@@ -6,44 +6,44 @@ interface HabitStatsProps {
 
 export function HabitStats({ stats }: HabitStatsProps) {
   return (
-    <div className="grid grid-cols-2 gap-3 text-sm">
-      <div className="bg-secondary-50 dark:bg-secondary-800/50 rounded-lg p-3">
-        <span className="text-secondary-500 dark:text-secondary-400 text-xs">
-          Current Streak
+    <div className="grid grid-cols-4 gap-2 text-xs">
+      <div className="bg-secondary-50 dark:bg-secondary-800/50 rounded-lg p-2 text-center">
+        <span className="text-secondary-500 dark:text-secondary-400 block">
+          Streak
         </span>
-        <p className="font-semibold text-secondary-900 dark:text-white mt-1">
-          <span className="mr-1" aria-hidden="true">🔥</span>
-          {stats.currentStreak} {stats.currentStreak === 1 ? 'day' : 'days'}
+        <p className="font-semibold text-secondary-900 dark:text-white mt-0.5">
+          <span className="mr-0.5" aria-hidden="true">🔥</span>
+          {stats.currentStreak}
         </p>
       </div>
 
-      <div className="bg-secondary-50 dark:bg-secondary-800/50 rounded-lg p-3">
-        <span className="text-secondary-500 dark:text-secondary-400 text-xs">
-          Longest Streak
+      <div className="bg-secondary-50 dark:bg-secondary-800/50 rounded-lg p-2 text-center">
+        <span className="text-secondary-500 dark:text-secondary-400 block">
+          Best
         </span>
-        <p className="font-semibold text-secondary-900 dark:text-white mt-1">
-          <span className="mr-1" aria-hidden="true">🏆</span>
-          {stats.longestStreak} {stats.longestStreak === 1 ? 'day' : 'days'}
+        <p className="font-semibold text-secondary-900 dark:text-white mt-0.5">
+          <span className="mr-0.5" aria-hidden="true">🏆</span>
+          {stats.longestStreak}
         </p>
       </div>
 
-      <div className="bg-secondary-50 dark:bg-secondary-800/50 rounded-lg p-3">
-        <span className="text-secondary-500 dark:text-secondary-400 text-xs">
-          Completion Rate
+      <div className="bg-secondary-50 dark:bg-secondary-800/50 rounded-lg p-2 text-center">
+        <span className="text-secondary-500 dark:text-secondary-400 block">
+          Rate
         </span>
-        <p className="font-semibold text-secondary-900 dark:text-white mt-1">
-          <span className="mr-1" aria-hidden="true">📊</span>
+        <p className="font-semibold text-secondary-900 dark:text-white mt-0.5">
+          <span className="mr-0.5" aria-hidden="true">📊</span>
           {stats.completionRate}%
         </p>
       </div>
 
-      <div className="bg-secondary-50 dark:bg-secondary-800/50 rounded-lg p-3">
-        <span className="text-secondary-500 dark:text-secondary-400 text-xs">
-          Total Completed
+      <div className="bg-secondary-50 dark:bg-secondary-800/50 rounded-lg p-2 text-center">
+        <span className="text-secondary-500 dark:text-secondary-400 block">
+          Total
         </span>
-        <p className="font-semibold text-secondary-900 dark:text-white mt-1">
-          <span className="mr-1" aria-hidden="true">✅</span>
-          {stats.completedDays} {stats.completedDays === 1 ? 'day' : 'days'}
+        <p className="font-semibold text-secondary-900 dark:text-white mt-0.5">
+          <span className="mr-0.5" aria-hidden="true">✅</span>
+          {stats.completedDays}
         </p>
       </div>
     </div>

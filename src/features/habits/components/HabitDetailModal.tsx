@@ -1,11 +1,12 @@
 import { createPortal } from 'react-dom';
 import { X, Edit2, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui';
 import { HabitStats } from './HabitStats';
 import { ContributionGraph } from './ContributionGraph';
+import { HabitCalendar } from './HabitCalendar';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import type { HabitStats as HabitStatsType } from '../hooks';
 import type { HabitLog, Habit } from '@/lib/types';
+
 
 interface HabitDetailModalProps {
   isOpen: boolean;
@@ -93,24 +94,41 @@ export function HabitDetailModal({
               </p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-full hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors flex-shrink-0"
-            aria-label="Close modal"
-          >
-            <X className="w-5 h-5 text-secondary-500" />
-          </button>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button
+              type="button"
+              onClick={handleEdit}
+              className="p-2 rounded-lg bg-secondary-100 dark:bg-secondary-800 hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-colors"
+              aria-label="Edit habit"
+            >
+              <Edit2 className="w-4 h-4 text-secondary-600 dark:text-secondary-400" />
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="p-2 rounded-lg bg-secondary-100 dark:bg-secondary-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+              aria-label="Delete habit"
+            >
+              <Trash2 className="w-4 h-4 text-secondary-600 dark:text-secondary-400 hover:text-red-500" />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-full hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors"
+              aria-label="Close modal"
+            >
+              <X className="w-5 h-5 text-secondary-500" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
-        <div className="p-4 space-y-4">
+        <div className="px-4 pt-3 pb-1 space-y-3 max-h-[70vh] overflow-y-auto">
           {/* Contribution Graph */}
           <div>
             <ContributionGraph
               logs={logs}
               color={habit.color}
-              onDayClick={onDayClick}
               showMonthLabels={true}
               allowDragScroll={true}
             />
@@ -119,27 +137,12 @@ export function HabitDetailModal({
           {/* Stats */}
           <HabitStats stats={stats} />
 
-          {/* Action buttons */}
-          <div className="flex gap-3 pt-2">
-            <Button
-              variant="outline"
-              onClick={handleEdit}
-              fullWidth
-              className="gap-2"
-            >
-              <Edit2 className="w-4 h-4" />
-              Edit
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleDelete}
-              fullWidth
-              className="gap-2 text-red-500 border-red-300 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete
-            </Button>
-          </div>
+          {/* Calendar for day selection */}
+          <HabitCalendar
+            logs={logs}
+            color={habit.color}
+            onDayClick={onDayClick}
+          />
         </div>
       </div>
 
