@@ -59,7 +59,7 @@ export function HabitDetailModal({
         className="
           w-full md:max-w-md
           bg-white dark:bg-secondary-900
-          rounded-t-2xl md:rounded-2xl
+          rounded-t-3xl md:rounded-3xl
           shadow-xl
           animate-slide-up md:animate-fade-in
         "

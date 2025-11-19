@@ -35,7 +35,7 @@ export default function ExerciseHistory({
         className="
           w-full md:max-w-md
           bg-white dark:bg-secondary-900
-          rounded-t-2xl md:rounded-2xl
+          rounded-t-3xl md:rounded-3xl
           shadow-xl
           animate-slide-up md:animate-fade-in
           max-h-[80vh] overflow-hidden flex flex-col
@@ -226,7 +226,7 @@ export function SessionDetail({
         className="
           w-full md:max-w-lg
           bg-white dark:bg-secondary-900
-          rounded-t-2xl md:rounded-2xl
+          rounded-t-3xl md:rounded-3xl
           shadow-xl
           animate-slide-up md:animate-fade-in
           max-h-[90vh] overflow-hidden flex flex-col
