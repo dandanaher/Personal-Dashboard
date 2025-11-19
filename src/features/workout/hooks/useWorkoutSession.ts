@@ -73,6 +73,10 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const restIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Store rest end time for background-safe timing
+  const restEndTimeRef = useRef<number | null>(null);
+  const restNextStateRef = useRef<{ exerciseIdx: number; setIdx?: number; isFailure?: boolean } | null>(null);
+
   // =============================================================================
   // Computed State
   // =============================================================================
@@ -145,6 +149,44 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
     };
   }, [startTime, phase.type]);
 
+  // Handle visibility change (app returning from background)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && restEndTimeRef.current) {
+        const remaining = Math.ceil((restEndTimeRef.current - Date.now()) / 1000);
+        const nextState = restNextStateRef.current;
+
+        if (remaining <= 0 && nextState) {
+          // Timer has completed while in background
+          if (restIntervalRef.current) {
+            clearInterval(restIntervalRef.current);
+            restIntervalRef.current = null;
+          }
+          restEndTimeRef.current = null;
+          restNextStateRef.current = null;
+          vibrateRestComplete();
+
+          if (nextState.isFailure) {
+            setPhase({ type: 'failure_set', exerciseIdx: nextState.exerciseIdx });
+          } else {
+            setPhase({ type: 'active', exerciseIdx: nextState.exerciseIdx, setIdx: nextState.setIdx! });
+          }
+        } else {
+          // Update remaining time immediately
+          setPhase(prev => {
+            if (prev.type === 'resting' || prev.type === 'resting_for_failure') {
+              return { ...prev, remainingSeconds: Math.max(0, remaining) };
+            }
+            return prev;
+          });
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   // =============================================================================
   // Workout Actions
   // =============================================================================
@@ -172,6 +214,11 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
       clearInterval(restIntervalRef.current);
     }
 
+    // Store end time for background-safe timing
+    const endTime = Date.now() + seconds * 1000;
+    restEndTimeRef.current = endTime;
+    restNextStateRef.current = { exerciseIdx: nextExerciseIdx, setIdx: nextSetIdx };
+
     setPhase({
       type: 'resting',
       exerciseIdx: nextExerciseIdx,
@@ -180,32 +227,33 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
     });
 
     restIntervalRef.current = setInterval(() => {
+      const remaining = Math.ceil((restEndTimeRef.current! - Date.now()) / 1000);
+
       setPhase(prev => {
         if (prev.type !== 'resting') {
           if (restIntervalRef.current) {
             clearInterval(restIntervalRef.current);
             restIntervalRef.current = null;
           }
+          restEndTimeRef.current = null;
+          restNextStateRef.current = null;
           return prev;
         }
 
-        if (prev.remainingSeconds <= 1) {
+        if (remaining <= 0) {
           if (restIntervalRef.current) {
             clearInterval(restIntervalRef.current);
             restIntervalRef.current = null;
           }
+          restEndTimeRef.current = null;
+          restNextStateRef.current = null;
           vibrateRestComplete();
           return { type: 'active', exerciseIdx: nextExerciseIdx, setIdx: nextSetIdx };
         }
 
-        // Vibrate at key moments
-        if (prev.remainingSeconds === 11) {
-          // 10 seconds warning
-        }
-
-        return { ...prev, remainingSeconds: prev.remainingSeconds - 1 };
+        return { ...prev, remainingSeconds: remaining };
       });
-    }, 1000);
+    }, 250); // Check more frequently for smoother updates when returning from background
   }, []);
 
   // Start rest timer before failure set
@@ -215,6 +263,11 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
       clearInterval(restIntervalRef.current);
     }
 
+    // Store end time for background-safe timing
+    const endTime = Date.now() + seconds * 1000;
+    restEndTimeRef.current = endTime;
+    restNextStateRef.current = { exerciseIdx, isFailure: true };
+
     setPhase({
       type: 'resting_for_failure',
       exerciseIdx,
@@ -222,27 +275,33 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
     });
 
     restIntervalRef.current = setInterval(() => {
+      const remaining = Math.ceil((restEndTimeRef.current! - Date.now()) / 1000);
+
       setPhase(prev => {
         if (prev.type !== 'resting_for_failure') {
           if (restIntervalRef.current) {
             clearInterval(restIntervalRef.current);
             restIntervalRef.current = null;
           }
+          restEndTimeRef.current = null;
+          restNextStateRef.current = null;
           return prev;
         }
 
-        if (prev.remainingSeconds <= 1) {
+        if (remaining <= 0) {
           if (restIntervalRef.current) {
             clearInterval(restIntervalRef.current);
             restIntervalRef.current = null;
           }
+          restEndTimeRef.current = null;
+          restNextStateRef.current = null;
           vibrateRestComplete();
           return { type: 'failure_set', exerciseIdx };
         }
 
-        return { ...prev, remainingSeconds: prev.remainingSeconds - 1 };
+        return { ...prev, remainingSeconds: remaining };
       });
-    }, 1000);
+    }, 250); // Check more frequently for smoother updates when returning from background
   }, []);
 
   // Complete current set
@@ -323,11 +382,13 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
 
   // Skip rest
   const skipRest = useCallback(() => {
-    // Clear rest interval
+    // Clear rest interval and refs
     if (restIntervalRef.current) {
       clearInterval(restIntervalRef.current);
       restIntervalRef.current = null;
     }
+    restEndTimeRef.current = null;
+    restNextStateRef.current = null;
 
     if (phase.type === 'resting') {
       setPhase({ type: 'active', exerciseIdx: phase.exerciseIdx, setIdx: phase.setIdx });
@@ -359,11 +420,13 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
       }
     } else if (phase.type !== 'idle' && phase.type !== 'complete') {
       // Pause
-      // Clear rest interval if running
+      // Clear rest interval and refs if running
       if (restIntervalRef.current) {
         clearInterval(restIntervalRef.current);
         restIntervalRef.current = null;
       }
+      restEndTimeRef.current = null;
+      restNextStateRef.current = null;
 
       setPhase({ type: 'paused', previousPhase: phase });
     }
@@ -379,6 +442,8 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
       clearInterval(restIntervalRef.current);
       restIntervalRef.current = null;
     }
+    restEndTimeRef.current = null;
+    restNextStateRef.current = null;
 
     // Calculate duration (wall clock time is already accurate - it only includes actual time spent)
     const duration = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
