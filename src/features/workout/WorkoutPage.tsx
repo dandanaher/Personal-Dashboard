@@ -227,7 +227,7 @@ function WorkoutPageContent() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 mb-6 bg-secondary-100 dark:bg-secondary-800 rounded-lg">
+      <div className="flex gap-1 p-1 mb-6 bg-secondary-100 dark:bg-secondary-800 rounded-full">
         <button
           onClick={() => setActiveTab('templates')}
           className={`
