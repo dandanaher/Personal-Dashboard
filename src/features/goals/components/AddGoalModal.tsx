@@ -7,6 +7,7 @@ import { Goal, Habit } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 type GoalType = Goal['type'];
 
@@ -211,14 +212,7 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
   }, [isOpen, onClose]);
 
   // Prevent body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 

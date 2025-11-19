@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { ColorPicker, HABIT_COLORS } from './ColorPicker';
+import { useScrollLock } from '@/hooks/useScrollLock';
 import type { Habit } from '@/lib/types';
 
 interface AddHabitModalProps {
@@ -43,14 +44,7 @@ export function AddHabitModal({
   }, [isOpen, editingHabit]);
 
   // Prevent body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
+  useScrollLock(isOpen);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

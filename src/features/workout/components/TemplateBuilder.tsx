@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Plus, AlertCircle } from 'lucide-react';
 import { Button, Input, Card } from '@/components/ui';
+import { useScrollLock } from '@/hooks/useScrollLock';
 import type { WorkoutTemplate, Exercise } from '@/lib/types';
 import ExerciseBuilder, { ExerciseItem } from './ExerciseBuilder';
 
@@ -84,12 +85,7 @@ export default function TemplateBuilder({
   };
 
   // Prevent body scroll when modal is open
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, []);
+  useScrollLock(true);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {

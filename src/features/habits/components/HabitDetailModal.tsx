@@ -1,9 +1,9 @@
-import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Edit2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { HabitStats } from './HabitStats';
 import { ContributionGraph } from './ContributionGraph';
+import { useScrollLock } from '@/hooks/useScrollLock';
 import type { HabitStats as HabitStatsType } from '../hooks';
 import type { HabitLog, Habit } from '@/lib/types';
 
@@ -45,14 +45,7 @@ export function HabitDetailModal({
   };
 
   // Prevent body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 

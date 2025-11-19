@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import { X, TrendingUp, Award } from 'lucide-react';
+import { useScrollLock } from '@/hooks/useScrollLock';
 import type { CompletedExercise } from '@/lib/types';
 
 interface ExerciseHistoryProps {
@@ -18,12 +18,7 @@ export default function ExerciseHistory({
   );
 
   // Prevent body scroll when modal is open
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, []);
+  useScrollLock(true);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -214,12 +209,7 @@ export function SessionDetail({
   }, 0);
 
   // Prevent body scroll when modal is open
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, []);
+  useScrollLock(true);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
