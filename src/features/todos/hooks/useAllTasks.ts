@@ -1,36 +1,52 @@
 import { useState, useEffect, useCallback } from 'react';
-import { format } from 'date-fns';
+import { format, startOfDay } from 'date-fns';
 import supabase from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
-import type { Task, TaskInsert, TaskUpdate } from '@/lib/types';
+import type { Task, TaskUpdate } from '@/lib/types';
 import { incrementXP } from '@/features/gamification/hooks/useProfileStats';
 import { XP_REWARDS } from '@/features/gamification/utils';
 
-interface UseTasksReturn {
-  tasks: Task[];
+interface UseAllTasksReturn {
+  /** All tasks for the user */
+  allTasks: Task[];
+  /** Upcoming tasks sorted chronologically (uncompleted, future or today) */
+  upcomingTasks: Task[];
+  /** Dateless/general tasks */
+  datelessTasks: Task[];
+  /** Overdue tasks (uncompleted from past dates) */
+  overdueTasks: Task[];
+  /** Whether previous days have uncompleted tasks */
+  hasPreviousUncompleted: boolean;
   loading: boolean;
   error: string | null;
-  addTask: (title: string, description?: string) => Promise<boolean>;
+  addTask: (title: string, description?: string, date?: string | null) => Promise<boolean>;
   toggleTask: (taskId: string) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   updateTask: (taskId: string, updates: TaskUpdate) => Promise<boolean>;
   refetch: () => Promise<void>;
 }
 
-export function useTasks(date: Date): UseTasksReturn {
-  const [tasks, setTasks] = useState<Task[]>([]);
+export function useAllTasks(): UseAllTasksReturn {
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuthStore();
 
-  const dateString = format(date, 'yyyy-MM-dd');
+  const today = format(startOfDay(new Date()), 'yyyy-MM-dd');
 
-  // Sort tasks: incomplete first, then by order_index, then by created_at
+  // Sort tasks: by date (nulls last), then by order_index, then by created_at
   const sortTasks = useCallback((tasksToSort: Task[]): Task[] => {
     return [...tasksToSort].sort((a, b) => {
       // Completed tasks go to bottom
       if (a.completed !== b.completed) {
         return a.completed ? 1 : -1;
+      }
+      // Null dates (dateless tasks) go after dated tasks
+      if (a.date === null && b.date !== null) return 1;
+      if (a.date !== null && b.date === null) return -1;
+      // Sort by date
+      if (a.date && b.date && a.date !== b.date) {
+        return a.date.localeCompare(b.date);
       }
       // Then by order_index
       if (a.order_index !== b.order_index) {
@@ -41,10 +57,10 @@ export function useTasks(date: Date): UseTasksReturn {
     });
   }, []);
 
-  // Fetch tasks for the selected date
+  // Fetch all tasks
   const fetchTasks = useCallback(async () => {
     if (!user) {
-      setTasks([]);
+      setAllTasks([]);
       setLoading(false);
       return;
     }
@@ -55,29 +71,52 @@ export function useTasks(date: Date): UseTasksReturn {
         .from('tasks')
         .select('*')
         .eq('user_id', user.id)
-        .eq('date', dateString)
+        .order('date', { ascending: true, nullsFirst: false })
         .order('order_index', { ascending: true });
 
       if (fetchError) {
         throw fetchError;
       }
 
-      setTasks(sortTasks(data || []));
+      setAllTasks(sortTasks(data || []));
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch tasks';
       setError(errorMessage);
-      console.error('Error fetching tasks:', err);
+      console.error('Error fetching all tasks:', err);
     } finally {
       setLoading(false);
     }
-  }, [user, dateString, sortTasks]);
+  }, [user, sortTasks]);
+
+  // Calculate derived task lists
+  const upcomingTasks = allTasks.filter(task => {
+    if (task.completed) return false;
+    if (!task.date) return false;
+    return task.date >= today;
+  });
+
+  const datelessTasks = allTasks.filter(task => !task.date && !task.completed);
+
+  const overdueTasks = allTasks.filter(task => {
+    if (task.completed) return false;
+    if (!task.date) return false;
+    return task.date < today;
+  });
+
+  // Check if there are uncompleted tasks from previous days
+  const hasPreviousUncompleted = overdueTasks.length > 0;
 
   // Add a new task with optimistic update
-  const addTask = useCallback(async (title: string, description?: string): Promise<boolean> => {
+  const addTask = useCallback(async (
+    title: string,
+    description?: string,
+    date?: string | null
+  ): Promise<boolean> => {
     if (!user) return false;
 
-    // Calculate new order_index (max + 1)
-    const maxOrderIndex = tasks.reduce((max, task) =>
+    // Calculate new order_index
+    const tasksForDate = allTasks.filter(t => t.date === date);
+    const maxOrderIndex = tasksForDate.reduce((max, task) =>
       Math.max(max, task.order_index), 0
     );
 
@@ -89,28 +128,26 @@ export function useTasks(date: Date): UseTasksReturn {
       title,
       description: description || null,
       completed: false,
-      date: dateString,
+      date: date ?? null,
       order_index: maxOrderIndex + 1,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
     // Optimistic update
-    setTasks(prev => sortTasks([...prev, tempTask]));
+    setAllTasks(prev => sortTasks([...prev, tempTask]));
 
     try {
-      const insertData: TaskInsert = {
-        user_id: user.id,
-        title,
-        description: description || null,
-        completed: false,
-        date: dateString,
-        order_index: maxOrderIndex + 1,
-      };
-
       const { data, error: insertError } = await supabase
         .from('tasks')
-        .insert(insertData)
+        .insert({
+          user_id: user.id,
+          title,
+          description: description || null,
+          completed: false,
+          date: date ?? null,
+          order_index: maxOrderIndex + 1,
+        })
         .select()
         .single();
 
@@ -119,30 +156,30 @@ export function useTasks(date: Date): UseTasksReturn {
       }
 
       // Replace temp task with real task
-      setTasks(prev =>
+      setAllTasks(prev =>
         sortTasks(prev.map(task => task.id === tempId ? data : task))
       );
 
       return true;
     } catch (err) {
       // Rollback optimistic update
-      setTasks(prev => prev.filter(task => task.id !== tempId));
+      setAllTasks(prev => prev.filter(task => task.id !== tempId));
       const errorMessage = err instanceof Error ? err.message : 'Failed to add task';
       setError(errorMessage);
       console.error('Error adding task:', err);
       return false;
     }
-  }, [user, dateString, tasks, sortTasks]);
+  }, [user, allTasks, sortTasks]);
 
   // Toggle task completion with optimistic update
   const toggleTask = useCallback(async (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
+    const task = allTasks.find(t => t.id === taskId);
     if (!task) return;
 
     const newCompleted = !task.completed;
 
     // Optimistic update
-    setTasks(prev =>
+    setAllTasks(prev =>
       sortTasks(prev.map(t =>
         t.id === taskId
           ? { ...t, completed: newCompleted, updated_at: new Date().toISOString() }
@@ -169,7 +206,7 @@ export function useTasks(date: Date): UseTasksReturn {
       }
     } catch (err) {
       // Rollback optimistic update
-      setTasks(prev =>
+      setAllTasks(prev =>
         sortTasks(prev.map(t =>
           t.id === taskId
             ? { ...t, completed: task.completed }
@@ -180,15 +217,15 @@ export function useTasks(date: Date): UseTasksReturn {
       setError(errorMessage);
       console.error('Error toggling task:', err);
     }
-  }, [tasks, sortTasks]);
+  }, [allTasks, sortTasks, user]);
 
   // Delete task with optimistic update
   const deleteTask = useCallback(async (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
+    const task = allTasks.find(t => t.id === taskId);
     if (!task) return;
 
     // Optimistic update
-    setTasks(prev => prev.filter(t => t.id !== taskId));
+    setAllTasks(prev => prev.filter(t => t.id !== taskId));
 
     try {
       const { error: deleteError } = await supabase
@@ -201,20 +238,20 @@ export function useTasks(date: Date): UseTasksReturn {
       }
     } catch (err) {
       // Rollback optimistic update
-      setTasks(prev => sortTasks([...prev, task]));
+      setAllTasks(prev => sortTasks([...prev, task]));
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete task';
       setError(errorMessage);
       console.error('Error deleting task:', err);
     }
-  }, [tasks, sortTasks]);
+  }, [allTasks, sortTasks]);
 
   // Update task with optimistic update
   const updateTask = useCallback(async (taskId: string, updates: TaskUpdate): Promise<boolean> => {
-    const task = tasks.find(t => t.id === taskId);
+    const task = allTasks.find(t => t.id === taskId);
     if (!task) return false;
 
     // Optimistic update
-    setTasks(prev =>
+    setAllTasks(prev =>
       sortTasks(prev.map(t =>
         t.id === taskId
           ? { ...t, ...updates, updated_at: new Date().toISOString() }
@@ -238,7 +275,7 @@ export function useTasks(date: Date): UseTasksReturn {
       return true;
     } catch (err) {
       // Rollback optimistic update
-      setTasks(prev =>
+      setAllTasks(prev =>
         sortTasks(prev.map(t =>
           t.id === taskId ? task : t
         ))
@@ -248,7 +285,7 @@ export function useTasks(date: Date): UseTasksReturn {
       console.error('Error updating task:', err);
       return false;
     }
-  }, [tasks, sortTasks]);
+  }, [allTasks, sortTasks]);
 
   // Initial fetch
   useEffect(() => {
@@ -261,7 +298,7 @@ export function useTasks(date: Date): UseTasksReturn {
     if (!user) return;
 
     const channel = supabase
-      .channel(`tasks-${dateString}`)
+      .channel('all-tasks')
       .on(
         'postgres_changes',
         {
@@ -270,19 +307,8 @@ export function useTasks(date: Date): UseTasksReturn {
           table: 'tasks',
           filter: `user_id=eq.${user.id}`,
         },
-        (payload) => {
-          console.log('Real-time update:', payload);
-
-          // Only refetch if the change is for the current date
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            const newTask = payload.new as Task;
-            if (newTask.date === dateString) {
-              fetchTasks();
-            }
-          } else if (payload.eventType === 'DELETE') {
-            // For deletes, always refetch as we can't check the date
-            fetchTasks();
-          }
+        () => {
+          fetchTasks();
         }
       )
       .subscribe();
@@ -290,10 +316,14 @@ export function useTasks(date: Date): UseTasksReturn {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, dateString, fetchTasks]);
+  }, [user, fetchTasks]);
 
   return {
-    tasks,
+    allTasks,
+    upcomingTasks,
+    datelessTasks,
+    overdueTasks,
+    hasPreviousUncompleted,
     loading,
     error,
     addTask,
@@ -304,4 +334,4 @@ export function useTasks(date: Date): UseTasksReturn {
   };
 }
 
-export default useTasks;
+export default useAllTasks;

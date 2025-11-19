@@ -1,16 +1,59 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, List, CalendarDays, AlertCircle } from 'lucide-react';
 import { format, addDays, subDays, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { Button, Card } from '@/components/ui';
 import { useThemeStore } from '@/stores/themeStore';
-import { useTasks } from './hooks/useTasks';
+import { useTasks, useAllTasks } from './hooks';
 import { TaskList } from './components/TaskList';
+import { TaskItem } from './components/TaskItem';
 import { AddTaskForm } from './components/AddTaskForm';
 import { ToastProvider, useToast } from './components/Toast';
+import type { Task, TaskUpdate } from '@/lib/types';
+
+type ViewMode = 'day' | 'overview';
 
 function TasksPageContent() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const { tasks, loading, error, addTask, toggleTask, deleteTask, refetch } = useTasks(selectedDate);
+  const [viewMode, setViewMode] = useState<ViewMode>('overview');
+
+  // Day view tasks
+  const {
+    tasks: dayTasks,
+    loading: dayLoading,
+    error: dayError,
+    addTask: addDayTask,
+    toggleTask: toggleDayTask,
+    deleteTask: deleteDayTask,
+    updateTask: updateDayTask,
+    refetch: refetchDay
+  } = useTasks(selectedDate);
+
+  // All tasks for overview
+  const {
+    allTasks,
+    upcomingTasks,
+    datelessTasks,
+    overdueTasks,
+    loading: allLoading,
+    error: allError,
+    addTask: addAllTask,
+    toggleTask: toggleAllTask,
+    deleteTask: deleteAllTask,
+    updateTask: updateAllTask,
+    refetch: refetchAll,
+  } = useAllTasks();
+
+  // Check if there are uncompleted tasks BEFORE the selected date
+  // Only count truly overdue tasks (before today AND before selected date)
+  const selectedDateString = format(selectedDate, 'yyyy-MM-dd');
+  const todayString = format(new Date(), 'yyyy-MM-dd');
+  const hasTasksBeforeSelectedDate = allTasks.some(task =>
+    !task.completed &&
+    task.date !== null &&
+    task.date < selectedDateString &&
+    task.date < todayString  // Must be truly overdue (before today)
+  );
+
   const { showToast } = useToast();
   const { accentColor } = useThemeStore();
 
@@ -43,9 +86,21 @@ function TasksPageContent() {
     return format(selectedDate, 'EEEE, MMM d');
   };
 
-  // Handle add task with toast feedback
-  const handleAddTask = async (title: string, description?: string) => {
-    const success = await addTask(title, description);
+  // Handle add task for day view
+  const handleAddDayTask = async (title: string, description?: string) => {
+    const success = await addDayTask(title, description);
+    if (success) {
+      showToast('Task added', 'success');
+      refetchAll(); // Refresh overview
+    } else {
+      showToast('Failed to add task', 'error');
+    }
+    return success;
+  };
+
+  // Handle add task for overview
+  const handleAddOverviewTask = async (title: string, description?: string, date?: string | null) => {
+    const success = await addAllTask(title, description, date);
     if (success) {
       showToast('Task added', 'success');
     } else {
@@ -54,97 +109,377 @@ function TasksPageContent() {
     return success;
   };
 
-  // Handle toggle task
-  const handleToggleTask = async (taskId: string) => {
-    await toggleTask(taskId);
+  // Handle toggle task for day view
+  const handleToggleDayTask = async (taskId: string) => {
+    await toggleDayTask(taskId);
+    refetchAll(); // Refresh overview
   };
 
-  // Handle delete task with confirmation
-  const handleDeleteTask = async (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
+  // Handle toggle task for overview
+  const handleToggleOverviewTask = async (taskId: string) => {
+    await toggleAllTask(taskId);
+  };
+
+  // Handle delete task for day view
+  const handleDeleteDayTask = async (taskId: string) => {
+    const task = dayTasks.find(t => t.id === taskId);
     if (!task) return;
 
-    // Simple confirmation
     const confirmed = window.confirm(`Delete "${task.title}"?`);
     if (!confirmed) return;
 
-    await deleteTask(taskId);
+    await deleteDayTask(taskId);
     showToast('Task deleted', 'success');
+    refetchAll(); // Refresh overview
+  };
+
+  // Handle delete task for overview
+  const handleDeleteOverviewTask = async (taskId: string) => {
+    const allTasks = [...overdueTasks, ...upcomingTasks, ...datelessTasks];
+    const task = allTasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const confirmed = window.confirm(`Delete "${task.title}"?`);
+    if (!confirmed) return;
+
+    await deleteAllTask(taskId);
+    showToast('Task deleted', 'success');
+  };
+
+  // Handle edit task for day view
+  const handleEditDayTask = async (taskId: string, updates: TaskUpdate): Promise<boolean> => {
+    const success = await updateDayTask(taskId, updates);
+    if (success) {
+      showToast('Task updated', 'success');
+      refetchAll();
+    } else {
+      showToast('Failed to update task', 'error');
+    }
+    return success;
+  };
+
+  // Handle edit task for overview
+  const handleEditOverviewTask = async (taskId: string, updates: TaskUpdate): Promise<boolean> => {
+    const success = await updateAllTask(taskId, updates);
+    if (success) {
+      showToast('Task updated', 'success');
+    } else {
+      showToast('Failed to update task', 'error');
+    }
+    return success;
+  };
+
+  // Group upcoming tasks by date for display
+  const groupTasksByDate = (tasks: Task[]) => {
+    const groups: { [key: string]: Task[] } = {};
+    tasks.forEach(task => {
+      const date = task.date || 'No date';
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(task);
+    });
+    return groups;
+  };
+
+  // Format date header
+  const formatDateHeader = (dateStr: string) => {
+    if (dateStr === 'No date') return 'General Tasks';
+
+    const date = new Date(dateStr + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (date.toDateString() === today.toDateString()) {
+      return `Today, ${format(date, 'MMM d')}`;
+    }
+
+    const tomorrow = addDays(today, 1);
+    if (date.toDateString() === tomorrow.toDateString()) {
+      return `Tomorrow, ${format(date, 'MMM d')}`;
+    }
+
+    return format(date, 'EEEE, MMM d');
   };
 
   return (
     <div className="space-y-4">
-      {/* Date Navigation */}
+      {/* View Mode Toggle */}
       <Card variant="default" padding="md">
-        <div className="flex items-center justify-between">
-          {/* Previous day button */}
+        <div className="flex items-center justify-center gap-2">
           <Button
-            variant="ghost"
+            variant={viewMode === 'overview' ? 'primary' : 'ghost'}
             size="sm"
-            onClick={goToPreviousDay}
-            aria-label="Previous day"
-            className="p-2"
+            onClick={() => setViewMode('overview')}
+            className="flex-1"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <List className="h-4 w-4 mr-2" />
+            Overview
           </Button>
+          <Button
+            variant={viewMode === 'day' ? 'primary' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('day')}
+            className="flex-1"
+          >
+            <CalendarDays className="h-4 w-4 mr-2" />
+            Day View
+          </Button>
+        </div>
+      </Card>
 
-          {/* Date display and Today button */}
-          <div className="flex flex-col items-center gap-1">
-            <h1 className="text-lg font-semibold text-secondary-900 dark:text-white">
-              {getDisplayDate()}
-            </h1>
-            {!isToday(selectedDate) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={goToToday}
-                className="text-xs p-1"
-                style={{ color: accentColor }}
-              >
-                <Calendar className="h-3 w-3 mr-1" />
-                Today
+      {viewMode === 'day' ? (
+        // Day View Mode
+        <>
+          {/* Date Navigation */}
+          <Card variant="default" padding="md">
+            <div className="flex items-center">
+              {/* Left side - equal width container */}
+              <div className="flex-1 flex items-center justify-start gap-1">
+                <div className="relative">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={goToPreviousDay}
+                    aria-label="Previous day"
+                    className="p-2"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                  {/* Red circle indicator for uncompleted tasks before selected date */}
+                  {hasTasksBeforeSelectedDate && (
+                    <span
+                      className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"
+                      title="You have uncompleted tasks from previous days"
+                    />
+                  )}
+                </div>
+                {/* Today button on left when viewing future dates */}
+                {!isToday(selectedDate) && selectedDate > new Date() && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={goToToday}
+                    className="text-xs px-2 py-1"
+                    style={{ color: accentColor }}
+                  >
+                    <Calendar className="h-3 w-3 mr-1" />
+                    Today
+                  </Button>
+                )}
+              </div>
+
+              {/* Date display - centered */}
+              <h1 className="text-lg font-semibold text-secondary-900 dark:text-white text-center">
+                {getDisplayDate()}
+              </h1>
+
+              {/* Right side - equal width container */}
+              <div className="flex-1 flex items-center justify-end gap-1">
+                {/* Today button on right when viewing past dates */}
+                {!isToday(selectedDate) && selectedDate < new Date() && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={goToToday}
+                    className="text-xs px-2 py-1"
+                    style={{ color: accentColor }}
+                  >
+                    Today
+                    <Calendar className="h-3 w-3 ml-1" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={goToNextDay}
+                  aria-label="Next day"
+                  className="p-2"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          {/* Add Task Form */}
+          <Card variant="default" padding="md">
+            <AddTaskForm
+              onAdd={handleAddDayTask}
+              defaultDate={selectedDateString}
+              showDateToggle={true}
+            />
+          </Card>
+
+          {/* Task List for selected day */}
+          <TaskList
+            tasks={dayTasks}
+            loading={dayLoading}
+            error={dayError}
+            onToggle={handleToggleDayTask}
+            onDelete={handleDeleteDayTask}
+            onEdit={handleEditDayTask}
+            onRetry={refetchDay}
+          />
+
+          {/* Task count */}
+          {!dayLoading && !dayError && dayTasks.length > 0 && (
+            <div className="text-center">
+              <p className="text-sm text-secondary-400 dark:text-secondary-500">
+                {dayTasks.filter(t => !t.completed).length} remaining
+                {dayTasks.filter(t => t.completed).length > 0 &&
+                  ` • ${dayTasks.filter(t => t.completed).length} completed`
+                }
+              </p>
+            </div>
+          )}
+        </>
+      ) : (
+        // Overview Mode
+        <>
+          {/* Add Task Form for overview (adds to today by default) */}
+          <Card variant="default" padding="md">
+            <AddTaskForm
+              onAdd={handleAddOverviewTask}
+              defaultDate={format(new Date(), 'yyyy-MM-dd')}
+              showDateToggle={true}
+            />
+          </Card>
+
+          {/* Loading state */}
+          {allLoading && (
+            <div className="space-y-2">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="animate-pulse">
+                  <div className="h-16 bg-secondary-200 dark:bg-secondary-700 rounded-lg" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Error state */}
+          {allError && (
+            <Card variant="outlined" className="text-center py-8">
+              <AlertCircle className="h-10 w-10 mx-auto text-red-500 mb-3" />
+              <h3 className="text-lg font-semibold text-secondary-700 dark:text-secondary-300 mb-2">
+                Failed to load tasks
+              </h3>
+              <p className="text-sm text-secondary-500 dark:text-secondary-400 mb-4">
+                {allError}
+              </p>
+              <Button variant="outline" onClick={refetchAll}>
+                Try Again
               </Button>
-            )}
-          </div>
+            </Card>
+          )}
 
-          {/* Next day button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={goToNextDay}
-            aria-label="Next day"
-            className="p-2"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-        </div>
-      </Card>
+          {/* Task Overview */}
+          {!allLoading && !allError && (
+            <>
+              {/* Overdue Tasks */}
+              {overdueTasks.length > 0 && (
+                <div className="space-y-2">
+                  <h2 className="text-sm font-semibold text-red-500 dark:text-red-400 px-1 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Overdue ({overdueTasks.length})
+                  </h2>
+                  <Card variant="default" padding="none">
+                    <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
+                      {overdueTasks.map(task => (
+                        <div key={task.id} className="group">
+                          <TaskItem
+                            task={task}
+                            onToggle={handleToggleOverviewTask}
+                            onDelete={handleDeleteOverviewTask}
+                            onEdit={handleEditOverviewTask}
+                            showDate={true}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
+              )}
 
-      {/* Add Task Form */}
-      <Card variant="default" padding="md">
-        <AddTaskForm onAdd={handleAddTask} />
-      </Card>
+              {/* Upcoming Tasks by date */}
+              {upcomingTasks.length > 0 && (
+                <div className="space-y-4">
+                  {Object.entries(groupTasksByDate(upcomingTasks)).map(([date, tasks]) => (
+                    <div key={date} className="space-y-2">
+                      <h2 className="text-sm font-semibold text-secondary-600 dark:text-secondary-400 px-1">
+                        {formatDateHeader(date)}
+                      </h2>
+                      <Card variant="default" padding="none">
+                        <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
+                          {tasks.map(task => (
+                            <div key={task.id} className="group">
+                              <TaskItem
+                                task={task}
+                                onToggle={handleToggleOverviewTask}
+                                onDelete={handleDeleteOverviewTask}
+                                onEdit={handleEditOverviewTask}
+                                showDate={false}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-      {/* Task List */}
-      <TaskList
-        tasks={tasks}
-        loading={loading}
-        error={error}
-        onToggle={handleToggleTask}
-        onDelete={handleDeleteTask}
-        onRetry={refetch}
-      />
+              {/* Dateless/General Tasks */}
+              {datelessTasks.length > 0 && (
+                <div className="space-y-2">
+                  <h2 className="text-sm font-semibold text-secondary-600 dark:text-secondary-400 px-1">
+                    General Tasks ({datelessTasks.length})
+                  </h2>
+                  <Card variant="default" padding="none">
+                    <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
+                      {datelessTasks.map(task => (
+                        <div key={task.id} className="group">
+                          <TaskItem
+                            task={task}
+                            onToggle={handleToggleOverviewTask}
+                            onDelete={handleDeleteOverviewTask}
+                            onEdit={handleEditOverviewTask}
+                            showDate={false}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
+              )}
 
-      {/* Task count */}
-      {!loading && !error && tasks.length > 0 && (
-        <div className="text-center">
-          <p className="text-sm text-secondary-400 dark:text-secondary-500">
-            {tasks.filter(t => !t.completed).length} remaining
-            {tasks.filter(t => t.completed).length > 0 &&
-              ` • ${tasks.filter(t => t.completed).length} completed`
-            }
-          </p>
-        </div>
+              {/* Empty state */}
+              {upcomingTasks.length === 0 && datelessTasks.length === 0 && overdueTasks.length === 0 && (
+                <Card variant="outlined" className="text-center py-12">
+                  <List className="h-12 w-12 mx-auto text-secondary-400 dark:text-secondary-500 mb-4" />
+                  <p className="text-secondary-500 dark:text-secondary-400 mb-2">
+                    No tasks yet
+                  </p>
+                  <p className="text-sm text-secondary-400 dark:text-secondary-500">
+                    Add a task above to get started!
+                  </p>
+                </Card>
+              )}
+
+              {/* Summary */}
+              {(upcomingTasks.length > 0 || datelessTasks.length > 0 || overdueTasks.length > 0) && (
+                <div className="text-center">
+                  <p className="text-sm text-secondary-400 dark:text-secondary-500">
+                    {overdueTasks.length + upcomingTasks.length + datelessTasks.length} total tasks
+                    {overdueTasks.length > 0 && (
+                      <span className="text-red-500"> • {overdueTasks.length} overdue</span>
+                    )}
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </>
       )}
     </div>
   );

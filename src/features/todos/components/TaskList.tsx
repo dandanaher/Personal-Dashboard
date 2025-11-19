@@ -1,7 +1,7 @@
 import { CheckSquare, AlertCircle } from 'lucide-react';
 import { Card, Button } from '@/components/ui';
 import { TaskItem } from './TaskItem';
-import type { Task } from '@/lib/types';
+import type { Task, TaskUpdate } from '@/lib/types';
 
 interface TaskListProps {
   tasks: Task[];
@@ -9,6 +9,7 @@ interface TaskListProps {
   error: string | null;
   onToggle: (taskId: string) => void;
   onDelete: (taskId: string) => void;
+  onEdit?: (taskId: string, updates: TaskUpdate) => Promise<boolean>;
   onRetry: () => void;
 }
 
@@ -33,6 +34,7 @@ export function TaskList({
   error,
   onToggle,
   onDelete,
+  onEdit,
   onRetry,
 }: TaskListProps) {
   // Error state
@@ -92,6 +94,7 @@ export function TaskList({
             task={task}
             onToggle={onToggle}
             onDelete={onDelete}
+            onEdit={onEdit}
           />
         </div>
       ))}
@@ -114,6 +117,7 @@ export function TaskList({
                 task={task}
                 onToggle={onToggle}
                 onDelete={onDelete}
+                onEdit={onEdit}
               />
             </div>
           ))}

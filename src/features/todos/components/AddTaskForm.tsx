@@ -1,16 +1,21 @@
 import { useState, useRef, useEffect } from 'react';
-import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Calendar, X } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { useThemeStore } from '@/stores/themeStore';
 
 interface AddTaskFormProps {
-  onAdd: (title: string, description?: string) => Promise<boolean>;
+  onAdd: (title: string, description?: string, date?: string | null) => Promise<boolean>;
+  /** The default date for new tasks (null for dateless) */
+  defaultDate?: string | null;
+  /** Whether to show the date toggle option */
+  showDateToggle?: boolean;
 }
 
-export function AddTaskForm({ onAdd }: AddTaskFormProps) {
+export function AddTaskForm({ onAdd, defaultDate, showDateToggle = false }: AddTaskFormProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [showDescription, setShowDescription] = useState(false);
+  const [isDateless, setIsDateless] = useState(defaultDate === null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const { accentColor } = useThemeStore();
@@ -28,9 +33,13 @@ export function AddTaskForm({ onAdd }: AddTaskFormProps) {
 
     setIsSubmitting(true);
 
+    // Determine the date to use
+    const taskDate = isDateless ? null : defaultDate;
+
     const success = await onAdd(
       trimmedTitle,
-      description.trim() || undefined
+      description.trim() || undefined,
+      taskDate
     );
 
     setIsSubmitting(false);
@@ -40,6 +49,7 @@ export function AddTaskForm({ onAdd }: AddTaskFormProps) {
       setTitle('');
       setDescription('');
       setShowDescription(false);
+      setIsDateless(defaultDate === null);
       // Re-focus title input for quick entry
       titleInputRef.current?.focus();
     }
@@ -80,8 +90,9 @@ export function AddTaskForm({ onAdd }: AddTaskFormProps) {
         </Button>
       </div>
 
-      {/* Description toggle and field */}
-      <div>
+      {/* Options row */}
+      <div className="flex items-center gap-4">
+        {/* Description toggle */}
         <button
           type="button"
           onClick={() => setShowDescription(!showDescription)}
@@ -104,31 +115,59 @@ export function AddTaskForm({ onAdd }: AddTaskFormProps) {
           )}
         </button>
 
-        {showDescription && (
-          <div className="mt-2">
-            <textarea
-              placeholder="Task description (optional)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={isSubmitting}
-              rows={2}
-              className="
-                w-full px-3 py-2 rounded-lg
-                bg-white dark:bg-secondary-900
-                border border-secondary-300 dark:border-secondary-700
-                text-secondary-900 dark:text-white
-                placeholder-secondary-400 dark:placeholder-secondary-500
-                focus:outline-none focus:ring-2 focus:border-transparent
-                disabled:opacity-50 disabled:cursor-not-allowed
-                resize-none
-                text-sm
-              "
-              style={{ '--tw-ring-color': accentColor } as React.CSSProperties}
-              aria-label="Task description"
-            />
-          </div>
+        {/* Dateless toggle */}
+        {showDateToggle && defaultDate !== null && (
+          <button
+            type="button"
+            onClick={() => setIsDateless(!isDateless)}
+            className={`
+              flex items-center gap-1 text-sm transition-colors
+              ${isDateless
+                ? 'text-secondary-700 dark:text-secondary-300'
+                : 'text-secondary-500 dark:text-secondary-400 hover:text-secondary-700 dark:hover:text-secondary-300'
+              }
+            `}
+          >
+            {isDateless ? (
+              <>
+                <X className="h-3 w-3" />
+                No date
+              </>
+            ) : (
+              <>
+                <Calendar className="h-3 w-3" />
+                With date
+              </>
+            )}
+          </button>
         )}
       </div>
+
+      {/* Description field */}
+      {showDescription && (
+        <div>
+          <textarea
+            placeholder="Task description (optional)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            disabled={isSubmitting}
+            rows={2}
+            className="
+              w-full px-3 py-2 rounded-lg
+              bg-white dark:bg-secondary-900
+              border border-secondary-300 dark:border-secondary-700
+              text-secondary-900 dark:text-white
+              placeholder-secondary-400 dark:placeholder-secondary-500
+              focus:outline-none focus:ring-2 focus:border-transparent
+              disabled:opacity-50 disabled:cursor-not-allowed
+              resize-none
+              text-sm
+            "
+            style={{ '--tw-ring-color': accentColor } as React.CSSProperties}
+            aria-label="Task description"
+          />
+        </div>
+      )}
     </form>
   );
 }

@@ -121,6 +121,7 @@ export interface WorkoutSessionData {
 /**
  * Task table row.
  * Uses 'date' field for task scheduling (date only, no time).
+ * Null date indicates a general/dateless task.
  */
 export interface Task {
   id: string;
@@ -129,8 +130,8 @@ export interface Task {
   description: string | null;
   /** Whether the task is completed */
   completed: boolean;
-  /** Date for the task in ISO format (YYYY-MM-DD) */
-  date: string;
+  /** Date for the task in ISO format (YYYY-MM-DD), null for dateless tasks */
+  date: string | null;
   /** Order index for sorting tasks within a day */
   order_index: number;
   created_at: string;
