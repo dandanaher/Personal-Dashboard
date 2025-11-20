@@ -16,6 +16,7 @@ export function AddTaskForm({ onAdd, defaultDate, showDateToggle = false }: AddT
   const [description, setDescription] = useState('');
   const [showDescription, setShowDescription] = useState(false);
   const [isDateless, setIsDateless] = useState(defaultDate === null);
+  const [selectedDate, setSelectedDate] = useState(defaultDate || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const { accentColor } = useThemeStore();
@@ -34,7 +35,7 @@ export function AddTaskForm({ onAdd, defaultDate, showDateToggle = false }: AddT
     setIsSubmitting(true);
 
     // Determine the date to use
-    const taskDate = isDateless ? null : defaultDate;
+    const taskDate = isDateless ? null : (selectedDate || defaultDate);
 
     const success = await onAdd(
       trimmedTitle,
@@ -50,6 +51,7 @@ export function AddTaskForm({ onAdd, defaultDate, showDateToggle = false }: AddT
       setDescription('');
       setShowDescription(false);
       setIsDateless(defaultDate === null);
+      setSelectedDate(defaultDate || '');
       // Re-focus title input for quick entry
       titleInputRef.current?.focus();
     }
@@ -91,7 +93,7 @@ export function AddTaskForm({ onAdd, defaultDate, showDateToggle = false }: AddT
       </div>
 
       {/* Options row */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         {/* Description toggle */}
         <button
           type="button"
@@ -116,10 +118,17 @@ export function AddTaskForm({ onAdd, defaultDate, showDateToggle = false }: AddT
         </button>
 
         {/* Dateless toggle */}
-        {showDateToggle && defaultDate !== null && (
+        {showDateToggle && (
           <button
             type="button"
-            onClick={() => setIsDateless(!isDateless)}
+            onClick={() => {
+              const newIsDateless = !isDateless;
+              setIsDateless(newIsDateless);
+              // When switching to "with date", set to today if no date is selected
+              if (!newIsDateless && !selectedDate) {
+                setSelectedDate(new Date().toISOString().split('T')[0]);
+              }
+            }}
             className={`
               flex items-center gap-1 text-sm transition-colors
               ${isDateless
@@ -140,6 +149,23 @@ export function AddTaskForm({ onAdd, defaultDate, showDateToggle = false }: AddT
               </>
             )}
           </button>
+        )}
+
+        {/* Date picker (when not dateless and date toggle is shown) */}
+        {showDateToggle && !isDateless && (
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="
+              px-2 py-1 text-sm rounded-lg
+              bg-white dark:bg-secondary-900
+              border border-secondary-300 dark:border-secondary-700
+              text-secondary-900 dark:text-white
+              focus:outline-none focus:ring-2 focus:border-transparent
+            "
+            style={{ '--tw-ring-color': accentColor } as React.CSSProperties}
+          />
         )}
       </div>
 

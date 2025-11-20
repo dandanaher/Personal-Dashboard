@@ -239,7 +239,7 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, showDate = false }:
           </button>
 
           {/* Task text */}
-          <div className="flex-1 min-w-0" onClick={() => !showDelete && onEdit && handleStartEdit()}>
+          <div className="flex-1 min-w-0">
             <p
               className={`
                 text-base transition-all duration-200
@@ -247,7 +247,6 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, showDate = false }:
                   ? 'text-secondary-400 dark:text-secondary-500 line-through'
                   : 'text-secondary-900 dark:text-white'
                 }
-                ${onEdit ? 'cursor-pointer' : ''}
               `}
             >
               {task.title}

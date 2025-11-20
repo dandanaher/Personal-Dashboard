@@ -307,7 +307,7 @@ function TasksPageContent() {
             <AddTaskForm
               onAdd={handleAddDayTask}
               defaultDate={selectedDateString}
-              showDateToggle={true}
+              showDateToggle={false}
             />
           </Card>
 
@@ -337,11 +337,11 @@ function TasksPageContent() {
       ) : (
         // Overview Mode
         <>
-          {/* Add Task Form for overview (adds to today by default) */}
+          {/* Add Task Form for overview */}
           <Card variant="default" padding="md">
             <AddTaskForm
               onAdd={handleAddOverviewTask}
-              defaultDate={format(new Date(), 'yyyy-MM-dd')}
+              defaultDate={null}
               showDateToggle={true}
             />
           </Card>

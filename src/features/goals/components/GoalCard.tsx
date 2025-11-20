@@ -207,73 +207,40 @@ export function GoalCard({
 
       {/* Footer with Progress Controls */}
       <div className="flex items-center justify-between text-sm">
-        {/* Left side: Days left (for non-habit-linked) or full date info (for habit-linked/completed) */}
-        {!goal.completed && !isHabitLinked ? (
-          <div className="flex items-center gap-1">
-            {goal.target_date && (
-              <div
-                className={`flex items-center gap-1 text-xs ${
-                  isOverdue
-                    ? 'text-red-600 dark:text-red-400 font-semibold'
-                    : 'text-secondary-600 dark:text-secondary-400'
-                }`}
-              >
-                {isOverdue ? (
-                  <>
-                    <AlertTriangle className="w-3 h-3" />
-                    <span>-{Math.abs(daysUntilTarget!)}d</span>
-                  </>
-                ) : daysUntilTarget === 0 ? (
-                  <span>Today</span>
-                ) : (
-                  <>
-                    <Calendar className="w-3 h-3" />
-                    <span>{daysUntilTarget}d</span>
-                  </>
-                )}
-              </div>
-            )}
-            {!goal.target_date && (
-              <span className="text-secondary-500 dark:text-secondary-500 text-xs">
-                No target date
-              </span>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-1">
-            {goal.target_date && (
-              <div
-                className={`flex items-center gap-1 ${
-                  isOverdue
-                    ? 'text-red-600 dark:text-red-400 font-semibold'
-                    : 'text-secondary-600 dark:text-secondary-400'
-                }`}
-              >
-                {isOverdue ? (
-                  <>
-                    <AlertTriangle className="w-4 h-4" />
-                    <span>Overdue by {Math.abs(daysUntilTarget!)} days</span>
-                  </>
-                ) : daysUntilTarget === 0 ? (
-                  <>
-                    <Calendar className="w-4 h-4" />
-                    <span>Due today</span>
-                  </>
-                ) : (
-                  <>
-                    <Calendar className="w-4 h-4" />
-                    <span>{daysUntilTarget} days left</span>
-                  </>
-                )}
-              </div>
-            )}
-            {!goal.target_date && (
-              <span className="text-secondary-500 dark:text-secondary-500 text-xs">
-                No target date
-              </span>
-            )}
-          </div>
-        )}
+        {/* Left side: Days left indicator */}
+        <div className="flex items-center gap-1">
+          {goal.target_date && (
+            <div
+              className={`flex items-center gap-1 ${
+                isOverdue
+                  ? 'text-red-600 dark:text-red-400 font-semibold'
+                  : 'text-secondary-600 dark:text-secondary-400'
+              }`}
+            >
+              {isOverdue ? (
+                <>
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>Overdue by {Math.abs(daysUntilTarget!)} days</span>
+                </>
+              ) : daysUntilTarget === 0 ? (
+                <>
+                  <Calendar className="w-4 h-4" />
+                  <span>Due today</span>
+                </>
+              ) : (
+                <>
+                  <Calendar className="w-4 h-4" />
+                  <span>{daysUntilTarget} days left</span>
+                </>
+              )}
+            </div>
+          )}
+          {!goal.target_date && (
+            <span className="text-secondary-500 dark:text-secondary-500 text-xs">
+              No target date
+            </span>
+          )}
+        </div>
 
         {/* Right side: Progress controls (for non-habit-linked) + Complete button */}
         <div className="flex items-center gap-2">
