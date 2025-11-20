@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Calendar, Target, Link, Unlink, AlertTriangle } from 'lucide-react';
-import { endOfWeek, endOfMonth, endOfQuarter, endOfYear, format, differenceInDays, parseISO } from 'date-fns';
+import { endOfWeek, endOfMonth, endOfYear, format, differenceInDays, parseISO } from 'date-fns';
 import { Button, Input } from '@/components/ui';
 import { Goal, Habit } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
@@ -10,6 +10,13 @@ import { useThemeStore } from '@/stores/themeStore';
 import { useScrollLock } from '@/hooks/useScrollLock';
 
 type GoalType = Goal['type'];
+
+const goalTypeOptions: { value: GoalType; label: string }[] = [
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'yearly', label: 'Yearly' },
+  { value: 'open', label: 'No deadline' },
+];
 
 interface AddGoalModalProps {
   isOpen: boolean;
@@ -28,6 +35,7 @@ interface AddGoalModalProps {
 
 // Get default target date based on goal type
 function getDefaultTargetDate(type: GoalType): string {
+  if (type === 'open') return '';
   const now = new Date();
   let targetDate: Date;
 
@@ -37,9 +45,6 @@ function getDefaultTargetDate(type: GoalType): string {
       break;
     case 'monthly':
       targetDate = endOfMonth(now);
-      break;
-    case 'quarterly':
-      targetDate = endOfQuarter(now);
       break;
     case 'yearly':
       targetDate = endOfYear(now);
@@ -134,10 +139,15 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
     }
   }, [isOpen, editingGoal]);
 
-  // Update target date when type changes (only for new goals)
+  // Update target date when type changes
   const handleTypeChange = (newType: GoalType) => {
     setType(newType);
-    if (!editingGoal) {
+    if (newType === 'open') {
+      setTargetDate('');
+      return;
+    }
+
+    if (!editingGoal || !targetDate) {
       setTargetDate(getDefaultTargetDate(newType));
     }
   };
@@ -314,46 +324,48 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
           {/* Type */}
           <div>
             <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-2">
-              Time Period
+              Goal Type
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {(['weekly', 'monthly', 'quarterly', 'yearly'] as GoalType[]).map((goalType) => (
+              {goalTypeOptions.map((goalType) => (
                 <button
-                  key={goalType}
+                  key={goalType.value}
                   type="button"
-                  onClick={() => handleTypeChange(goalType)}
+                  onClick={() => handleTypeChange(goalType.value)}
                   className={`px-3 py-2 rounded-full text-sm font-medium capitalize transition-colors ${
-                    type === goalType
+                    type === goalType.value
                       ? 'text-white'
                       : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
                   }`}
-                  style={type === goalType ? { backgroundColor: accentColor } : undefined}
+                  style={type === goalType.value ? { backgroundColor: accentColor } : undefined}
                 >
-                  {goalType}
+                  {goalType.label}
                 </button>
               ))}
             </div>
           </div>
 
           {/* Target Date */}
-          <div>
-            <label
-              htmlFor="goal-target-date"
-              className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1"
-            >
-              <Calendar className="w-4 h-4 inline mr-1" />
-              Target Date
-            </label>
-            <Input
-              id="goal-target-date"
-              type="date"
-              value={targetDate}
-              onChange={(e) => setTargetDate(e.target.value)}
-            />
-            <p className="mt-1 text-xs text-secondary-500 dark:text-secondary-400">
-              Auto-suggested based on time period
-            </p>
-          </div>
+          {type !== 'open' && (
+            <div>
+              <label
+                htmlFor="goal-target-date"
+                className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1"
+              >
+                <Calendar className="w-4 h-4 inline mr-1" />
+                Target Date
+              </label>
+              <Input
+                id="goal-target-date"
+                type="date"
+                value={targetDate}
+                onChange={(e) => setTargetDate(e.target.value)}
+              />
+              <p className="mt-1 text-xs text-secondary-500 dark:text-secondary-400">
+                Auto-suggested based on time period
+              </p>
+            </div>
+          )}
 
           {/* Habit Linking Section */}
           <div className="border-t border-secondary-200 dark:border-secondary-700 pt-4">

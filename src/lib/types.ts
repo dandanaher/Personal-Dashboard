@@ -140,7 +140,7 @@ export interface Task {
 
 /**
  * Goal table row.
- * Supports different goal timeframes (weekly, monthly, quarterly, yearly).
+ * Supports different goal timeframes (weekly, monthly, yearly) and open-ended goals.
  */
 export interface Goal {
   id: string;
@@ -148,7 +148,7 @@ export interface Goal {
   title: string;
   description: string | null;
   /** Goal timeframe type */
-  type: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  type: 'weekly' | 'monthly' | 'yearly' | 'open';
   /** Target completion date in ISO format (YYYY-MM-DD) */
   target_date: string | null;
   /** Whether the goal is completed */

@@ -16,8 +16,8 @@ export function GoalFilters({ activeFilter, onFilterChange, counts }: GoalFilter
     { value: 'all', label: 'All' },
     { value: 'weekly', label: 'Weekly' },
     { value: 'monthly', label: 'Monthly' },
-    { value: 'quarterly', label: 'Quarterly' },
     { value: 'yearly', label: 'Yearly' },
+    { value: 'open', label: 'No deadline' },
   ];
 
   return (

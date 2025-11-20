@@ -64,13 +64,18 @@ export function GoalCard({
         return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
       case 'monthly':
         return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
-      case 'quarterly':
-        return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
       case 'yearly':
         return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+      case 'open':
+        return 'bg-slate-200 text-slate-700 dark:bg-slate-800/80 dark:text-slate-300';
       default:
         return 'bg-secondary-100 text-secondary-600 dark:bg-secondary-800 dark:text-secondary-400';
     }
+  }, [goal.type]);
+
+  const typeLabel = useMemo(() => {
+    if (goal.type === 'open') return 'No deadline';
+    return goal.type;
   }, [goal.type]);
 
   // Clear all timers
@@ -156,7 +161,7 @@ export function GoalCard({
               {goal.title}
             </h3>
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${typeBadgeColor}`}>
-              {goal.type}
+              {typeLabel}
             </span>
           </div>
           {goal.description && (

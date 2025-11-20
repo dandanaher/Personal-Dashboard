@@ -38,12 +38,14 @@ function GoalsPage() {
       all: goals.length,
       weekly: 0,
       monthly: 0,
-      quarterly: 0,
       yearly: 0,
+      open: 0,
     };
 
     goals.forEach(goal => {
-      counts[goal.type]++;
+      if (goal.type in counts) {
+        counts[goal.type as FilterType]++;
+      }
     });
 
     return counts;

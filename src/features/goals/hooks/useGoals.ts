@@ -177,7 +177,6 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
         return null;
       }
 
-      // Add to local state
       setGoals(prev => {
         const newGoals = [data, ...prev];
         // Re-sort by target date
