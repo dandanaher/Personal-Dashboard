@@ -4,14 +4,16 @@ import { X } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { ColorPicker, HABIT_COLORS } from './ColorPicker';
 import { useScrollLock } from '@/hooks/useScrollLock';
+import { useThemeStore, getColorVariants } from '@/stores/themeStore';
 import type { Habit } from '@/lib/types';
 
 interface AddHabitModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (name: string, color: string, description?: string) => Promise<boolean>;
+  onSave: (name: string, color: string, description?: string, habitType?: string) => Promise<boolean>;
   editingHabit?: Habit | null;
-  onUpdate?: (id: string, updates: { name: string; color: string; description?: string }) => Promise<boolean>;
+  onUpdate?: (id: string, updates: { name: string; color: string; description?: string; habitType?: string }) => Promise<boolean>;
+  existingTypes?: string[];
 }
 
 export function AddHabitModal({
@@ -20,11 +22,17 @@ export function AddHabitModal({
   onSave,
   editingHabit,
   onUpdate,
+  existingTypes = [],
 }: AddHabitModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState<string>(HABIT_COLORS[0].value);
+  const [habitType, setHabitType] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hoveredTag, setHoveredTag] = useState<string | null>(null);
+
+  const accentColor = useThemeStore((state) => state.accentColor);
+  const accentVariants = getColorVariants(accentColor);
 
   const isEditing = !!editingHabit;
 
@@ -35,10 +43,12 @@ export function AddHabitModal({
         setName(editingHabit.name);
         setDescription(editingHabit.description || '');
         setColor(editingHabit.color);
+        setHabitType(editingHabit.habit_type || '');
       } else {
         setName('');
         setDescription('');
         setColor(HABIT_COLORS[0].value);
+        setHabitType('');
       }
     }
   }, [isOpen, editingHabit]);
@@ -60,9 +70,10 @@ export function AddHabitModal({
         name: name.trim(),
         color,
         description: description.trim() || undefined,
+        habitType: habitType.trim() || undefined,
       });
     } else {
-      success = await onSave(name.trim(), color, description.trim() || undefined);
+      success = await onSave(name.trim(), color, description.trim() || undefined, habitType.trim() || undefined);
     }
 
     setIsSubmitting(false);
@@ -163,6 +174,53 @@ export function AddHabitModal({
                 resize-none
               "
             />
+          </div>
+
+          {/* Habit Type Input */}
+          <div>
+            <label
+              htmlFor="habit-type"
+              className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1"
+            >
+              Type/Tag <span className="text-secondary-400">(optional)</span>
+            </label>
+            <Input
+              id="habit-type"
+              type="text"
+              placeholder="e.g., Health, Productivity, Personal..."
+              value={habitType}
+              onChange={(e) => setHabitType(e.target.value)}
+              disabled={isSubmitting}
+            />
+            {existingTypes.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {existingTypes.map(type => {
+                  const isHovered = hoveredTag === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setHabitType(type)}
+                      onMouseEnter={() => setHoveredTag(type)}
+                      onMouseLeave={() => setHoveredTag(null)}
+                      disabled={isSubmitting}
+                      className={`
+                        px-3 py-1 rounded-full text-xs font-medium
+                        transition-colors
+                        disabled:opacity-50 disabled:cursor-not-allowed
+                        ${!isHovered ? 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300' : ''}
+                      `}
+                      style={{
+                        backgroundColor: isHovered ? accentVariants.light : undefined,
+                        color: isHovered ? accentColor : undefined,
+                      }}
+                    >
+                      {type}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Color Picker */}

@@ -3,13 +3,16 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useHabits } from './hooks';
 import { HabitList, AddHabitModal } from './components';
+import { useThemeStore } from '@/stores/themeStore';
 import type { Habit } from '@/lib/types';
 
 function HabitsPage() {
   const { habits, loading, error, addHabit, updateHabit, deleteHabit, refetch } = useHabits();
+  const accentColor = useThemeStore((state) => state.accentColor);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [completionStatus, setCompletionStatus] = useState<Record<string, boolean>>({});
+  const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
 
   // Handle completion status changes from HabitCards
   const handleCompletionChange = useCallback((habitId: string, isCompleted: boolean) => {
@@ -19,9 +22,28 @@ function HabitsPage() {
     });
   }, []);
 
+  // Extract unique habit types from all habits
+  const habitTypes = useMemo(() => {
+    const types = new Set<string>();
+    habits.forEach(habit => {
+      if (habit.habit_type) {
+        types.add(habit.habit_type);
+      }
+    });
+    return Array.from(types).sort();
+  }, [habits]);
+
+  // Filter habits based on selected filter
+  const filteredHabits = useMemo(() => {
+    if (!selectedFilter) {
+      return habits;
+    }
+    return habits.filter(habit => habit.habit_type === selectedFilter);
+  }, [habits, selectedFilter]);
+
   // Sort habits: incomplete first, completed last
   const sortedHabits = useMemo(() => {
-    return [...habits].sort((a, b) => {
+    return [...filteredHabits].sort((a, b) => {
       const aCompleted = completionStatus[a.id] ?? false;
       const bCompleted = completionStatus[b.id] ?? false;
 
@@ -33,7 +55,7 @@ function HabitsPage() {
       // Incomplete habits come first
       return aCompleted ? 1 : -1;
     });
-  }, [habits, completionStatus]);
+  }, [filteredHabits, completionStatus]);
 
   const handleAddClick = () => {
     setEditingHabit(null);
@@ -56,12 +78,17 @@ function HabitsPage() {
     setEditingHabit(null);
   };
 
-  const handleSave = async (name: string, color: string, description?: string) => {
-    return await addHabit(name, color, description);
+  const handleSave = async (name: string, color: string, description?: string, habitType?: string) => {
+    return await addHabit(name, color, description, 'check', 7, habitType);
   };
 
-  const handleUpdate = async (id: string, updates: { name: string; color: string; description?: string }) => {
-    return await updateHabit(id, updates);
+  const handleUpdate = async (id: string, updates: { name: string; color: string; description?: string; habitType?: string }) => {
+    return await updateHabit(id, {
+      name: updates.name,
+      color: updates.color,
+      description: updates.description,
+      habit_type: updates.habitType,
+    });
   };
 
   return (
@@ -75,6 +102,44 @@ function HabitsPage() {
           <span className="sm:hidden">Add</span>
         </Button>
       </div>
+
+      {/* Filter Tags */}
+      {habitTypes.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-2">
+          <button
+            onClick={() => setSelectedFilter(null)}
+            className={`
+              px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors
+              ${selectedFilter === null
+                ? 'text-white'
+                : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
+              }
+            `}
+            style={selectedFilter === null ? { backgroundColor: accentColor } : undefined}
+          >
+            All ({habits.length})
+          </button>
+          {habitTypes.map(type => {
+            const count = habits.filter(h => h.habit_type === type).length;
+            return (
+              <button
+                key={type}
+                onClick={() => setSelectedFilter(type)}
+                className={`
+                  px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors
+                  ${selectedFilter === type
+                    ? 'text-white'
+                    : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
+                  }
+                `}
+                style={selectedFilter === type ? { backgroundColor: accentColor } : undefined}
+              >
+                {type} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Habit List */}
       <HabitList
@@ -95,6 +160,7 @@ function HabitsPage() {
         onSave={handleSave}
         editingHabit={editingHabit}
         onUpdate={handleUpdate}
+        existingTypes={habitTypes}
       />
     </div>
   );

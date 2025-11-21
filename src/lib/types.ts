@@ -178,6 +178,8 @@ export interface Habit {
   icon: string;
   /** Target number of times to complete per week */
   target_frequency: number;
+  /** User-defined habit type/tag for categorization */
+  habit_type: string | null;
   created_at: string;
   updated_at: string;
 }

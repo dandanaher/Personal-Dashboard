@@ -7,8 +7,8 @@ interface UseHabitsReturn {
   habits: Habit[];
   loading: boolean;
   error: string | null;
-  addHabit: (name: string, color: string, description?: string, icon?: string, targetFrequency?: number) => Promise<boolean>;
-  updateHabit: (id: string, updates: Partial<Pick<Habit, 'name' | 'color' | 'description' | 'icon' | 'target_frequency'>>) => Promise<boolean>;
+  addHabit: (name: string, color: string, description?: string, icon?: string, targetFrequency?: number, habitType?: string) => Promise<boolean>;
+  updateHabit: (id: string, updates: Partial<Pick<Habit, 'name' | 'color' | 'description' | 'icon' | 'target_frequency' | 'habit_type'>>) => Promise<boolean>;
   deleteHabit: (id: string) => Promise<boolean>;
   refetch: () => Promise<void>;
 }
@@ -50,7 +50,8 @@ export function useHabits(): UseHabitsReturn {
     color: string,
     description?: string,
     icon: string = 'check',
-    targetFrequency: number = 7
+    targetFrequency: number = 7,
+    habitType?: string
   ): Promise<boolean> => {
     if (!user) return false;
 
@@ -64,6 +65,7 @@ export function useHabits(): UseHabitsReturn {
       color,
       icon,
       target_frequency: targetFrequency,
+      habit_type: habitType || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -81,6 +83,7 @@ export function useHabits(): UseHabitsReturn {
           color,
           icon,
           target_frequency: targetFrequency,
+          habit_type: habitType || null,
         })
         .select()
         .single();
@@ -101,7 +104,7 @@ export function useHabits(): UseHabitsReturn {
 
   const updateHabit = useCallback(async (
     id: string,
-    updates: Partial<Pick<Habit, 'name' | 'color' | 'description' | 'icon' | 'target_frequency'>>
+    updates: Partial<Pick<Habit, 'name' | 'color' | 'description' | 'icon' | 'target_frequency' | 'habit_type'>>
   ): Promise<boolean> => {
     if (!user) return false;
 
