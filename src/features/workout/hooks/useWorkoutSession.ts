@@ -10,6 +10,7 @@ import type {
   CompletedExercise,
   CompletedSet,
   WorkoutSessionData,
+  WorkoutSession,
 } from '@/lib/types';
 import {
   WorkoutPhase,
@@ -53,6 +54,7 @@ interface UseWorkoutSessionReturn {
   elapsedSeconds: number;
   actualDuration: number;
   currentExercise: CurrentExerciseState | null;
+  exerciseNotesHistory: Record<string, string[]>;
 
   // Actions
   startWorkout: () => void;
@@ -65,6 +67,7 @@ interface UseWorkoutSessionReturn {
   // Quick adjustments
   adjustWeight: (delta: number) => void;
   adjustReps: (delta: number) => void;
+  setExerciseNotes: (exerciseIdx: number, notes: string) => void;
   setWeight: (weight: number) => void;
   setReps: (reps: number) => void;
 }
@@ -81,6 +84,7 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
   const [sessionData, setSessionData] = useState<CompletedExercise[]>([]);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [exerciseNotesHistory, setExerciseNotesHistory] = useState<Record<string, string[]>>({});
 
   // Current exercise adjustments
   const [currentWeight, setCurrentWeight] = useState(0);
@@ -262,6 +266,54 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
     // Keep screen on
     requestWakeLock();
   }, [template.exercises, initializeExerciseState]);
+
+  // Fetch historical exercise notes for this template/user
+  useEffect(() => {
+    const fetchExerciseNotes = async () => {
+      if (!user) {
+        setExerciseNotesHistory({});
+        return;
+      }
+
+      try {
+        let query = supabase
+          .from('workout_sessions')
+          .select('data, started_at, template_id, template_name')
+          .eq('user_id', user.id)
+          .not('completed_at', 'is', null)
+          .order('started_at', { ascending: false })
+          .limit(50);
+
+        if (template.id) {
+          query = query.eq('template_id', template.id);
+        } else {
+          query = query.eq('template_name', template.name);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        const notesMap: Record<string, string[]> = {};
+
+        (data as WorkoutSession[] | null)?.forEach((session) => {
+          const exercises = session.data?.exercises || [];
+          exercises.forEach((exercise) => {
+            if (exercise?.completion_notes) {
+              const key = exercise.name.toLowerCase();
+              if (!notesMap[key]) notesMap[key] = [];
+              notesMap[key].push(exercise.completion_notes);
+            }
+          });
+        });
+
+        setExerciseNotesHistory(notesMap);
+      } catch (err) {
+        console.error('Error loading exercise notes history:', err);
+      }
+    };
+
+    fetchExerciseNotes();
+  }, [template.id, template.name, user]);
 
   // Start rest timer
   const startRestTimer = useCallback(
@@ -704,6 +756,16 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
     setCurrentReps((prev) => Math.max(1, prev + delta));
   }, []);
 
+  const setExerciseNotes = useCallback((exerciseIdx: number, notes: string) => {
+    setSessionData((prev) => {
+      const updated = [...prev];
+      if (updated[exerciseIdx]) {
+        updated[exerciseIdx] = { ...updated[exerciseIdx], completion_notes: notes };
+      }
+      return updated;
+    });
+  }, []);
+
   // =============================================================================
   // Cleanup
   // =============================================================================
@@ -726,6 +788,7 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
     elapsedSeconds,
     actualDuration: elapsedSeconds,
     currentExercise,
+    exerciseNotesHistory,
     startWorkout,
     completeSet,
     completeFailureSet,
@@ -734,6 +797,7 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
     endWorkout,
     adjustWeight,
     adjustReps,
+    setExerciseNotes,
     setWeight: setCurrentWeight,
     setReps: setCurrentReps,
   };

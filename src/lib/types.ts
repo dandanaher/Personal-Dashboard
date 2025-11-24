@@ -84,6 +84,8 @@ export interface CompletedExercise {
   /** Exercise type for display and calculation purposes */
   type?: ExerciseType;
   target_sets: number;
+  /** User notes added after completing an exercise */
+  completion_notes?: string;
 
   // Strength targets
   /** Target reps per set - used for strength exercises */

@@ -13,6 +13,7 @@ import {
 import WorkoutControls from './WorkoutControls';
 import SetDisplay from './SetDisplay';
 import RestTimer from './RestTimer';
+import RestBetweenExercises from './RestBetweenExercises';
 import QuickAdjust from './QuickAdjust';
 import WorkoutTimer from './WorkoutTimer';
 
@@ -30,6 +31,7 @@ export default function LiveWorkout({
   const {
     phase,
     sessionData,
+    exerciseNotesHistory,
     elapsedSeconds,
     actualDuration,
     currentExercise,
@@ -41,6 +43,7 @@ export default function LiveWorkout({
     endWorkout,
     adjustWeight,
     adjustReps,
+    setExerciseNotes,
   } = useWorkoutSession(template);
 
   const { accentColor } = useThemeStore();
@@ -84,6 +87,46 @@ export default function LiveWorkout({
   // Get current exercise type
   const getExerciseType = (): ExerciseType => {
     return currentExercise?.exercise.type || 'strength';
+  };
+
+  // Render template + historical notes for the active exercise
+  const renderExerciseNotes = () => {
+    if (!currentExercise) return null;
+
+    const templateNote = currentExercise.exercise.notes;
+    const historyKey = currentExercise.exercise.name.toLowerCase();
+    const historyNotes = exerciseNotesHistory[historyKey] || [];
+    const currentNote = sessionData[currentExercise.exerciseIdx]?.completion_notes;
+
+    const combinedNotes = currentNote
+      ? [currentNote, ...historyNotes.filter((note) => note !== currentNote)]
+      : historyNotes;
+
+    if (!templateNote && combinedNotes.length === 0) return null;
+
+    return (
+      <div className="mt-4 space-y-3" data-no-tap>
+        {templateNote && (
+          <div className="text-sm text-white/70 text-center">💡 {templateNote}</div>
+        )}
+
+        {combinedNotes.length > 0 && (
+          <div className="bg-white/10 border border-white/10 rounded-xl p-3 text-left">
+            <div className="text-xs uppercase text-white/60 mb-2">Previous notes</div>
+            <div className="space-y-2">
+              {combinedNotes.map((note, idx) => (
+                <div
+                  key={`${historyKey}-${idx}`}
+                  className="text-sm text-white/90 leading-relaxed break-words"
+                >
+                  {note}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Handle screen tap for completing set
@@ -296,10 +339,15 @@ export default function LiveWorkout({
 
         {/* Resting between exercises */}
         {phase.type === 'resting_between_exercises' && (
-          <RestTimer
+          <RestBetweenExercises
             remainingSeconds={phase.remainingSeconds}
-            totalSeconds={template.exercises[phase.completedExerciseIdx].rest_time}
-            nextSetInfo={template.exercises[phase.nextExerciseIdx].name}
+            totalSeconds={
+              template.exercises[phase.completedExerciseIdx]?.rest_time || phase.remainingSeconds
+            }
+            completedExercise={sessionData[phase.completedExerciseIdx]}
+            nextExercise={template.exercises[phase.nextExerciseIdx]}
+            notes={sessionData[phase.completedExerciseIdx]?.completion_notes || ''}
+            onNotesChange={(value) => setExerciseNotes(phase.completedExerciseIdx, value)}
             onSkip={skipRest}
             highlightColor={highlightColor}
           />
@@ -319,6 +367,7 @@ export default function LiveWorkout({
                   reps={currentExercise.currentReps}
                   weight={currentExercise.currentWeight}
                 />
+                {renderExerciseNotes()}
                 <div className="mt-8 text-center">
                   <p className="text-sm text-white/70 mb-2">Tap anywhere to complete set</p>
                 </div>
@@ -337,6 +386,7 @@ export default function LiveWorkout({
                   distanceUnit={currentExercise.exercise.distance_unit}
                   targetTime={currentExercise.exercise.target_time}
                 />
+                {renderExerciseNotes()}
                 <div className="mt-8 text-center">
                   <p className="text-sm text-white/70 mb-2">Tap when complete to log results</p>
                 </div>
@@ -354,6 +404,7 @@ export default function LiveWorkout({
                   targetTime={currentExercise.exercise.target_time}
                   weight={currentExercise.currentWeight}
                 />
+                {renderExerciseNotes()}
                 <div className="mt-6">
                   <WorkoutTimer
                     targetTime={currentExercise.exercise.target_time || 60}
@@ -365,9 +416,8 @@ export default function LiveWorkout({
             )}
           </div>
         )}
-
-        {/* Failure set state */}
-        {(phase.type === 'failure_set' || phase.type === 'failure_input') && currentExercise && (
+      {/* Failure set state */}
+      {(phase.type === 'failure_set' || phase.type === 'failure_input') && currentExercise && (
           <div className="w-full max-w-sm">
             {showFailureInput ? (
               <div className="text-center" data-no-tap>
