@@ -266,15 +266,17 @@ export default function TemplateBuilder({
           </form>
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-2 p-4 border-t border-secondary-200 dark:border-secondary-700">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
-            Cancel
-          </Button>
-          <Button type="submit" form="template-form" isLoading={saving}>
-            {template ? 'Save Changes' : 'Create Template'}
-          </Button>
-        </div>
+        {/* Footer - hide when adding or editing exercises */}
+        {!showAddExercise && editingExerciseIndex === null && (
+          <div className="flex justify-end gap-2 p-4 border-t border-secondary-200 dark:border-secondary-700">
+            <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+              Cancel
+            </Button>
+            <Button type="submit" form="template-form" isLoading={saving}>
+              {template ? 'Save Changes' : 'Create Template'}
+            </Button>
+          </div>
+        )}
       </div>
 
       <style>{`

@@ -1,4 +1,4 @@
-import { Minus, Plus } from 'lucide-react';
+import { Minus, Plus, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 interface QuickAdjustProps {
   weight: number;
@@ -21,18 +21,26 @@ export default function QuickAdjust({
     <div className="grid grid-cols-2 gap-4">
       {/* Weight adjustment */}
       <div
-        className="flex items-center justify-between rounded-full p-2"
+        className="flex items-center justify-between rounded-full p-2 gap-1"
         style={{ backgroundColor: highlightColor }}
       >
         <button
-          onClick={() => onAdjustWeight(-2.5)}
-          className="w-11 h-11 flex items-center justify-center rounded-full bg-white hover:bg-white/90 active:scale-95 transition-all touch-manipulation"
+          onClick={() => onAdjustWeight(-1)}
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-white hover:bg-white/90 active:scale-95 transition-all touch-manipulation"
           style={{ color: accentColor }}
-          aria-label="Decrease weight"
+          aria-label="Decrease weight by 1kg"
         >
-          <Minus className="h-5 w-5" />
+          <ChevronsLeft className="h-4 w-4" />
         </button>
-        <div className="text-center px-2">
+        <button
+          onClick={() => onAdjustWeight(-0.25)}
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-white hover:bg-white/90 active:scale-95 transition-all touch-manipulation"
+          style={{ color: accentColor }}
+          aria-label="Decrease weight by 0.25kg"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <div className="text-center px-1 flex-1">
           <div className="text-lg font-bold text-white">
             {weight}
           </div>
@@ -41,12 +49,20 @@ export default function QuickAdjust({
           </div>
         </div>
         <button
-          onClick={() => onAdjustWeight(2.5)}
-          className="w-11 h-11 flex items-center justify-center rounded-full bg-white hover:bg-white/90 active:scale-95 transition-all touch-manipulation"
+          onClick={() => onAdjustWeight(0.25)}
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-white hover:bg-white/90 active:scale-95 transition-all touch-manipulation"
           style={{ color: accentColor }}
-          aria-label="Increase weight"
+          aria-label="Increase weight by 0.25kg"
         >
-          <Plus className="h-5 w-5" />
+          <ChevronRight className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => onAdjustWeight(1)}
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-white hover:bg-white/90 active:scale-95 transition-all touch-manipulation"
+          style={{ color: accentColor }}
+          aria-label="Increase weight by 1kg"
+        >
+          <ChevronsRight className="h-4 w-4" />
         </button>
       </div>
 
