@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Dumbbell, History, TrendingUp } from 'lucide-react';
 import { useWorkoutTemplates, useWorkoutSessions } from './hooks';
 import type { WorkoutTemplate, Exercise } from '@/lib/types';
 import { useAuthStore } from '@/stores/authStore';
+import { useWorkoutSessionStore } from '@/stores/workoutSessionStore';
 import TemplateList from './components/TemplateList';
 import TemplateBuilder from './components/TemplateBuilder';
 import WorkoutHistory from './components/WorkoutHistory';
@@ -100,13 +101,23 @@ function WorkoutPageContent() {
   const [activeTab, setActiveTab] = useState<TabType>('templates');
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplate | null>(null);
-  const [activeWorkout, setActiveWorkout] = useState<WorkoutTemplate | null>(null);
   const [showOverloadSuggestions, setShowOverloadSuggestions] = useState(false);
   const [overloadSuggestions, setOverloadSuggestions] = useState<
     Map<string, ProgressiveSuggestion>
   >(new Map());
   const [selectedTemplateForWorkout, setSelectedTemplateForWorkout] =
     useState<WorkoutTemplate | null>(null);
+  const [showActiveWorkoutWarning, setShowActiveWorkoutWarning] = useState(false);
+  const warningTimeoutRef = useRef<number | null>(null);
+
+  const {
+    isActive: isWorkoutActive,
+    isMinimized: isWorkoutMinimized,
+    activeTemplate,
+    startWorkout: startWorkoutSession,
+    resetSession,
+    resumeWorkout,
+  } = useWorkoutSessionStore();
 
   // Handle template actions
   const handleCreateTemplate = async (
@@ -170,6 +181,16 @@ function WorkoutPageContent() {
   // Handle starting workout with progressive overload check
   const handleStartWorkout = async (template: WorkoutTemplate) => {
     if (!user) return;
+    if (isWorkoutActive) {
+      setShowActiveWorkoutWarning(true);
+      if (warningTimeoutRef.current) {
+        window.clearTimeout(warningTimeoutRef.current);
+      }
+      warningTimeoutRef.current = window.setTimeout(() => {
+        setShowActiveWorkoutWarning(false);
+      }, 3000);
+      return;
+    }
 
     // Calculate progressive overload suggestions
     const suggestions = await calculateTemplateOverloads(
@@ -192,7 +213,7 @@ function WorkoutPageContent() {
       setShowOverloadSuggestions(true);
     } else {
       // Start workout directly
-      setActiveWorkout(template);
+      startWorkoutSession(template);
     }
   };
 
@@ -204,7 +225,7 @@ function WorkoutPageContent() {
       ? { ...selectedTemplateForWorkout, exercises: updatedExercises }
       : selectedTemplateForWorkout;
 
-    setActiveWorkout(workoutTemplate);
+    startWorkoutSession(workoutTemplate);
     setShowOverloadSuggestions(false);
     setSelectedTemplateForWorkout(null);
     setOverloadSuggestions(new Map());
@@ -223,22 +244,32 @@ function WorkoutPageContent() {
   };
 
   // Live workout is active
-  if (activeWorkout) {
+  if (isWorkoutActive && !isWorkoutMinimized && activeTemplate) {
     return (
       <LiveWorkout
-        template={activeWorkout}
+        template={activeTemplate}
         onComplete={() => {
-          setActiveWorkout(null);
+          resetSession();
           showToast('Workout saved!');
           refetchSessions();
         }}
-        onCancel={() => setActiveWorkout(null)}
+        onCancel={() => {
+          resetSession();
+        }}
       />
     );
   }
 
   return (
     <div className="pb-20">
+      {showActiveWorkoutWarning && isWorkoutActive && (
+        <div className="fixed bottom-32 left-0 right-0 z-[55] flex justify-center px-4 pointer-events-none">
+          <div className="bg-white text-secondary-900 border border-secondary-200 dark:bg-secondary-800 dark:text-secondary-100 dark:border-secondary-700 rounded-full shadow-lg shadow-black/15 px-4 py-2 flex items-center gap-3 pointer-events-auto">
+            <span className="text-sm">You already have a workout in progress.</span>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-secondary-900 dark:text-secondary-100">Workouts</h1>

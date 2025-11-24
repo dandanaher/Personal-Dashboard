@@ -1,6 +1,8 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { CheckSquare, Target, Grid, Dumbbell, Home } from 'lucide-react';
 import { useThemeStore } from '@/stores/themeStore';
+import { useWorkoutSessionStore } from '@/stores/workoutSessionStore';
+import { formatTime } from '@/features/workout/lib/workoutEngine';
 
 interface NavItem {
   path: string;
@@ -39,6 +41,9 @@ const navItems: NavItem[] = [
 function BottomNav() {
   const { accentColor } = useThemeStore();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isActive, isMinimized, activeTemplate, elapsedSeconds, resumeWorkout } =
+    useWorkoutSessionStore();
 
   // Find the active index
   const activeIndex = navItems.findIndex((item) => location.pathname.startsWith(item.path));
@@ -47,50 +52,70 @@ function BottomNav() {
   // Circle size matches the nav bar height minus padding
   const circleSize = 48; // pixels
 
+  const showResume = isActive && isMinimized && !!activeTemplate;
+
+  const handleResume = () => {
+    resumeWorkout();
+    navigate('/workout');
+  };
+
   return (
     <nav
       className="fixed left-0 right-0 z-50 flex justify-center pointer-events-none"
       style={{ bottom: 'max(4px, env(safe-area-inset-bottom))' }}
     >
-      <div
-        className="relative bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/40 dark:border-white/20 shadow-lg shadow-black/5 pointer-events-auto"
-        style={{ borderRadius: `${(circleSize + 8) / 2}px` }}
-      >
-        {/* Animated circle indicator */}
-        <div
-          className="absolute top-1 transition-all duration-300 ease-out pointer-events-none"
-          style={{
-            left: `${4 + safeActiveIndex * circleSize}px`,
-            width: `${circleSize}px`,
-            height: `${circleSize}px`,
-          }}
-        >
-          <div
-            className="w-full h-full rounded-full"
-            style={{
-              backgroundColor: `${accentColor}20`,
-            }}
-          />
-        </div>
-
-        {/* Navigation items */}
-        <div className="relative flex items-center p-1">
-          {navItems.map((item, index) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={`flex items-center justify-center rounded-full transition-colors duration-200 touch-manipulation ${
-                index === safeActiveIndex ? '' : 'text-secondary-500 dark:text-secondary-400'
-              }`}
-              style={{
-                width: `${circleSize}px`,
-                height: `${circleSize}px`,
-                ...(index === safeActiveIndex ? { color: accentColor } : {}),
-              }}
+      <div className="relative w-full flex justify-center">
+        {showResume && (
+          <div className="absolute -top-12 left-0 right-0 flex justify-center pointer-events-auto">
+            <button
+              onClick={handleResume}
+              className="px-4 py-2 rounded-full bg-white text-secondary-900 border border-secondary-200 dark:bg-secondary-800 dark:text-secondary-100 dark:border-secondary-700 shadow-lg shadow-black/10 text-sm font-medium flex items-center gap-2"
             >
-              {item.icon}
-            </NavLink>
-          ))}
+              Resume: {activeTemplate?.name || 'Workout'} ({formatTime(elapsedSeconds)})
+            </button>
+          </div>
+        )}
+
+        <div
+          className="relative bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/40 dark:border-white/20 shadow-lg shadow-black/5 pointer-events-auto"
+          style={{ borderRadius: `${(circleSize + 8) / 2}px` }}
+        >
+          {/* Animated circle indicator */}
+          <div
+            className="absolute top-1 transition-all duration-300 ease-out pointer-events-none"
+            style={{
+              left: `${4 + safeActiveIndex * circleSize}px`,
+              width: `${circleSize}px`,
+              height: `${circleSize}px`,
+            }}
+          >
+            <div
+              className="w-full h-full rounded-full"
+              style={{
+                backgroundColor: `${accentColor}20`,
+              }}
+            />
+          </div>
+
+          {/* Navigation items */}
+          <div className="relative flex items-center p-1">
+            {navItems.map((item, index) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={`flex items-center justify-center rounded-full transition-colors duration-200 touch-manipulation ${
+                  index === safeActiveIndex ? '' : 'text-secondary-500 dark:text-secondary-400'
+                }`}
+                style={{
+                  width: `${circleSize}px`,
+                  height: `${circleSize}px`,
+                  ...(index === safeActiveIndex ? { color: accentColor } : {}),
+                }}
+              >
+                {item.icon}
+              </NavLink>
+            ))}
+          </div>
         </div>
       </div>
     </nav>

@@ -31,6 +31,7 @@ export default function LiveWorkout({
   const {
     phase,
     sessionData,
+    activeTemplate,
     exerciseNotesHistory,
     elapsedSeconds,
     actualDuration,
@@ -44,6 +45,7 @@ export default function LiveWorkout({
     adjustWeight,
     adjustReps,
     setExerciseNotes,
+    minimizeWorkout,
   } = useWorkoutSession(template);
 
   const { accentColor } = useThemeStore();
@@ -75,6 +77,8 @@ export default function LiveWorkout({
       });
     }
   }, [phase.type, isSaved, endWorkout]);
+
+  const workoutTemplate = activeTemplate || template;
 
   // Handle end workout
   const handleEndWorkout = async () => {
@@ -180,9 +184,11 @@ export default function LiveWorkout({
   };
 
   // Get progress string
+  if (!workoutTemplate) return null;
+
   const getExerciseProgress = () => {
     if (!currentExercise) return '';
-    return `Exercise ${currentExercise.exerciseIdx + 1}/${template.exercises.length}`;
+    return `Exercise ${currentExercise.exerciseIdx + 1}/${workoutTemplate.exercises.length}`;
   };
 
   // Render complete screen
@@ -208,7 +214,7 @@ export default function LiveWorkout({
             <h1 className="text-2xl font-bold text-secondary-900 dark:text-secondary-100 mb-2">
               Workout Complete!
             </h1>
-            <p className="text-secondary-600 dark:text-secondary-400 mb-8">{template.name}</p>
+            <p className="text-secondary-600 dark:text-secondary-400 mb-8">{workoutTemplate.name}</p>
 
             <div className="grid grid-cols-2 gap-4 mb-8">
               <Card className="p-4 text-center">
@@ -299,6 +305,7 @@ export default function LiveWorkout({
           exerciseProgress={getExerciseProgress()}
           onTogglePause={togglePause}
           onEnd={() => setShowEndConfirm(true)}
+          onMinimize={minimizeWorkout}
           highlightColor={highlightColor}
         />
       </div>
@@ -320,7 +327,7 @@ export default function LiveWorkout({
           <RestTimer
             remainingSeconds={phase.remainingSeconds}
             totalSeconds={currentExercise.exercise.rest_time}
-            nextSetInfo={`Set ${phase.setIdx + 1}/${currentExercise.exercise.sets} • ${currentExercise.currentReps} reps @ ${currentExercise.currentWeight}kg`}
+            nextSetInfo={`Set ${phase.setIdx + 1}/${currentExercise.exercise.sets} - ${currentExercise.currentReps} reps @ ${currentExercise.currentWeight}kg`}
             onSkip={skipRest}
             highlightColor={highlightColor}
           />
@@ -331,7 +338,7 @@ export default function LiveWorkout({
           <RestTimer
             remainingSeconds={phase.remainingSeconds}
             totalSeconds={currentExercise.exercise.rest_time}
-            nextSetInfo={`Failure Set • ${currentExercise.currentWeight}kg`}
+            nextSetInfo={`Failure Set - ${currentExercise.currentWeight}kg`}
             onSkip={skipRest}
             highlightColor={highlightColor}
           />
@@ -342,10 +349,10 @@ export default function LiveWorkout({
           <RestBetweenExercises
             remainingSeconds={phase.remainingSeconds}
             totalSeconds={
-              template.exercises[phase.completedExerciseIdx]?.rest_time || phase.remainingSeconds
+              workoutTemplate.exercises[phase.completedExerciseIdx]?.rest_time || phase.remainingSeconds
             }
             completedExercise={sessionData[phase.completedExerciseIdx]}
-            nextExercise={template.exercises[phase.nextExerciseIdx]}
+            nextExercise={workoutTemplate.exercises[phase.nextExerciseIdx]}
             notes={sessionData[phase.completedExerciseIdx]?.completion_notes || ''}
             onNotesChange={(value) => setExerciseNotes(phase.completedExerciseIdx, value)}
             onSkip={skipRest}

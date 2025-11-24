@@ -1,4 +1,4 @@
-import { Pause, Play, Square } from 'lucide-react';
+import { Pause, Play, Square, Minimize2 } from 'lucide-react';
 
 interface WorkoutControlsProps {
   isPaused: boolean;
@@ -6,6 +6,7 @@ interface WorkoutControlsProps {
   exerciseProgress: string;
   onTogglePause: () => void;
   onEnd: () => void;
+  onMinimize?: () => void;
   highlightColor?: string;
 }
 
@@ -15,6 +16,7 @@ export default function WorkoutControls({
   exerciseProgress,
   onTogglePause,
   onEnd,
+  onMinimize,
   highlightColor,
 }: WorkoutControlsProps) {
   return (
@@ -36,6 +38,16 @@ export default function WorkoutControls({
         >
           <Square className="h-5 w-5" />
         </button>
+        {onMinimize && (
+          <button
+            onClick={onMinimize}
+            className="p-2 rounded-full text-white hover:bg-white/20 transition-colors"
+            style={{ backgroundColor: highlightColor }}
+            aria-label="Minimize workout"
+          >
+            <Minimize2 className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       <div className="text-center">
