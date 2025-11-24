@@ -157,12 +157,7 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, showDate = false }:
           style={{ '--tw-ring-color': accentColor } as React.CSSProperties}
         />
         <div className="flex justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCancelEdit}
-            disabled={isSaving}
-          >
+          <Button variant="ghost" size="sm" onClick={handleCancelEdit} disabled={isSaving}>
             <X className="h-4 w-4 mr-1" />
             Cancel
           </Button>
@@ -223,16 +218,15 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, showDate = false }:
               flex items-center justify-center
               transition-all duration-200 ease-in-out
               focus:outline-none focus:ring-2 focus:ring-offset-2
-              ${task.completed
-                ? 'text-white'
-                : 'border-secondary-300 dark:border-secondary-600'
-              }
+              ${task.completed ? 'text-white' : 'border-secondary-300 dark:border-secondary-600'}
             `}
-            style={{
-              backgroundColor: task.completed ? accentColor : undefined,
-              borderColor: task.completed ? accentColor : undefined,
-              '--tw-ring-color': accentColor,
-            } as React.CSSProperties}
+            style={
+              {
+                backgroundColor: task.completed ? accentColor : undefined,
+                borderColor: task.completed ? accentColor : undefined,
+                '--tw-ring-color': accentColor,
+              } as React.CSSProperties
+            }
             aria-label={task.completed ? 'Mark as incomplete' : 'Mark as complete'}
           >
             {task.completed && <Check className="h-4 w-4" />}
@@ -243,9 +237,10 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, showDate = false }:
             <p
               className={`
                 text-base transition-all duration-200
-                ${task.completed
-                  ? 'text-secondary-400 dark:text-secondary-500 line-through'
-                  : 'text-secondary-900 dark:text-white'
+                ${
+                  task.completed
+                    ? 'text-secondary-400 dark:text-secondary-500 line-through'
+                    : 'text-secondary-900 dark:text-white'
                 }
               `}
             >
@@ -255,9 +250,10 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, showDate = false }:
               <p
                 className={`
                   text-sm mt-1 transition-all duration-200
-                  ${task.completed
-                    ? 'text-secondary-400 dark:text-secondary-600 line-through'
-                    : 'text-secondary-500 dark:text-secondary-400'
+                  ${
+                    task.completed
+                      ? 'text-secondary-400 dark:text-secondary-600 line-through'
+                      : 'text-secondary-500 dark:text-secondary-400'
                   }
                 `}
               >
@@ -268,9 +264,12 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, showDate = false }:
               <p
                 className={`
                   text-xs mt-1 transition-all duration-200
-                  ${task.date && task.date < new Date().toISOString().split('T')[0] && !task.completed
-                    ? 'text-red-500 dark:text-red-400'
-                    : 'text-secondary-400 dark:text-secondary-500'
+                  ${
+                    task.date &&
+                    task.date < new Date().toISOString().split('T')[0] &&
+                    !task.completed
+                      ? 'text-red-500 dark:text-red-400'
+                      : 'text-secondary-400 dark:text-secondary-500'
                   }
                 `}
               >

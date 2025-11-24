@@ -28,9 +28,10 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
           className={`
             relative w-10 h-10 rounded-full border-2 transition-all duration-150
             hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500
-            ${value === color.value
-              ? 'border-secondary-900 dark:border-white scale-110'
-              : 'border-transparent'
+            ${
+              value === color.value
+                ? 'border-secondary-900 dark:border-white scale-110'
+                : 'border-transparent'
             }
           `}
           style={{ backgroundColor: color.value }}

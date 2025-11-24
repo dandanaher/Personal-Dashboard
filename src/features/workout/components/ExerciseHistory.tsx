@@ -16,7 +16,10 @@ const formatDuration = (seconds: number): string => {
 };
 
 // Helper to get set display based on exercise type
-const getSetDisplay = (set: { reps?: number; weight?: number; distance?: number; time?: number }, type: ExerciseType): string => {
+const getSetDisplay = (
+  set: { reps?: number; weight?: number; distance?: number; time?: number },
+  type: ExerciseType
+): string => {
   switch (type) {
     case 'strength':
       return `${set.reps || 0} × ${set.weight || 0}kg`;
@@ -54,16 +57,14 @@ interface ExerciseHistoryProps {
   onClose: () => void;
 }
 
-export default function ExerciseHistory({
-  exercise,
-  onClose,
-}: ExerciseHistoryProps) {
+export default function ExerciseHistory({ exercise, onClose }: ExerciseHistoryProps) {
   const exerciseType = exercise.type || 'strength';
 
   // Check if all sets hit target based on exercise type
-  const allSetsHitTarget = exerciseType === 'strength'
-    ? exercise.main_sets.every(set => (set.reps || 0) >= (exercise.target_reps || 0))
-    : true; // For non-strength, just completing is success
+  const allSetsHitTarget =
+    exerciseType === 'strength'
+      ? exercise.main_sets.every((set) => (set.reps || 0) >= (exercise.target_reps || 0))
+      : true; // For non-strength, just completing is success
 
   // Prevent body scroll when modal is open
   useScrollLock(true);
@@ -177,7 +178,8 @@ export default function ExerciseHistory({
                       {exercise.failure_set.reps} reps
                     </span>
                     <span className="text-secondary-500 dark:text-secondary-400">
-                      {' '}@ {exercise.failure_set.weight}kg
+                      {' '}
+                      @ {exercise.failure_set.weight}kg
                     </span>
                   </div>
                 </div>
@@ -305,25 +307,22 @@ export function SessionDetail({
               <div className="text-lg font-bold text-secondary-900 dark:text-secondary-100">
                 {duration ? `${Math.floor(duration / 60)}m` : '--'}
               </div>
-              <div className="text-xs text-secondary-500 dark:text-secondary-400">
-                Duration
-              </div>
+              <div className="text-xs text-secondary-500 dark:text-secondary-400">Duration</div>
             </div>
             <div>
               <div className="text-lg font-bold text-secondary-900 dark:text-secondary-100">
-                {exercises.reduce((sum, e) => sum + e.main_sets.length + (e.failure_set ? 1 : 0), 0)}
+                {exercises.reduce(
+                  (sum, e) => sum + e.main_sets.length + (e.failure_set ? 1 : 0),
+                  0
+                )}
               </div>
-              <div className="text-xs text-secondary-500 dark:text-secondary-400">
-                Sets
-              </div>
+              <div className="text-xs text-secondary-500 dark:text-secondary-400">Sets</div>
             </div>
             <div>
               <div className="text-lg font-bold text-secondary-900 dark:text-secondary-100">
                 {volumeLabel}
               </div>
-              <div className="text-xs text-secondary-500 dark:text-secondary-400">
-                Volume
-              </div>
+              <div className="text-xs text-secondary-500 dark:text-secondary-400">Volume</div>
             </div>
           </div>
         </div>
@@ -332,15 +331,13 @@ export function SessionDetail({
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {exercises.map((exercise, index) => {
             const exerciseType = exercise.type || 'strength';
-            const allSetsHit = exerciseType === 'strength'
-              ? exercise.main_sets.every(s => (s.reps || 0) >= (exercise.target_reps || 0))
-              : true;
+            const allSetsHit =
+              exerciseType === 'strength'
+                ? exercise.main_sets.every((s) => (s.reps || 0) >= (exercise.target_reps || 0))
+                : true;
 
             return (
-              <div
-                key={index}
-                className="p-3 bg-secondary-50 dark:bg-secondary-800 rounded-lg"
-              >
+              <div key={index} className="p-3 bg-secondary-50 dark:bg-secondary-800 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <h3 className="font-medium text-secondary-900 dark:text-secondary-100">
@@ -356,23 +353,23 @@ export function SessionDetail({
 
                 <div className="space-y-1">
                   {exercise.main_sets.map((set, setIdx) => {
-                    const hitTarget = exerciseType === 'strength'
-                      ? (set.reps || 0) >= (exercise.target_reps || 0)
-                      : true;
+                    const hitTarget =
+                      exerciseType === 'strength'
+                        ? (set.reps || 0) >= (exercise.target_reps || 0)
+                        : true;
 
                     return (
-                      <div
-                        key={setIdx}
-                        className="flex items-center justify-between text-sm"
-                      >
+                      <div key={setIdx} className="flex items-center justify-between text-sm">
                         <span className="text-secondary-600 dark:text-secondary-400">
                           {exerciseType === 'cardio' ? 'Result' : `Set ${setIdx + 1}`}
                         </span>
-                        <span className={`font-medium ${
-                          hitTarget
-                            ? 'text-green-600 dark:text-green-400'
-                            : 'text-secondary-900 dark:text-secondary-100'
-                        }`}>
+                        <span
+                          className={`font-medium ${
+                            hitTarget
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-secondary-900 dark:text-secondary-100'
+                          }`}
+                        >
                           {getSetDisplay(set, exerciseType)}
                         </span>
                       </div>
@@ -380,9 +377,7 @@ export function SessionDetail({
                   })}
                   {exercise.failure_set && (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-orange-600 dark:text-orange-400">
-                        Failure
-                      </span>
+                      <span className="text-orange-600 dark:text-orange-400">Failure</span>
                       <span className="font-medium text-orange-600 dark:text-orange-400">
                         {getSetDisplay(exercise.failure_set, exerciseType)}
                       </span>
@@ -400,9 +395,7 @@ export function SessionDetail({
             <h3 className="text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">
               Notes
             </h3>
-            <p className="text-sm text-secondary-600 dark:text-secondary-400">
-              {notes}
-            </p>
+            <p className="text-sm text-secondary-600 dark:text-secondary-400">{notes}</p>
           </div>
         )}
       </div>

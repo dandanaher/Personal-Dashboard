@@ -89,15 +89,15 @@ export function useAllTasks(): UseAllTasksReturn {
   }, [user, sortTasks]);
 
   // Calculate derived task lists
-  const upcomingTasks = allTasks.filter(task => {
+  const upcomingTasks = allTasks.filter((task) => {
     if (task.completed) return false;
     if (!task.date) return false;
     return task.date >= today;
   });
 
-  const datelessTasks = allTasks.filter(task => !task.date && !task.completed);
+  const datelessTasks = allTasks.filter((task) => !task.date && !task.completed);
 
-  const overdueTasks = allTasks.filter(task => {
+  const overdueTasks = allTasks.filter((task) => {
     if (task.completed) return false;
     if (!task.date) return false;
     return task.date < today;
@@ -107,185 +107,180 @@ export function useAllTasks(): UseAllTasksReturn {
   const hasPreviousUncompleted = overdueTasks.length > 0;
 
   // Add a new task with optimistic update
-  const addTask = useCallback(async (
-    title: string,
-    description?: string,
-    date?: string | null
-  ): Promise<boolean> => {
-    if (!user) return false;
+  const addTask = useCallback(
+    async (title: string, description?: string, date?: string | null): Promise<boolean> => {
+      if (!user) return false;
 
-    // Calculate new order_index
-    const tasksForDate = allTasks.filter(t => t.date === date);
-    const maxOrderIndex = tasksForDate.reduce((max, task) =>
-      Math.max(max, task.order_index), 0
-    );
+      // Calculate new order_index
+      const tasksForDate = allTasks.filter((t) => t.date === date);
+      const maxOrderIndex = tasksForDate.reduce((max, task) => Math.max(max, task.order_index), 0);
 
-    // Create temporary task for optimistic update
-    const tempId = `temp-${Date.now()}`;
-    const tempTask: Task = {
-      id: tempId,
-      user_id: user.id,
-      title,
-      description: description || null,
-      completed: false,
-      date: date ?? null,
-      order_index: maxOrderIndex + 1,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+      // Create temporary task for optimistic update
+      const tempId = `temp-${Date.now()}`;
+      const tempTask: Task = {
+        id: tempId,
+        user_id: user.id,
+        title,
+        description: description || null,
+        completed: false,
+        date: date ?? null,
+        order_index: maxOrderIndex + 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
-    // Optimistic update
-    setAllTasks(prev => sortTasks([...prev, tempTask]));
+      // Optimistic update
+      setAllTasks((prev) => sortTasks([...prev, tempTask]));
 
-    try {
-      const { data, error: insertError } = await supabase
-        .from('tasks')
-        .insert({
-          user_id: user.id,
-          title,
-          description: description || null,
-          completed: false,
-          date: date ?? null,
-          order_index: maxOrderIndex + 1,
-        })
-        .select()
-        .single();
+      try {
+        const { data, error: insertError } = await supabase
+          .from('tasks')
+          .insert({
+            user_id: user.id,
+            title,
+            description: description || null,
+            completed: false,
+            date: date ?? null,
+            order_index: maxOrderIndex + 1,
+          })
+          .select()
+          .single();
 
-      if (insertError) {
-        throw insertError;
+        if (insertError) {
+          throw insertError;
+        }
+
+        // Replace temp task with real task
+        setAllTasks((prev) => sortTasks(prev.map((task) => (task.id === tempId ? data : task))));
+
+        return true;
+      } catch (err) {
+        // Rollback optimistic update
+        setAllTasks((prev) => prev.filter((task) => task.id !== tempId));
+        const errorMessage = err instanceof Error ? err.message : 'Failed to add task';
+        setError(errorMessage);
+        console.error('Error adding task:', err);
+        return false;
       }
-
-      // Replace temp task with real task
-      setAllTasks(prev =>
-        sortTasks(prev.map(task => task.id === tempId ? data : task))
-      );
-
-      return true;
-    } catch (err) {
-      // Rollback optimistic update
-      setAllTasks(prev => prev.filter(task => task.id !== tempId));
-      const errorMessage = err instanceof Error ? err.message : 'Failed to add task';
-      setError(errorMessage);
-      console.error('Error adding task:', err);
-      return false;
-    }
-  }, [user, allTasks, sortTasks]);
+    },
+    [user, allTasks, sortTasks]
+  );
 
   // Toggle task completion with optimistic update
-  const toggleTask = useCallback(async (taskId: string) => {
-    const task = allTasks.find(t => t.id === taskId);
-    if (!task) return;
+  const toggleTask = useCallback(
+    async (taskId: string) => {
+      const task = allTasks.find((t) => t.id === taskId);
+      if (!task) return;
 
-    const newCompleted = !task.completed;
+      const newCompleted = !task.completed;
 
-    // Optimistic update
-    setAllTasks(prev =>
-      sortTasks(prev.map(t =>
-        t.id === taskId
-          ? { ...t, completed: newCompleted, updated_at: new Date().toISOString() }
-          : t
-      ))
-    );
-
-    try {
-      const { error: updateError } = await supabase
-        .from('tasks')
-        .update({
-          completed: newCompleted,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', taskId);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      // Award XP for completing a task (Focus)
-      if (newCompleted && user) {
-        await incrementXP(user.id, 'focus', XP_REWARDS.TASK_COMPLETE);
-      }
-    } catch (err) {
-      // Rollback optimistic update
-      setAllTasks(prev =>
-        sortTasks(prev.map(t =>
-          t.id === taskId
-            ? { ...t, completed: task.completed }
-            : t
-        ))
+      // Optimistic update
+      setAllTasks((prev) =>
+        sortTasks(
+          prev.map((t) =>
+            t.id === taskId
+              ? { ...t, completed: newCompleted, updated_at: new Date().toISOString() }
+              : t
+          )
+        )
       );
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update task';
-      setError(errorMessage);
-      console.error('Error toggling task:', err);
-    }
-  }, [allTasks, sortTasks, user]);
+
+      try {
+        const { error: updateError } = await supabase
+          .from('tasks')
+          .update({
+            completed: newCompleted,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', taskId);
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        // Award XP for completing a task (Focus)
+        if (newCompleted && user) {
+          await incrementXP(user.id, 'focus', XP_REWARDS.TASK_COMPLETE);
+        }
+      } catch (err) {
+        // Rollback optimistic update
+        setAllTasks((prev) =>
+          sortTasks(prev.map((t) => (t.id === taskId ? { ...t, completed: task.completed } : t)))
+        );
+        const errorMessage = err instanceof Error ? err.message : 'Failed to update task';
+        setError(errorMessage);
+        console.error('Error toggling task:', err);
+      }
+    },
+    [allTasks, sortTasks, user]
+  );
 
   // Delete task with optimistic update
-  const deleteTask = useCallback(async (taskId: string) => {
-    const task = allTasks.find(t => t.id === taskId);
-    if (!task) return;
+  const deleteTask = useCallback(
+    async (taskId: string) => {
+      const task = allTasks.find((t) => t.id === taskId);
+      if (!task) return;
 
-    // Optimistic update
-    setAllTasks(prev => prev.filter(t => t.id !== taskId));
+      // Optimistic update
+      setAllTasks((prev) => prev.filter((t) => t.id !== taskId));
 
-    try {
-      const { error: deleteError } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', taskId);
+      try {
+        const { error: deleteError } = await supabase.from('tasks').delete().eq('id', taskId);
 
-      if (deleteError) {
-        throw deleteError;
+        if (deleteError) {
+          throw deleteError;
+        }
+      } catch (err) {
+        // Rollback optimistic update
+        setAllTasks((prev) => sortTasks([...prev, task]));
+        const errorMessage = err instanceof Error ? err.message : 'Failed to delete task';
+        setError(errorMessage);
+        console.error('Error deleting task:', err);
       }
-    } catch (err) {
-      // Rollback optimistic update
-      setAllTasks(prev => sortTasks([...prev, task]));
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete task';
-      setError(errorMessage);
-      console.error('Error deleting task:', err);
-    }
-  }, [allTasks, sortTasks]);
+    },
+    [allTasks, sortTasks]
+  );
 
   // Update task with optimistic update
-  const updateTask = useCallback(async (taskId: string, updates: TaskUpdate): Promise<boolean> => {
-    const task = allTasks.find(t => t.id === taskId);
-    if (!task) return false;
+  const updateTask = useCallback(
+    async (taskId: string, updates: TaskUpdate): Promise<boolean> => {
+      const task = allTasks.find((t) => t.id === taskId);
+      if (!task) return false;
 
-    // Optimistic update
-    setAllTasks(prev =>
-      sortTasks(prev.map(t =>
-        t.id === taskId
-          ? { ...t, ...updates, updated_at: new Date().toISOString() }
-          : t
-      ))
-    );
-
-    try {
-      const { error: updateError } = await supabase
-        .from('tasks')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', taskId);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      return true;
-    } catch (err) {
-      // Rollback optimistic update
-      setAllTasks(prev =>
-        sortTasks(prev.map(t =>
-          t.id === taskId ? task : t
-        ))
+      // Optimistic update
+      setAllTasks((prev) =>
+        sortTasks(
+          prev.map((t) =>
+            t.id === taskId ? { ...t, ...updates, updated_at: new Date().toISOString() } : t
+          )
+        )
       );
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update task';
-      setError(errorMessage);
-      console.error('Error updating task:', err);
-      return false;
-    }
-  }, [allTasks, sortTasks]);
+
+      try {
+        const { error: updateError } = await supabase
+          .from('tasks')
+          .update({
+            ...updates,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', taskId);
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        return true;
+      } catch (err) {
+        // Rollback optimistic update
+        setAllTasks((prev) => sortTasks(prev.map((t) => (t.id === taskId ? task : t))));
+        const errorMessage = err instanceof Error ? err.message : 'Failed to update task';
+        setError(errorMessage);
+        console.error('Error updating task:', err);
+        return false;
+      }
+    },
+    [allTasks, sortTasks]
+  );
 
   // Initial fetch
   useEffect(() => {

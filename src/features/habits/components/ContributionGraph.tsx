@@ -12,7 +12,12 @@ interface ContributionGraphProps {
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-export function ContributionGraph({ logs, color, showMonthLabels = false, allowDragScroll = false }: ContributionGraphProps) {
+export function ContributionGraph({
+  logs,
+  color,
+  showMonthLabels = false,
+  allowDragScroll = false,
+}: ContributionGraphProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const startX = useRef(0);
@@ -77,7 +82,7 @@ export function ContributionGraph({ logs, color, showMonthLabels = false, allowD
 
   // Create a Set of completed dates for quick lookup
   const completedDates = useMemo(() => {
-    return new Set(logs.filter(log => log.completed).map(log => log.date));
+    return new Set(logs.filter((log) => log.completed).map((log) => log.date));
   }, [logs]);
 
   // Generate the grid data (52 weeks + partial week)
@@ -150,7 +155,9 @@ export function ContributionGraph({ logs, color, showMonthLabels = false, allowD
     <div className="relative">
       <div className="flex">
         {/* Day labels */}
-        <div className={`flex flex-col gap-[3px] mr-2 text-xs text-secondary-500 dark:text-secondary-400 ${showMonthLabels ? 'mt-5' : ''}`}>
+        <div
+          className={`flex flex-col gap-[3px] mr-2 text-xs text-secondary-500 dark:text-secondary-400 ${showMonthLabels ? 'mt-5' : ''}`}
+        >
           {DAYS_OF_WEEK.map((day, idx) => (
             <div
               key={day}
@@ -176,9 +183,11 @@ export function ContributionGraph({ logs, color, showMonthLabels = false, allowD
         >
           <div
             className="inline-block"
-            style={{
-              '--graph-empty': 'rgb(229 231 235)',
-            } as React.CSSProperties}
+            style={
+              {
+                '--graph-empty': 'rgb(229 231 235)',
+              } as React.CSSProperties
+            }
           >
             <style>
               {`
@@ -199,12 +208,10 @@ export function ContributionGraph({ logs, color, showMonthLabels = false, allowD
             {showMonthLabels && (
               <div className="flex mb-1 text-xs text-secondary-500 dark:text-secondary-400 h-4">
                 {weeks.map((_week, weekIdx) => {
-                  const monthLabel = monthLabels.find(m => m.weekIndex === weekIdx);
+                  const monthLabel = monthLabels.find((m) => m.weekIndex === weekIdx);
                   return (
                     <div key={weekIdx} className="w-[14px] flex-shrink-0">
-                      {monthLabel && (
-                        <span className="whitespace-nowrap">{monthLabel.month}</span>
-                      )}
+                      {monthLabel && <span className="whitespace-nowrap">{monthLabel.month}</span>}
                     </div>
                   );
                 })}

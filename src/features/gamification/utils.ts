@@ -40,10 +40,10 @@ export function getProgressToNextLevel(xp: number): number {
  * XP rewards for different actions
  */
 export const XP_REWARDS = {
-  HABIT_COMPLETE: 15,     // Consistency
-  WORKOUT_COMPLETE: 50,   // Vitality
-  TASK_COMPLETE: 20,      // Focus
-  GOAL_COMPLETE: 100,     // Drive
+  HABIT_COMPLETE: 15, // Consistency
+  WORKOUT_COMPLETE: 50, // Vitality
+  TASK_COMPLETE: 20, // Focus
+  GOAL_COMPLETE: 100, // Drive
 } as const;
 
 /**

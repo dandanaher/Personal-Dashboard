@@ -12,7 +12,8 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
     const variantStyles = {
       default: 'bg-white dark:bg-secondary-800 shadow-sm',
       elevated: 'bg-white dark:bg-secondary-800 shadow-md hover:shadow-lg',
-      outlined: 'bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700',
+      outlined:
+        'bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700',
     };
 
     const paddingStyles = {

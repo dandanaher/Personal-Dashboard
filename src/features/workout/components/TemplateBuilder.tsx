@@ -8,49 +8,109 @@ import ExerciseBuilder, { ExerciseItem } from './ExerciseBuilder';
 
 interface TemplateBuilderProps {
   template?: WorkoutTemplate;
-  onSave: (name: string, description: string | null, exercises: Exercise[], linkedHabitId: string | null) => Promise<boolean>;
+  onSave: (
+    name: string,
+    description: string | null,
+    exercises: Exercise[],
+    linkedHabitId: string | null
+  ) => Promise<boolean>;
   onClose: () => void;
 }
 
-export default function TemplateBuilder({
-  template,
-  onSave,
-  onClose,
-}: TemplateBuilderProps) {
+export default function TemplateBuilder({ template, onSave, onClose }: TemplateBuilderProps) {
   const [name, setName] = useState(template?.name || '');
   const [description, setDescription] = useState(template?.description || '');
   const [exercises, setExercises] = useState<Exercise[]>(template?.exercises || []);
-  const [linkedHabitId, setLinkedHabitId] = useState<string | null>(template?.linked_habit_id || null);
+  const [linkedHabitId, setLinkedHabitId] = useState<string | null>(
+    template?.linked_habit_id || null
+  );
   const [editingExerciseIndex, setEditingExerciseIndex] = useState<number | null>(null);
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Drag and drop state
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+
   const { habits } = useHabits();
 
   const handleAddExercise = (exercise: Exercise) => {
-    setExercises(prev => [...prev, exercise]);
+    setExercises((prev) => [...prev, exercise]);
     setShowAddExercise(false);
   };
 
   const handleUpdateExercise = (index: number, exercise: Exercise) => {
-    setExercises(prev => prev.map((e, i) => (i === index ? exercise : e)));
+    setExercises((prev) => prev.map((e, i) => (i === index ? exercise : e)));
     setEditingExerciseIndex(null);
   };
 
   const handleDeleteExercise = (index: number) => {
-    setExercises(prev => prev.filter((_, i) => i !== index));
+    setExercises((prev) => prev.filter((_, i) => i !== index));
+
+    // Fix: Reset editing state to prevent crashes when deleting exercises
+    if (editingExerciseIndex !== null) {
+      if (editingExerciseIndex === index) {
+        // Deleting the exercise being edited
+        setEditingExerciseIndex(null);
+      } else if (editingExerciseIndex > index) {
+        // Deleting an exercise before the one being edited, adjust index
+        setEditingExerciseIndex(editingExerciseIndex - 1);
+      }
+    }
   };
 
-  const handleMoveExercise = (fromIndex: number, toIndex: number) => {
-    if (toIndex < 0 || toIndex >= exercises.length) return;
+  // Drag and drop handlers
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
 
-    setExercises(prev => {
-      const newExercises = [...prev];
-      const [moved] = newExercises.splice(fromIndex, 1);
-      newExercises.splice(toIndex, 0, moved);
-      return newExercises;
-    });
+  const handleDragOver = (index: number) => {
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragEnd = () => {
+    if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
+      setExercises((prev) => {
+        const newExercises = [...prev];
+        const [moved] = newExercises.splice(draggedIndex, 1);
+        newExercises.splice(dragOverIndex, 0, moved);
+        return newExercises;
+      });
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  // Touch handlers for mobile drag-and-drop
+  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+    setTouchStartY(e.touches[0].clientY);
+    setDraggedIndex(index);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (draggedIndex === null || !touchStartY) return;
+
+    const touchY = e.touches[0].clientY;
+    const target = document.elementFromPoint(e.touches[0].clientX, touchY);
+
+    if (target) {
+      const exerciseItem = target.closest('[data-exercise-index]');
+      if (exerciseItem) {
+        const overIndex = parseInt(exerciseItem.getAttribute('data-exercise-index') || '-1');
+        if (overIndex !== -1 && overIndex !== draggedIndex) {
+          setDragOverIndex(overIndex);
+        }
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    handleDragEnd();
+    setTouchStartY(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -152,7 +212,7 @@ export default function TemplateBuilder({
               label="Template Name"
               placeholder="e.g., Push Day"
               value={name}
-              onChange={e => setName(e.target.value)}
+              onChange={(e) => setName(e.target.value)}
               required
             />
 
@@ -160,7 +220,7 @@ export default function TemplateBuilder({
               label="Description (optional)"
               placeholder="e.g., Chest, shoulders, triceps"
               value={description}
-              onChange={e => setDescription(e.target.value)}
+              onChange={(e) => setDescription(e.target.value)}
             />
 
             {/* Linked Habit Selector */}
@@ -173,11 +233,11 @@ export default function TemplateBuilder({
               </label>
               <select
                 value={linkedHabitId || ''}
-                onChange={e => setLinkedHabitId(e.target.value || null)}
+                onChange={(e) => setLinkedHabitId(e.target.value || null)}
                 className="w-full px-3 py-2 rounded-lg border border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 text-secondary-900 dark:text-secondary-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value="">No linked habit</option>
-                {habits.map(habit => (
+                {habits.map((habit) => (
                   <option key={habit.id} value={habit.id}>
                     {habit.name}
                   </option>
@@ -206,14 +266,14 @@ export default function TemplateBuilder({
               </div>
 
               {/* Exercise list */}
-              <div className="space-y-2">
+              <div className="space-y-2" onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
                 {exercises.map((exercise, index) => (
-                  <div key={index}>
+                  <div key={index} data-exercise-index={index}>
                     {editingExerciseIndex === index ? (
                       <Card className="p-4">
                         <ExerciseBuilder
                           exercise={exercise}
-                          onSave={updated => handleUpdateExercise(index, updated)}
+                          onSave={(updated) => handleUpdateExercise(index, updated)}
                           onCancel={() => setEditingExerciseIndex(null)}
                         />
                       </Card>
@@ -223,12 +283,12 @@ export default function TemplateBuilder({
                         index={index}
                         onEdit={() => setEditingExerciseIndex(index)}
                         onDelete={() => handleDeleteExercise(index)}
-                        dragHandleProps={{
-                          onDoubleClick: () => {
-                            // Simple move up on double click
-                            handleMoveExercise(index, index - 1);
-                          },
-                        }}
+                        onDragStart={handleDragStart}
+                        onDragOver={handleDragOver}
+                        onDragEnd={handleDragEnd}
+                        onTouchStart={handleTouchStart}
+                        isDragging={draggedIndex === index}
+                        isDragOver={dragOverIndex === index}
                       />
                     )}
                   </div>

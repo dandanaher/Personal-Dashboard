@@ -28,16 +28,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = `toast-${Date.now()}`;
-    setToasts(prev => [...prev, { id, message, type }]);
+    setToasts((prev) => [...prev, { id, message, type }]);
 
     // Auto-dismiss after 3 seconds
     setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
+      setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 3000);
   }, []);
 
   const dismissToast = useCallback((id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
   return (
@@ -46,12 +46,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
       {/* Toast container */}
       <div className="fixed bottom-20 left-0 right-0 z-[60] flex flex-col items-center gap-2 pointer-events-none px-4">
-        {toasts.map(toast => (
-          <ToastItem
-            key={toast.id}
-            toast={toast}
-            onDismiss={() => dismissToast(toast.id)}
-          />
+        {toasts.map((toast) => (
+          <ToastItem key={toast.id} toast={toast} onDismiss={() => dismissToast(toast.id)} />
         ))}
       </div>
     </ToastContext.Provider>
@@ -88,17 +84,12 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
         border ${bgColors[toast.type]}
         rounded-lg shadow-lg
         transition-all duration-300 ease-out
-        ${isVisible
-          ? 'opacity-100 translate-y-0'
-          : 'opacity-0 translate-y-4'
-        }
+        ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
         max-w-sm w-full
       `}
     >
       {icons[toast.type]}
-      <p className="flex-1 text-sm text-secondary-700 dark:text-secondary-200">
-        {toast.message}
-      </p>
+      <p className="flex-1 text-sm text-secondary-700 dark:text-secondary-200">{toast.message}</p>
       <button
         onClick={onDismiss}
         className="text-secondary-400 hover:text-secondary-600 dark:hover:text-secondary-200 transition-colors"

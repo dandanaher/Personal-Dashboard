@@ -3,7 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
-import type { WorkoutTemplate, WorkoutTemplateInsert, WorkoutTemplateUpdate, Exercise } from '@/lib/types';
+import type {
+  WorkoutTemplate,
+  WorkoutTemplateInsert,
+  WorkoutTemplateUpdate,
+  Exercise,
+} from '@/lib/types';
 
 // =============================================================================
 // Types
@@ -13,8 +18,21 @@ interface UseWorkoutTemplatesReturn {
   templates: WorkoutTemplate[];
   loading: boolean;
   error: string | null;
-  createTemplate: (name: string, description: string | null, exercises: Exercise[], linkedHabitId?: string | null) => Promise<WorkoutTemplate | null>;
-  updateTemplate: (id: string, updates: Partial<{ name: string; description: string | null; exercises: Exercise[]; linked_habit_id: string | null }>) => Promise<boolean>;
+  createTemplate: (
+    name: string,
+    description: string | null,
+    exercises: Exercise[],
+    linkedHabitId?: string | null
+  ) => Promise<WorkoutTemplate | null>;
+  updateTemplate: (
+    id: string,
+    updates: Partial<{
+      name: string;
+      description: string | null;
+      exercises: Exercise[];
+      linked_habit_id: string | null;
+    }>
+  ) => Promise<boolean>;
   deleteTemplate: (id: string) => Promise<boolean>;
   duplicateTemplate: (id: string, newName: string) => Promise<WorkoutTemplate | null>;
   refetch: () => Promise<void>;
@@ -114,7 +132,7 @@ export function useWorkoutTemplates(): UseWorkoutTemplatesReturn {
         if (insertError) throw insertError;
 
         // Optimistically add to state
-        setTemplates(prev => [data, ...prev]);
+        setTemplates((prev) => [data, ...prev]);
         return data;
       } catch (err) {
         console.error('Error creating template:', err);
@@ -138,11 +156,9 @@ export function useWorkoutTemplates(): UseWorkoutTemplatesReturn {
 
       try {
         // Optimistic update
-        setTemplates(prev =>
-          prev.map(t =>
-            t.id === id
-              ? { ...t, ...updates, updated_at: new Date().toISOString() }
-              : t
+        setTemplates((prev) =>
+          prev.map((t) =>
+            t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t
           )
         );
 
@@ -180,7 +196,7 @@ export function useWorkoutTemplates(): UseWorkoutTemplatesReturn {
 
       try {
         // Optimistic delete
-        setTemplates(prev => prev.filter(t => t.id !== id));
+        setTemplates((prev) => prev.filter((t) => t.id !== id));
 
         const { error: deleteError } = await supabase
           .from('workout_templates')
@@ -206,13 +222,18 @@ export function useWorkoutTemplates(): UseWorkoutTemplatesReturn {
     async (id: string, newName: string): Promise<WorkoutTemplate | null> => {
       if (!user) return null;
 
-      const template = templates.find(t => t.id === id);
+      const template = templates.find((t) => t.id === id);
       if (!template) {
         setError('Template not found');
         return null;
       }
 
-      return createTemplate(newName, template.description, template.exercises, template.linked_habit_id);
+      return createTemplate(
+        newName,
+        template.description,
+        template.exercises,
+        template.linked_habit_id
+      );
     },
     [user, templates, createTemplate]
   );

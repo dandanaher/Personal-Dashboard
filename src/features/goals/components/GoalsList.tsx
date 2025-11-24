@@ -41,7 +41,7 @@ export function GoalsList({
     const active: Goal[] = [];
     const completed: Goal[] = [];
 
-    goals.forEach(goal => {
+    goals.forEach((goal) => {
       if (goal.completed) {
         completed.push(goal);
       } else {
@@ -78,7 +78,7 @@ export function GoalsList({
   if (loading) {
     return (
       <div className="space-y-3">
-        {[1, 2, 3].map(i => (
+        {[1, 2, 3].map((i) => (
           <div
             key={i}
             className="h-40 bg-secondary-100 dark:bg-secondary-800 rounded-xl animate-pulse"
@@ -117,7 +117,7 @@ export function GoalsList({
             </span>
           </h2>
           <div className="space-y-3">
-            {activeGoals.map(goal => {
+            {activeGoals.map((goal) => {
               const hData = goal.linked_habit_id ? habitData.get(goal.linked_habit_id) : undefined;
               return (
                 <GoalCard
@@ -158,8 +158,10 @@ export function GoalsList({
 
           {showCompleted && (
             <div id="completed-goals" className="space-y-3">
-              {completedGoals.map(goal => {
-                const hData = goal.linked_habit_id ? habitData.get(goal.linked_habit_id) : undefined;
+              {completedGoals.map((goal) => {
+                const hData = goal.linked_habit_id
+                  ? habitData.get(goal.linked_habit_id)
+                  : undefined;
                 return (
                   <GoalCard
                     key={goal.id}

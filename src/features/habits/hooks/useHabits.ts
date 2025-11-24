@@ -7,8 +7,20 @@ interface UseHabitsReturn {
   habits: Habit[];
   loading: boolean;
   error: string | null;
-  addHabit: (name: string, color: string, description?: string, icon?: string, targetFrequency?: number, habitType?: string) => Promise<boolean>;
-  updateHabit: (id: string, updates: Partial<Pick<Habit, 'name' | 'color' | 'description' | 'icon' | 'target_frequency' | 'habit_type'>>) => Promise<boolean>;
+  addHabit: (
+    name: string,
+    color: string,
+    description?: string,
+    icon?: string,
+    targetFrequency?: number,
+    habitType?: string
+  ) => Promise<boolean>;
+  updateHabit: (
+    id: string,
+    updates: Partial<
+      Pick<Habit, 'name' | 'color' | 'description' | 'icon' | 'target_frequency' | 'habit_type'>
+    >
+  ) => Promise<boolean>;
   deleteHabit: (id: string) => Promise<boolean>;
   refetch: () => Promise<void>;
 }
@@ -45,127 +57,140 @@ export function useHabits(): UseHabitsReturn {
     }
   }, [user]);
 
-  const addHabit = useCallback(async (
-    name: string,
-    color: string,
-    description?: string,
-    icon: string = 'check',
-    targetFrequency: number = 7,
-    habitType?: string
-  ): Promise<boolean> => {
-    if (!user) return false;
+  const addHabit = useCallback(
+    async (
+      name: string,
+      color: string,
+      description?: string,
+      icon: string = 'check',
+      targetFrequency: number = 7,
+      habitType?: string
+    ): Promise<boolean> => {
+      if (!user) return false;
 
-    // Create temporary habit for optimistic update
-    const tempId = `temp-${Date.now()}`;
-    const tempHabit: Habit = {
-      id: tempId,
-      user_id: user.id,
-      name,
-      description: description || null,
-      color,
-      icon,
-      target_frequency: targetFrequency,
-      habit_type: habitType || null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+      // Create temporary habit for optimistic update
+      const tempId = `temp-${Date.now()}`;
+      const tempHabit: Habit = {
+        id: tempId,
+        user_id: user.id,
+        name,
+        description: description || null,
+        color,
+        icon,
+        target_frequency: targetFrequency,
+        habit_type: habitType || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
-    // Optimistic update
-    setHabits(prev => [...prev, tempHabit]);
+      // Optimistic update
+      setHabits((prev) => [...prev, tempHabit]);
 
-    try {
-      const { data, error: insertError } = await supabase
-        .from('habits')
-        .insert({
-          user_id: user.id,
-          name,
-          description: description || null,
-          color,
-          icon,
-          target_frequency: targetFrequency,
-          habit_type: habitType || null,
-        })
-        .select()
-        .single();
+      try {
+        const { data, error: insertError } = await supabase
+          .from('habits')
+          .insert({
+            user_id: user.id,
+            name,
+            description: description || null,
+            color,
+            icon,
+            target_frequency: targetFrequency,
+            habit_type: habitType || null,
+          })
+          .select()
+          .single();
 
-      if (insertError) throw insertError;
+        if (insertError) throw insertError;
 
-      // Replace temp habit with real one
-      setHabits(prev => prev.map(h => h.id === tempId ? data : h));
-      return true;
-    } catch (err) {
-      console.error('Error adding habit:', err);
-      // Rollback optimistic update
-      setHabits(prev => prev.filter(h => h.id !== tempId));
-      setError(err instanceof Error ? err.message : 'Failed to add habit');
-      return false;
-    }
-  }, [user]);
+        // Replace temp habit with real one
+        setHabits((prev) => prev.map((h) => (h.id === tempId ? data : h)));
+        return true;
+      } catch (err) {
+        console.error('Error adding habit:', err);
+        // Rollback optimistic update
+        setHabits((prev) => prev.filter((h) => h.id !== tempId));
+        setError(err instanceof Error ? err.message : 'Failed to add habit');
+        return false;
+      }
+    },
+    [user]
+  );
 
-  const updateHabit = useCallback(async (
-    id: string,
-    updates: Partial<Pick<Habit, 'name' | 'color' | 'description' | 'icon' | 'target_frequency' | 'habit_type'>>
-  ): Promise<boolean> => {
-    if (!user) return false;
+  const updateHabit = useCallback(
+    async (
+      id: string,
+      updates: Partial<
+        Pick<Habit, 'name' | 'color' | 'description' | 'icon' | 'target_frequency' | 'habit_type'>
+      >
+    ): Promise<boolean> => {
+      if (!user) return false;
 
-    // Store original for rollback
-    const originalHabit = habits.find(h => h.id === id);
-    if (!originalHabit) return false;
+      // Store original for rollback
+      const originalHabit = habits.find((h) => h.id === id);
+      if (!originalHabit) return false;
 
-    // Optimistic update
-    setHabits(prev => prev.map(h =>
-      h.id === id
-        ? { ...h, ...updates, updated_at: new Date().toISOString() }
-        : h
-    ));
+      // Optimistic update
+      setHabits((prev) =>
+        prev.map((h) =>
+          h.id === id ? { ...h, ...updates, updated_at: new Date().toISOString() } : h
+        )
+      );
 
-    try {
-      const { error: updateError } = await supabase
-        .from('habits')
-        .update(updates)
-        .eq('id', id)
-        .eq('user_id', user.id);
+      try {
+        const { error: updateError } = await supabase
+          .from('habits')
+          .update(updates)
+          .eq('id', id)
+          .eq('user_id', user.id);
 
-      if (updateError) throw updateError;
-      return true;
-    } catch (err) {
-      console.error('Error updating habit:', err);
-      // Rollback
-      setHabits(prev => prev.map(h => h.id === id ? originalHabit : h));
-      setError(err instanceof Error ? err.message : 'Failed to update habit');
-      return false;
-    }
-  }, [user, habits]);
+        if (updateError) throw updateError;
+        return true;
+      } catch (err) {
+        console.error('Error updating habit:', err);
+        // Rollback
+        setHabits((prev) => prev.map((h) => (h.id === id ? originalHabit : h)));
+        setError(err instanceof Error ? err.message : 'Failed to update habit');
+        return false;
+      }
+    },
+    [user, habits]
+  );
 
-  const deleteHabit = useCallback(async (id: string): Promise<boolean> => {
-    if (!user) return false;
+  const deleteHabit = useCallback(
+    async (id: string): Promise<boolean> => {
+      if (!user) return false;
 
-    // Store original for rollback
-    const originalHabit = habits.find(h => h.id === id);
-    if (!originalHabit) return false;
+      // Store original for rollback
+      const originalHabit = habits.find((h) => h.id === id);
+      if (!originalHabit) return false;
 
-    // Optimistic update
-    setHabits(prev => prev.filter(h => h.id !== id));
+      // Optimistic update
+      setHabits((prev) => prev.filter((h) => h.id !== id));
 
-    try {
-      const { error: deleteError } = await supabase
-        .from('habits')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
+      try {
+        const { error: deleteError } = await supabase
+          .from('habits')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', user.id);
 
-      if (deleteError) throw deleteError;
-      return true;
-    } catch (err) {
-      console.error('Error deleting habit:', err);
-      // Rollback
-      setHabits(prev => [...prev, originalHabit].sort((a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      ));
-      setError(err instanceof Error ? err.message : 'Failed to delete habit');
-      return false;
-    }
-  }, [user, habits]);
+        if (deleteError) throw deleteError;
+        return true;
+      } catch (err) {
+        console.error('Error deleting habit:', err);
+        // Rollback
+        setHabits((prev) =>
+          [...prev, originalHabit].sort(
+            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          )
+        );
+        setError(err instanceof Error ? err.message : 'Failed to delete habit');
+        return false;
+      }
+    },
+    [user, habits]
+  );
 
   // Initial fetch
   useEffect(() => {

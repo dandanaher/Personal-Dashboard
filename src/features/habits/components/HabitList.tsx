@@ -102,9 +102,7 @@ export function HabitList({
               />
             </svg>
           </div>
-          <p className="text-secondary-400 dark:text-secondary-500 mb-2 text-lg">
-            No habits yet
-          </p>
+          <p className="text-secondary-400 dark:text-secondary-500 mb-2 text-lg">No habits yet</p>
           <p className="text-sm text-secondary-500 dark:text-secondary-400 mb-6 max-w-xs mx-auto">
             Start tracking your daily habits and build better routines!
           </p>

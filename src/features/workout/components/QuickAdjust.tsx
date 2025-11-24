@@ -41,12 +41,8 @@ export default function QuickAdjust({
           <ChevronLeft className="h-4 w-4" />
         </button>
         <div className="text-center px-1 flex-1">
-          <div className="text-lg font-bold text-white">
-            {weight}
-          </div>
-          <div className="text-xs text-white/70">
-            kg
-          </div>
+          <div className="text-lg font-bold text-white">{weight}</div>
+          <div className="text-xs text-white/70">kg</div>
         </div>
         <button
           onClick={() => onAdjustWeight(0.25)}
@@ -80,12 +76,8 @@ export default function QuickAdjust({
           <Minus className="h-5 w-5" />
         </button>
         <div className="text-center px-2">
-          <div className="text-lg font-bold text-white">
-            {reps}
-          </div>
-          <div className="text-xs text-white/70">
-            reps
-          </div>
+          <div className="text-lg font-bold text-white">{reps}</div>
+          <div className="text-xs text-white/70">reps</div>
         </div>
         <button
           onClick={() => onAdjustReps(1)}

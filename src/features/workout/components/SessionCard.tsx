@@ -2,7 +2,12 @@ import { format } from 'date-fns';
 import { Clock, Dumbbell, ChevronRight, Trash2, Route, Timer } from 'lucide-react';
 import { Card } from '@/components/ui';
 import type { WorkoutSession } from '@/lib/types';
-import { formatTime, calculateTotalSets, calculateWorkoutVolume, getVolumeLabel } from '../lib/workoutEngine';
+import {
+  formatTime,
+  calculateTotalSets,
+  calculateWorkoutVolume,
+  getVolumeLabel,
+} from '../lib/workoutEngine';
 
 interface SessionCardProps {
   session: WorkoutSession;
@@ -10,11 +15,7 @@ interface SessionCardProps {
   onDelete?: (session: WorkoutSession) => void;
 }
 
-export default function SessionCard({
-  session,
-  onView,
-  onDelete,
-}: SessionCardProps) {
+export default function SessionCard({ session, onView, onDelete }: SessionCardProps) {
   const totalSets = calculateTotalSets(session.data.exercises);
   const volume = calculateWorkoutVolume(session.data.exercises);
   const volumeLabel = getVolumeLabel(session.data.exercises);
@@ -59,9 +60,7 @@ export default function SessionCard({
               <Dumbbell className="h-3.5 w-3.5" />
               {exerciseCount} exercises
             </span>
-            <span>
-              {totalSets} sets
-            </span>
+            <span>{totalSets} sets</span>
           </div>
         </div>
 
@@ -86,9 +85,15 @@ export default function SessionCard({
       <div className="mt-3 pt-3 border-t border-secondary-200 dark:border-secondary-700">
         <div className="flex items-center justify-between text-sm">
           <span className="text-secondary-500 dark:text-secondary-400 flex items-center gap-1">
-            {hasCardio && typeCounts.cardio >= typeCounts.strength && <Route className="h-3.5 w-3.5" />}
-            {hasTimed && typeCounts.timed >= typeCounts.strength && !hasCardio && <Timer className="h-3.5 w-3.5" />}
-            {hasStrength && typeCounts.strength > typeCounts.cardio && typeCounts.strength > typeCounts.timed && <Dumbbell className="h-3.5 w-3.5" />}
+            {hasCardio && typeCounts.cardio >= typeCounts.strength && (
+              <Route className="h-3.5 w-3.5" />
+            )}
+            {hasTimed && typeCounts.timed >= typeCounts.strength && !hasCardio && (
+              <Timer className="h-3.5 w-3.5" />
+            )}
+            {hasStrength &&
+              typeCounts.strength > typeCounts.cardio &&
+              typeCounts.strength > typeCounts.timed && <Dumbbell className="h-3.5 w-3.5" />}
             {getVolumeTypeLabel()}
           </span>
           <span className="font-semibold text-secondary-900 dark:text-secondary-100">

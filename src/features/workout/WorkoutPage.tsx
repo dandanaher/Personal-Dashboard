@@ -36,21 +36,24 @@ function useToast() {
 function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
-    const id = Math.random().toString(36).substring(7);
-    setToasts(prev => [...prev, { id, message, type }]);
+  const showToast = useCallback(
+    (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+      const id = Math.random().toString(36).substring(7);
+      setToasts((prev) => [...prev, { id, message, type }]);
 
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 3000);
-  }, []);
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 3000);
+    },
+    []
+  );
 
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
       {/* Toast container */}
       <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-[60] space-y-2">
-        {toasts.map(toast => (
+        {toasts.map((toast) => (
           <div
             key={toast.id}
             className={`
@@ -99,11 +102,19 @@ function WorkoutPageContent() {
   const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplate | null>(null);
   const [activeWorkout, setActiveWorkout] = useState<WorkoutTemplate | null>(null);
   const [showOverloadSuggestions, setShowOverloadSuggestions] = useState(false);
-  const [overloadSuggestions, setOverloadSuggestions] = useState<Map<string, ProgressiveSuggestion>>(new Map());
-  const [selectedTemplateForWorkout, setSelectedTemplateForWorkout] = useState<WorkoutTemplate | null>(null);
+  const [overloadSuggestions, setOverloadSuggestions] = useState<
+    Map<string, ProgressiveSuggestion>
+  >(new Map());
+  const [selectedTemplateForWorkout, setSelectedTemplateForWorkout] =
+    useState<WorkoutTemplate | null>(null);
 
   // Handle template actions
-  const handleCreateTemplate = async (name: string, description: string | null, exercises: Exercise[], linkedHabitId: string | null) => {
+  const handleCreateTemplate = async (
+    name: string,
+    description: string | null,
+    exercises: Exercise[],
+    linkedHabitId: string | null
+  ) => {
     const result = await createTemplate(name, description, exercises, linkedHabitId);
     if (result) {
       showToast('Template created');
@@ -113,10 +124,20 @@ function WorkoutPageContent() {
     return false;
   };
 
-  const handleUpdateTemplate = async (name: string, description: string | null, exercises: Exercise[], linkedHabitId: string | null) => {
+  const handleUpdateTemplate = async (
+    name: string,
+    description: string | null,
+    exercises: Exercise[],
+    linkedHabitId: string | null
+  ) => {
     if (!editingTemplate) return false;
 
-    const result = await updateTemplate(editingTemplate.id, { name, description, exercises, linked_habit_id: linkedHabitId });
+    const result = await updateTemplate(editingTemplate.id, {
+      name,
+      description,
+      exercises,
+      linked_habit_id: linkedHabitId,
+    });
     if (result) {
       showToast('Template updated');
       setEditingTemplate(null);
@@ -154,8 +175,8 @@ function WorkoutPageContent() {
     const suggestions = await calculateTemplateOverloads(
       user.id,
       template.exercises
-        .filter(e => e.weight !== undefined && e.reps_per_set !== undefined)
-        .map(e => ({
+        .filter((e) => e.weight !== undefined && e.reps_per_set !== undefined)
+        .map((e) => ({
           name: e.name,
           weight: e.weight!,
           reps_per_set: e.reps_per_set!,
@@ -163,7 +184,7 @@ function WorkoutPageContent() {
     );
 
     // Check if any suggestions recommend increasing
-    const hasIncreases = Array.from(suggestions.values()).some(s => s.shouldIncrease);
+    const hasIncreases = Array.from(suggestions.values()).some((s) => s.shouldIncrease);
 
     if (hasIncreases) {
       setOverloadSuggestions(suggestions);
@@ -220,12 +241,8 @@ function WorkoutPageContent() {
     <div className="pb-20">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-secondary-900 dark:text-secondary-100">
-          Workouts
-        </h1>
-        <p className="text-secondary-600 dark:text-secondary-400">
-          Track your strength training
-        </p>
+        <h1 className="text-2xl font-bold text-secondary-900 dark:text-secondary-100">Workouts</h1>
+        <p className="text-secondary-600 dark:text-secondary-400">Track your strength training</p>
       </div>
 
       {/* Tabs */}
@@ -234,9 +251,10 @@ function WorkoutPageContent() {
           onClick={() => setActiveTab('templates')}
           className={`
             flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-full text-sm font-medium transition-colors
-            ${activeTab === 'templates'
-              ? 'bg-white dark:bg-secondary-700 text-secondary-900 dark:text-secondary-100 shadow-sm'
-              : 'text-secondary-600 dark:text-secondary-400 hover:text-secondary-900 dark:hover:text-secondary-100'
+            ${
+              activeTab === 'templates'
+                ? 'bg-white dark:bg-secondary-700 text-secondary-900 dark:text-secondary-100 shadow-sm'
+                : 'text-secondary-600 dark:text-secondary-400 hover:text-secondary-900 dark:hover:text-secondary-100'
             }
           `}
         >
@@ -247,9 +265,10 @@ function WorkoutPageContent() {
           onClick={() => setActiveTab('history')}
           className={`
             flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-full text-sm font-medium transition-colors
-            ${activeTab === 'history'
-              ? 'bg-white dark:bg-secondary-700 text-secondary-900 dark:text-secondary-100 shadow-sm'
-              : 'text-secondary-600 dark:text-secondary-400 hover:text-secondary-900 dark:hover:text-secondary-100'
+            ${
+              activeTab === 'history'
+                ? 'bg-white dark:bg-secondary-700 text-secondary-900 dark:text-secondary-100 shadow-sm'
+                : 'text-secondary-600 dark:text-secondary-400 hover:text-secondary-900 dark:hover:text-secondary-100'
             }
           `}
         >
@@ -354,7 +373,7 @@ function WorkoutPageContent() {
                 fullWidth
                 onClick={() => {
                   // Apply suggested weights
-                  const updatedExercises = selectedTemplateForWorkout.exercises.map(exercise => {
+                  const updatedExercises = selectedTemplateForWorkout.exercises.map((exercise) => {
                     const suggestion = overloadSuggestions.get(exercise.name);
                     if (suggestion?.shouldIncrease) {
                       return { ...exercise, weight: suggestion.suggestedWeight };
@@ -366,11 +385,7 @@ function WorkoutPageContent() {
               >
                 Start with Suggested Weights
               </Button>
-              <Button
-                fullWidth
-                variant="outline"
-                onClick={() => handleConfirmWorkoutStart()}
-              >
+              <Button fullWidth variant="outline" onClick={() => handleConfirmWorkoutStart()}>
                 Start with Current Weights
               </Button>
               <Button

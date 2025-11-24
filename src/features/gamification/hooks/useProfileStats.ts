@@ -48,12 +48,12 @@ export function useProfileStats(): UseProfileStatsReturn {
 
       // Create a map of attribute_id to current_xp
       const xpMap = new Map<string, number>();
-      xpData?.forEach(xp => {
+      xpData?.forEach((xp) => {
         xpMap.set(xp.attribute_id, xp.current_xp);
       });
 
       // Combine attributes with XP data
-      const combined: AttributeWithXP[] = (attributesData as Attribute[] || []).map(attr => {
+      const combined: AttributeWithXP[] = ((attributesData as Attribute[]) || []).map((attr) => {
         const currentXP = xpMap.get(attr.id) || 0;
         return {
           ...attr,

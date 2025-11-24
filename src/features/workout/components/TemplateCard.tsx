@@ -3,7 +3,11 @@ import { Card } from '@/components/ui';
 import { useThemeStore } from '@/stores/themeStore';
 import { useHabits } from '@/features/habits/hooks/useHabits';
 import type { WorkoutTemplate, WorkoutSession } from '@/lib/types';
-import { calculateEstimatedDuration, calculateAverageDuration, formatTime } from '../lib/workoutEngine';
+import {
+  calculateEstimatedDuration,
+  calculateAverageDuration,
+  formatTime,
+} from '../lib/workoutEngine';
 
 interface TemplateCardProps {
   template: WorkoutTemplate;
@@ -34,7 +38,7 @@ export default function TemplateCard({
 
   // Find the linked habit name if template has one
   const linkedHabit = template.linked_habit_id
-    ? habits.find(h => h.id === template.linked_habit_id)
+    ? habits.find((h) => h.id === template.linked_habit_id)
     : null;
 
   return (
@@ -54,9 +58,13 @@ export default function TemplateCard({
               <Dumbbell className="h-3.5 w-3.5" />
               {exerciseCount} {exerciseCount === 1 ? 'exercise' : 'exercises'}
             </span>
-            <span className="flex items-center gap-1" title={isHistoricalAverage ? 'Average from completed workouts' : 'Estimated duration'}>
+            <span
+              className="flex items-center gap-1"
+              title={isHistoricalAverage ? 'Average from completed workouts' : 'Estimated duration'}
+            >
               <Clock className="h-3.5 w-3.5" />
-              {isHistoricalAverage ? '' : '~'}{formatTime(displayDuration)}
+              {isHistoricalAverage ? '' : '~'}
+              {formatTime(displayDuration)}
             </span>
             {linkedHabit && (
               <span className="flex items-center gap-1 text-primary-600 dark:text-primary-400">

@@ -193,15 +193,18 @@ export function SettingsMenu() {
                   className={`
                     relative w-8 h-8 rounded-full border-2 transition-all duration-150
                     hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2
-                    ${accentColor === color.value
-                      ? 'border-secondary-900 dark:border-white scale-110'
-                      : 'border-transparent'
+                    ${
+                      accentColor === color.value
+                        ? 'border-secondary-900 dark:border-white scale-110'
+                        : 'border-transparent'
                     }
                   `}
-                  style={{
-                    backgroundColor: color.value,
-                    '--tw-ring-color': color.value,
-                  } as React.CSSProperties}
+                  style={
+                    {
+                      backgroundColor: color.value,
+                      '--tw-ring-color': color.value,
+                    } as React.CSSProperties
+                  }
                   onClick={() => setAccentColor(color.value)}
                   aria-label={`Select ${color.name} color`}
                 >

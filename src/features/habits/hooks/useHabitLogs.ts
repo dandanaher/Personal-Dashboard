@@ -59,81 +59,86 @@ export function useHabitLogs(habitId: string): UseHabitLogsReturn {
     }
   }, [user, habitId]);
 
-  const toggleLog = useCallback(async (date: string): Promise<boolean> => {
-    if (!user || !habitId) return false;
+  const toggleLog = useCallback(
+    async (date: string): Promise<boolean> => {
+      if (!user || !habitId) return false;
 
-    const existingLog = logs.find(log => log.date === date);
+      const existingLog = logs.find((log) => log.date === date);
 
-    if (existingLog) {
-      // Optimistic delete
-      setLogs(prev => prev.filter(log => log.id !== existingLog.id));
+      if (existingLog) {
+        // Optimistic delete
+        setLogs((prev) => prev.filter((log) => log.id !== existingLog.id));
 
-      try {
-        const { error: deleteError } = await supabase
-          .from('habit_logs')
-          .delete()
-          .eq('id', existingLog.id)
-          .eq('user_id', user.id);
+        try {
+          const { error: deleteError } = await supabase
+            .from('habit_logs')
+            .delete()
+            .eq('id', existingLog.id)
+            .eq('user_id', user.id);
 
-        if (deleteError) throw deleteError;
-        return true;
-      } catch (err) {
-        console.error('Error deleting habit log:', err);
-        // Rollback
-        setLogs(prev => [...prev, existingLog].sort((a, b) =>
-          new Date(b.date).getTime() - new Date(a.date).getTime()
-        ));
-        setError(err instanceof Error ? err.message : 'Failed to delete log');
-        return false;
+          if (deleteError) throw deleteError;
+          return true;
+        } catch (err) {
+          console.error('Error deleting habit log:', err);
+          // Rollback
+          setLogs((prev) =>
+            [...prev, existingLog].sort(
+              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+            )
+          );
+          setError(err instanceof Error ? err.message : 'Failed to delete log');
+          return false;
+        }
+      } else {
+        // Create new log
+        const tempId = `temp-${Date.now()}`;
+        const tempLog: HabitLog = {
+          id: tempId,
+          habit_id: habitId,
+          user_id: user.id,
+          date,
+          completed: true,
+          notes: null,
+          created_at: new Date().toISOString(),
+        };
+
+        // Optimistic add
+        setLogs((prev) =>
+          [tempLog, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        );
+
+        try {
+          const { data, error: insertError } = await supabase
+            .from('habit_logs')
+            .insert({
+              habit_id: habitId,
+              user_id: user.id,
+              date,
+              completed: true,
+            })
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+
+          // Replace temp with real
+          setLogs((prev) => prev.map((log) => (log.id === tempId ? data : log)));
+
+          // Award XP for completing a habit (Consistency)
+          await incrementXP(user.id, 'consistency', XP_REWARDS.HABIT_COMPLETE);
+
+          return true;
+        } catch (err) {
+          console.error('Error creating habit log:', err);
+          // Rollback
+          setLogs((prev) => prev.filter((log) => log.id !== tempId));
+          setError(err instanceof Error ? err.message : 'Failed to create log');
+          return false;
+        }
       }
-    } else {
-      // Create new log
-      const tempId = `temp-${Date.now()}`;
-      const tempLog: HabitLog = {
-        id: tempId,
-        habit_id: habitId,
-        user_id: user.id,
-        date,
-        completed: true,
-        notes: null,
-        created_at: new Date().toISOString(),
-      };
-
-      // Optimistic add
-      setLogs(prev => [tempLog, ...prev].sort((a, b) =>
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-      ));
-
-      try {
-        const { data, error: insertError } = await supabase
-          .from('habit_logs')
-          .insert({
-            habit_id: habitId,
-            user_id: user.id,
-            date,
-            completed: true,
-          })
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
-
-        // Replace temp with real
-        setLogs(prev => prev.map(log => log.id === tempId ? data : log));
-
-        // Award XP for completing a habit (Consistency)
-        await incrementXP(user.id, 'consistency', XP_REWARDS.HABIT_COMPLETE);
-
-        return true;
-      } catch (err) {
-        console.error('Error creating habit log:', err);
-        // Rollback
-        setLogs(prev => prev.filter(log => log.id !== tempId));
-        setError(err instanceof Error ? err.message : 'Failed to create log');
-        return false;
-      }
-    }
-  }, [user, habitId, logs]);
+    },
+    [user, habitId, logs]
+  );
 
   // Calculate stats from logs
   const stats = useMemo((): HabitStats => {
@@ -148,9 +153,7 @@ export function useHabitLogs(habitId: string): UseHabitLogsReturn {
     }
 
     // Get completed dates as a Set for quick lookup
-    const completedDates = new Set(
-      logs.filter(log => log.completed).map(log => log.date)
-    );
+    const completedDates = new Set(logs.filter((log) => log.completed).map((log) => log.date));
 
     const completedDays = completedDates.size;
     const completionRate = Math.round((completedDays / 365) * 100);

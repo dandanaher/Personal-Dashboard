@@ -15,7 +15,7 @@ export function HabitCalendar({ logs, color, onDayClick }: HabitCalendarProps) {
 
   // Create a set of completed dates for quick lookup
   const completedDates = useMemo(() => {
-    return new Set(logs.map(log => log.date));
+    return new Set(logs.map((log) => log.date));
   }, [logs]);
 
   // Check if we can navigate to the next month (can't go past current month)
@@ -129,7 +129,7 @@ export function HabitCalendar({ logs, color, onDayClick }: HabitCalendarProps) {
     return days;
   }, [currentMonth, currentYear, completedDates, today]);
 
-  const handleDayClick = (day: typeof calendarDays[0]) => {
+  const handleDayClick = (day: (typeof calendarDays)[0]) => {
     if (day.isFuture) return;
 
     const dateStr = `${day.year}-${String(day.month + 1).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`;
@@ -137,8 +137,18 @@ export function HabitCalendar({ logs, color, onDayClick }: HabitCalendarProps) {
   };
 
   const monthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -147,7 +157,7 @@ export function HabitCalendar({ logs, color, onDayClick }: HabitCalendarProps) {
     <div>
       {/* Day headers */}
       <div className="grid grid-cols-7 gap-1">
-        {dayNames.map(day => (
+        {dayNames.map((day) => (
           <div
             key={day}
             className="text-center text-xs font-medium text-secondary-500 dark:text-secondary-400 py-1"
@@ -168,18 +178,17 @@ export function HabitCalendar({ logs, color, onDayClick }: HabitCalendarProps) {
               className={`
                 aspect-square flex items-center justify-center text-sm rounded-lg
                 transition-colors relative
-                ${day.isCurrentMonth
-                  ? 'text-secondary-900 dark:text-white'
-                  : 'text-secondary-400 dark:text-secondary-600'
+                ${
+                  day.isCurrentMonth
+                    ? 'text-secondary-900 dark:text-white'
+                    : 'text-secondary-400 dark:text-secondary-600'
                 }
-                ${day.isFuture
-                  ? 'cursor-not-allowed opacity-50'
-                  : 'cursor-pointer hover:bg-secondary-100 dark:hover:bg-secondary-800'
+                ${
+                  day.isFuture
+                    ? 'cursor-not-allowed opacity-50'
+                    : 'cursor-pointer hover:bg-secondary-100 dark:hover:bg-secondary-800'
                 }
-                ${day.isToday
-                  ? 'font-bold'
-                  : ''
-                }
+                ${day.isToday ? 'font-bold' : ''}
               `}
             >
               {day.isCompleted && (
@@ -188,9 +197,7 @@ export function HabitCalendar({ logs, color, onDayClick }: HabitCalendarProps) {
                   style={{ backgroundColor: color }}
                 />
               )}
-              <span className={`relative z-10 ${day.isToday ? 'font-bold' : ''}`}>
-                {day.date}
-              </span>
+              <span className={`relative z-10 ${day.isToday ? 'font-bold' : ''}`}>{day.date}</span>
             </button>
           );
         })}
@@ -198,9 +205,7 @@ export function HabitCalendar({ logs, color, onDayClick }: HabitCalendarProps) {
 
       {/* Month navigation */}
       <div className="flex items-center justify-between">
-        <button
-          className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-secondary-100 dark:bg-secondary-800 text-sm font-medium text-secondary-700 dark:text-secondary-300"
-        >
+        <button className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-secondary-100 dark:bg-secondary-800 text-sm font-medium text-secondary-700 dark:text-secondary-300">
           <Calendar className="w-4 h-4" />
           {monthNames[currentMonth]} {currentYear}
         </button>
@@ -218,9 +223,10 @@ export function HabitCalendar({ logs, color, onDayClick }: HabitCalendarProps) {
             disabled={!canGoNext}
             className={`
               p-2 rounded-lg transition-colors
-              ${canGoNext
-                ? 'bg-secondary-100 dark:bg-secondary-800 hover:bg-secondary-200 dark:hover:bg-secondary-700'
-                : 'bg-secondary-100 dark:bg-secondary-800 opacity-50 cursor-not-allowed'
+              ${
+                canGoNext
+                  ? 'bg-secondary-100 dark:bg-secondary-800 hover:bg-secondary-200 dark:hover:bg-secondary-700'
+                  : 'bg-secondary-100 dark:bg-secondary-800 opacity-50 cursor-not-allowed'
               }
             `}
             aria-label="Next month"

@@ -22,7 +22,7 @@ export function GoalFilters({ activeFilter, onFilterChange, counts }: GoalFilter
 
   return (
     <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-      {filters.map(filter => (
+      {filters.map((filter) => (
         <button
           key={filter.value}
           className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors flex-shrink-0 ${

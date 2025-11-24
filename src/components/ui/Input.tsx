@@ -41,10 +41,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             }
             ${className}
           `}
-          style={{
-            ...style,
-            '--tw-ring-color': error ? undefined : accentColor,
-          } as React.CSSProperties}
+          style={
+            {
+              ...style,
+              '--tw-ring-color': error ? undefined : accentColor,
+            } as React.CSSProperties
+          }
           {...props}
         />
         {error && <p className="mt-1.5 text-sm text-red-500">{error}</p>}

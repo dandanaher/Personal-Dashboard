@@ -17,11 +17,7 @@ const REST_TIME_PRESETS = [
   { label: '3m', value: 180 },
 ];
 
-export default function ExerciseBuilder({
-  exercise,
-  onSave,
-  onCancel,
-}: ExerciseBuilderProps) {
+export default function ExerciseBuilder({ exercise, onSave, onCancel }: ExerciseBuilderProps) {
   const { accentColor } = useThemeStore();
   const [name, setName] = useState(exercise?.name || '');
   const [type, setType] = useState<ExerciseType>(exercise?.type || 'strength');
@@ -109,12 +105,14 @@ export default function ExerciseBuilder({
         <Input
           label="Exercise Name"
           placeholder={
-            type === 'strength' ? 'e.g., Bench Press' :
-            type === 'cardio' ? 'e.g., Running' :
-            'e.g., Plank'
+            type === 'strength'
+              ? 'e.g., Bench Press'
+              : type === 'cardio'
+                ? 'e.g., Running'
+                : 'e.g., Plank'
           }
           value={name}
-          onChange={e => setName(e.target.value)}
+          onChange={(e) => setName(e.target.value)}
           required
           autoFocus
         />
@@ -132,12 +130,17 @@ export default function ExerciseBuilder({
             className={`
               flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium transition-colors
               rounded-tl-lg border-t border-l border-r
-              ${type === 'strength'
-                ? 'text-white relative z-10'
-                : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700 border-secondary-300 dark:border-secondary-600'
+              ${
+                type === 'strength'
+                  ? 'text-white relative z-10'
+                  : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700 border-secondary-300 dark:border-secondary-600'
               }
             `}
-            style={type === 'strength' ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
+            style={
+              type === 'strength'
+                ? { backgroundColor: accentColor, borderColor: accentColor }
+                : undefined
+            }
           >
             <Dumbbell className="h-4 w-4" />
             Strength
@@ -148,12 +151,17 @@ export default function ExerciseBuilder({
             className={`
               flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium transition-colors
               border-t border-r
-              ${type === 'cardio'
-                ? 'text-white relative z-10'
-                : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700 border-secondary-300 dark:border-secondary-600'
+              ${
+                type === 'cardio'
+                  ? 'text-white relative z-10'
+                  : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700 border-secondary-300 dark:border-secondary-600'
               }
             `}
-            style={type === 'cardio' ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
+            style={
+              type === 'cardio'
+                ? { backgroundColor: accentColor, borderColor: accentColor }
+                : undefined
+            }
           >
             <Route className="h-4 w-4" />
             Cardio
@@ -164,12 +172,17 @@ export default function ExerciseBuilder({
             className={`
               flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium transition-colors
               rounded-tr-lg border-t border-r
-              ${type === 'timed'
-                ? 'text-white relative z-10'
-                : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700 border-secondary-300 dark:border-secondary-600'
+              ${
+                type === 'timed'
+                  ? 'text-white relative z-10'
+                  : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700 border-secondary-300 dark:border-secondary-600'
               }
             `}
-            style={type === 'timed' ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
+            style={
+              type === 'timed'
+                ? { backgroundColor: accentColor, borderColor: accentColor }
+                : undefined
+            }
           >
             <Timer className="h-4 w-4" />
             Timed
@@ -187,7 +200,7 @@ export default function ExerciseBuilder({
                 min="1"
                 max="20"
                 value={sets}
-                onChange={e => setSets(e.target.value)}
+                onChange={(e) => setSets(e.target.value)}
                 required
               />
               <Input
@@ -196,7 +209,7 @@ export default function ExerciseBuilder({
                 min="1"
                 max="100"
                 value={reps}
-                onChange={e => setReps(e.target.value)}
+                onChange={(e) => setReps(e.target.value)}
                 required
               />
               <Input
@@ -205,7 +218,7 @@ export default function ExerciseBuilder({
                 min="0"
                 step="0.5"
                 value={weight}
-                onChange={e => setWeight(e.target.value)}
+                onChange={(e) => setWeight(e.target.value)}
                 required
               />
             </div>
@@ -224,7 +237,7 @@ export default function ExerciseBuilder({
                     min="0"
                     step="0.1"
                     value={distance}
-                    onChange={e => setDistance(e.target.value)}
+                    onChange={(e) => setDistance(e.target.value)}
                     className="w-full min-h-touch px-4 py-3 text-base rounded-l-lg border border-r-0 border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 text-secondary-900 dark:text-white"
                     required
                   />
@@ -236,7 +249,11 @@ export default function ExerciseBuilder({
                         ? 'text-white'
                         : 'bg-white dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 border-secondary-300 dark:border-secondary-600 hover:bg-secondary-100 dark:hover:bg-secondary-700'
                     }`}
-                    style={distanceUnit === 'km' ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
+                    style={
+                      distanceUnit === 'km'
+                        ? { backgroundColor: accentColor, borderColor: accentColor }
+                        : undefined
+                    }
                   >
                     Km
                   </button>
@@ -248,7 +265,11 @@ export default function ExerciseBuilder({
                         ? 'text-white'
                         : 'bg-white dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 border-secondary-300 dark:border-secondary-600 hover:bg-secondary-100 dark:hover:bg-secondary-700'
                     }`}
-                    style={distanceUnit === 'm' ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
+                    style={
+                      distanceUnit === 'm'
+                        ? { backgroundColor: accentColor, borderColor: accentColor }
+                        : undefined
+                    }
                   >
                     M
                   </button>
@@ -260,7 +281,11 @@ export default function ExerciseBuilder({
                         ? 'text-white'
                         : 'bg-white dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 border-secondary-300 dark:border-secondary-600 hover:bg-secondary-100 dark:hover:bg-secondary-700'
                     }`}
-                    style={distanceUnit === 'mi' ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
+                    style={
+                      distanceUnit === 'mi'
+                        ? { backgroundColor: accentColor, borderColor: accentColor }
+                        : undefined
+                    }
                   >
                     Mi
                   </button>
@@ -272,7 +297,7 @@ export default function ExerciseBuilder({
                 min="0.5"
                 step="0.5"
                 value={targetTimeMinutes}
-                onChange={e => setTargetTimeMinutes(e.target.value)}
+                onChange={(e) => setTargetTimeMinutes(e.target.value)}
               />
             </div>
           )}
@@ -287,7 +312,7 @@ export default function ExerciseBuilder({
                   min="1"
                   max="20"
                   value={sets}
-                  onChange={e => setSets(e.target.value)}
+                  onChange={(e) => setSets(e.target.value)}
                   required
                 />
               </div>
@@ -299,7 +324,7 @@ export default function ExerciseBuilder({
                   max="60"
                   step="0.5"
                   value={durationMinutes}
-                  onChange={e => setDurationMinutes(e.target.value)}
+                  onChange={(e) => setDurationMinutes(e.target.value)}
                 />
               </div>
               <div className="flex-1">
@@ -309,7 +334,7 @@ export default function ExerciseBuilder({
                   min="0"
                   step="0.5"
                   value={weight}
-                  onChange={e => setWeight(e.target.value)}
+                  onChange={(e) => setWeight(e.target.value)}
                 />
               </div>
             </div>
@@ -322,7 +347,7 @@ export default function ExerciseBuilder({
           Rest Time
         </label>
         <div className="flex gap-2 mb-2">
-          {REST_TIME_PRESETS.map(preset => (
+          {REST_TIME_PRESETS.map((preset) => (
             <button
               key={preset.value}
               type="button"
@@ -335,7 +360,9 @@ export default function ExerciseBuilder({
                     : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
                 }
               `}
-              style={restTime === preset.value.toString() ? { backgroundColor: accentColor } : undefined}
+              style={
+                restTime === preset.value.toString() ? { backgroundColor: accentColor } : undefined
+              }
             >
               {preset.label}
             </button>
@@ -347,7 +374,7 @@ export default function ExerciseBuilder({
           max="600"
           step="10"
           value={restTime}
-          onChange={e => setRestTime(e.target.value)}
+          onChange={(e) => setRestTime(e.target.value)}
           helperText="Seconds"
         />
       </div>
@@ -359,7 +386,7 @@ export default function ExerciseBuilder({
             <input
               type="checkbox"
               checked={toFailure}
-              onChange={e => setToFailure(e.target.checked)}
+              onChange={(e) => setToFailure(e.target.checked)}
               className="sr-only peer"
             />
             <div className="w-11 h-6 bg-secondary-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-secondary-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-secondary-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-secondary-600 peer-checked:bg-primary-600"></div>
@@ -380,7 +407,7 @@ export default function ExerciseBuilder({
           label="Notes (optional)"
           placeholder="e.g., Focus on slow negatives"
           value={notes}
-          onChange={e => setNotes(e.target.value)}
+          onChange={(e) => setNotes(e.target.value)}
         />
       </div>
 
@@ -402,7 +429,13 @@ interface ExerciseItemProps {
   index: number;
   onEdit: () => void;
   onDelete: () => void;
-  dragHandleProps?: object;
+  // Drag and drop props
+  onDragStart: (index: number) => void;
+  onDragOver: (index: number) => void;
+  onDragEnd: () => void;
+  onTouchStart: (e: React.TouchEvent, index: number) => void;
+  isDragging: boolean;
+  isDragOver: boolean;
 }
 
 // Helper to format exercise details based on type
@@ -449,14 +482,44 @@ export function ExerciseItem({
   index,
   onEdit,
   onDelete,
-  dragHandleProps,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+  onTouchStart,
+  isDragging,
+  isDragOver,
 }: ExerciseItemProps) {
   const exerciseType = exercise.type || 'strength';
   const typeLabel = exerciseType.charAt(0).toUpperCase() + exerciseType.slice(1);
 
   return (
-    <div className="flex items-center gap-3 p-3 bg-secondary-50 dark:bg-secondary-800/50 rounded-lg">
-      <div {...dragHandleProps} className="cursor-grab text-secondary-400">
+    <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = 'move';
+        onDragStart(index);
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        onDragOver(index);
+      }}
+      onDragEnd={onDragEnd}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDragEnd();
+      }}
+      className={`
+        flex items-center gap-3 p-3 bg-secondary-50 dark:bg-secondary-800/50 rounded-lg
+        transition-all
+        ${isDragging ? 'opacity-50 scale-95' : ''}
+        ${isDragOver ? 'border-t-2 border-primary-500' : ''}
+      `}
+    >
+      <div
+        className="cursor-grab active:cursor-grabbing text-secondary-400"
+        onTouchStart={(e) => onTouchStart(e, index)}
+      >
         <GripVertical className="h-5 w-5" />
       </div>
 
@@ -480,7 +543,8 @@ export function ExerciseItem({
         <div className="text-sm text-secondary-600 dark:text-secondary-400 mt-0.5">
           {getExerciseDetails(exercise)}
           <span className="mx-1">·</span>
-          {Math.floor(exercise.rest_time / 60)}:{(exercise.rest_time % 60).toString().padStart(2, '0')} rest
+          {Math.floor(exercise.rest_time / 60)}:
+          {(exercise.rest_time % 60).toString().padStart(2, '0')} rest
         </div>
       </div>
 

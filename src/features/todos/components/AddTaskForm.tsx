@@ -35,13 +35,9 @@ export function AddTaskForm({ onAdd, defaultDate, showDateToggle = false }: AddT
     setIsSubmitting(true);
 
     // Determine the date to use
-    const taskDate = isDateless ? null : (selectedDate || defaultDate);
+    const taskDate = isDateless ? null : selectedDate || defaultDate;
 
-    const success = await onAdd(
-      trimmedTitle,
-      description.trim() || undefined,
-      taskDate
-    );
+    const success = await onAdd(trimmedTitle, description.trim() || undefined, taskDate);
 
     setIsSubmitting(false);
 
@@ -131,9 +127,10 @@ export function AddTaskForm({ onAdd, defaultDate, showDateToggle = false }: AddT
             }}
             className={`
               flex items-center gap-1 text-sm transition-colors
-              ${isDateless
-                ? 'text-secondary-700 dark:text-secondary-300'
-                : 'text-secondary-500 dark:text-secondary-400 hover:text-secondary-700 dark:hover:text-secondary-300'
+              ${
+                isDateless
+                  ? 'text-secondary-700 dark:text-secondary-300'
+                  : 'text-secondary-500 dark:text-secondary-400 hover:text-secondary-700 dark:hover:text-secondary-300'
               }
             `}
           >

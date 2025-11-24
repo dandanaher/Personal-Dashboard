@@ -29,12 +29,10 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       'inline-flex items-center justify-center font-medium rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 touch-manipulation select-none';
 
     const variantStyles = {
-      primary:
-        'text-white disabled:opacity-50',
+      primary: 'text-white disabled:opacity-50',
       secondary:
         'bg-secondary-200 text-secondary-900 hover:bg-secondary-300 focus:ring-secondary-500 dark:bg-secondary-700 dark:text-white dark:hover:bg-secondary-600',
-      outline:
-        'border-2 hover:bg-opacity-10 dark:hover:bg-opacity-20',
+      outline: 'border-2 hover:bg-opacity-10 dark:hover:bg-opacity-20',
       ghost:
         'text-secondary-600 hover:bg-secondary-100 focus:ring-secondary-500 dark:text-secondary-400 dark:hover:bg-secondary-800',
     };

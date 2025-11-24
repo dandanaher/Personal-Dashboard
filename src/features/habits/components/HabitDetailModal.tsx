@@ -7,7 +7,6 @@ import { useScrollLock } from '@/hooks/useScrollLock';
 import type { HabitStats as HabitStatsType } from '../hooks';
 import type { HabitLog, Habit } from '@/lib/types';
 
-
 interface HabitDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -138,11 +137,7 @@ export function HabitDetailModal({
           <HabitStats stats={stats} />
 
           {/* Calendar for day selection */}
-          <HabitCalendar
-            logs={logs}
-            color={habit.color}
-            onDayClick={onDayClick}
-          />
+          <HabitCalendar logs={logs} color={habit.color} onDayClick={onDayClick} />
         </div>
       </div>
 

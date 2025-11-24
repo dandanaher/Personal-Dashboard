@@ -2,17 +2,8 @@ import { useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 
 export function useAuth() {
-  const {
-    user,
-    session,
-    loading,
-    error,
-    signIn,
-    signUp,
-    signOut,
-    initialize,
-    clearError,
-  } = useAuthStore();
+  const { user, session, loading, error, signIn, signUp, signOut, initialize, clearError } =
+    useAuthStore();
 
   useEffect(() => {
     // Initialize auth state on mount

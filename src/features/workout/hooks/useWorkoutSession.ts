@@ -4,7 +4,13 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
-import type { WorkoutTemplate, Exercise, CompletedExercise, CompletedSet, WorkoutSessionData } from '@/lib/types';
+import type {
+  WorkoutTemplate,
+  Exercise,
+  CompletedExercise,
+  CompletedSet,
+  WorkoutSessionData,
+} from '@/lib/types';
 import {
   WorkoutPhase,
   requestWakeLock,
@@ -86,7 +92,11 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
 
   // Store rest end time for background-safe timing
   const restEndTimeRef = useRef<number | null>(null);
-  const restNextStateRef = useRef<{ exerciseIdx: number; setIdx?: number; isFailure?: boolean } | null>(null);
+  const restNextStateRef = useRef<{
+    exerciseIdx: number;
+    setIdx?: number;
+    isFailure?: boolean;
+  } | null>(null);
 
   // =============================================================================
   // Computed State
@@ -95,12 +105,20 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
   const getCurrentExercise = useCallback((): CurrentExerciseState | null => {
     if (phase.type === 'idle' || phase.type === 'complete') return null;
 
+    // Resting between exercises doesn't have a current exercise in the traditional sense
+    if (phase.type === 'resting_between_exercises') return null;
+
     let exerciseIdx: number;
     let setIdx: number = 0;
 
     if (phase.type === 'paused') {
       const prev = phase.previousPhase;
-      if (prev.type === 'idle' || prev.type === 'complete') return null;
+      if (
+        prev.type === 'idle' ||
+        prev.type === 'complete' ||
+        prev.type === 'resting_between_exercises'
+      )
+        return null;
       exerciseIdx = prev.exerciseIdx;
       setIdx = 'setIdx' in prev ? prev.setIdx : 0;
     } else {
@@ -126,22 +144,25 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
   // Initialize Exercise State
   // =============================================================================
 
-  const initializeExerciseState = useCallback((exerciseIdx: number) => {
-    const exercise = template.exercises[exerciseIdx];
-    if (exercise) {
-      const exerciseType = exercise.type || 'strength';
+  const initializeExerciseState = useCallback(
+    (exerciseIdx: number) => {
+      const exercise = template.exercises[exerciseIdx];
+      if (exercise) {
+        const exerciseType = exercise.type || 'strength';
 
-      // Set weight (used by strength and timed)
-      setCurrentWeight(exercise.weight || 0);
+        // Set weight (used by strength and timed)
+        setCurrentWeight(exercise.weight || 0);
 
-      // Set reps (only meaningful for strength)
-      if (exerciseType === 'strength') {
-        setCurrentReps(exercise.reps_per_set || 8);
-      } else {
-        setCurrentReps(0);
+        // Set reps (only meaningful for strength)
+        if (exerciseType === 'strength') {
+          setCurrentReps(exercise.reps_per_set || 8);
+        } else {
+          setCurrentReps(0);
+        }
       }
-    }
-  }, [template.exercises]);
+    },
+    [template.exercises]
+  );
 
   // =============================================================================
   // Timer Management
@@ -149,7 +170,12 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
 
   // Elapsed time ticker
   useEffect(() => {
-    if (!startTime || phase.type === 'paused' || phase.type === 'idle' || phase.type === 'complete') {
+    if (
+      !startTime ||
+      phase.type === 'paused' ||
+      phase.type === 'idle' ||
+      phase.type === 'complete'
+    ) {
       if (elapsedIntervalRef.current) {
         clearInterval(elapsedIntervalRef.current);
         elapsedIntervalRef.current = null;
@@ -189,12 +215,22 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
           if (nextState.isFailure) {
             setPhase({ type: 'failure_set', exerciseIdx: nextState.exerciseIdx });
           } else {
-            setPhase({ type: 'active', exerciseIdx: nextState.exerciseIdx, setIdx: nextState.setIdx! });
+            // This handles both resting (between sets) and resting_between_exercises
+            initializeExerciseState(nextState.exerciseIdx);
+            setPhase({
+              type: 'active',
+              exerciseIdx: nextState.exerciseIdx,
+              setIdx: nextState.setIdx ?? 0,
+            });
           }
         } else {
           // Update remaining time immediately
-          setPhase(prev => {
-            if (prev.type === 'resting' || prev.type === 'resting_for_failure') {
+          setPhase((prev) => {
+            if (
+              prev.type === 'resting' ||
+              prev.type === 'resting_for_failure' ||
+              prev.type === 'resting_between_exercises'
+            ) {
               return { ...prev, remainingSeconds: Math.max(0, remaining) };
             }
             return prev;
@@ -205,7 +241,7 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
+  }, [initializeExerciseState]);
 
   // =============================================================================
   // Workout Actions
@@ -228,53 +264,56 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
   }, [template.exercises, initializeExerciseState]);
 
   // Start rest timer
-  const startRestTimer = useCallback((seconds: number, nextExerciseIdx: number, nextSetIdx: number) => {
-    // Clear any existing rest interval
-    if (restIntervalRef.current) {
-      clearInterval(restIntervalRef.current);
-    }
+  const startRestTimer = useCallback(
+    (seconds: number, nextExerciseIdx: number, nextSetIdx: number) => {
+      // Clear any existing rest interval
+      if (restIntervalRef.current) {
+        clearInterval(restIntervalRef.current);
+      }
 
-    // Store end time for background-safe timing
-    const endTime = Date.now() + seconds * 1000;
-    restEndTimeRef.current = endTime;
-    restNextStateRef.current = { exerciseIdx: nextExerciseIdx, setIdx: nextSetIdx };
+      // Store end time for background-safe timing
+      const endTime = Date.now() + seconds * 1000;
+      restEndTimeRef.current = endTime;
+      restNextStateRef.current = { exerciseIdx: nextExerciseIdx, setIdx: nextSetIdx };
 
-    setPhase({
-      type: 'resting',
-      exerciseIdx: nextExerciseIdx,
-      setIdx: nextSetIdx,
-      remainingSeconds: seconds,
-    });
-
-    restIntervalRef.current = setInterval(() => {
-      const remaining = Math.ceil((restEndTimeRef.current! - Date.now()) / 1000);
-
-      setPhase(prev => {
-        if (prev.type !== 'resting') {
-          if (restIntervalRef.current) {
-            clearInterval(restIntervalRef.current);
-            restIntervalRef.current = null;
-          }
-          restEndTimeRef.current = null;
-          restNextStateRef.current = null;
-          return prev;
-        }
-
-        if (remaining <= 0) {
-          if (restIntervalRef.current) {
-            clearInterval(restIntervalRef.current);
-            restIntervalRef.current = null;
-          }
-          restEndTimeRef.current = null;
-          restNextStateRef.current = null;
-          vibrateRestComplete();
-          return { type: 'active', exerciseIdx: nextExerciseIdx, setIdx: nextSetIdx };
-        }
-
-        return { ...prev, remainingSeconds: remaining };
+      setPhase({
+        type: 'resting',
+        exerciseIdx: nextExerciseIdx,
+        setIdx: nextSetIdx,
+        remainingSeconds: seconds,
       });
-    }, 250); // Check more frequently for smoother updates when returning from background
-  }, []);
+
+      restIntervalRef.current = setInterval(() => {
+        const remaining = Math.ceil((restEndTimeRef.current! - Date.now()) / 1000);
+
+        setPhase((prev) => {
+          if (prev.type !== 'resting') {
+            if (restIntervalRef.current) {
+              clearInterval(restIntervalRef.current);
+              restIntervalRef.current = null;
+            }
+            restEndTimeRef.current = null;
+            restNextStateRef.current = null;
+            return prev;
+          }
+
+          if (remaining <= 0) {
+            if (restIntervalRef.current) {
+              clearInterval(restIntervalRef.current);
+              restIntervalRef.current = null;
+            }
+            restEndTimeRef.current = null;
+            restNextStateRef.current = null;
+            vibrateRestComplete();
+            return { type: 'active', exerciseIdx: nextExerciseIdx, setIdx: nextSetIdx };
+          }
+
+          return { ...prev, remainingSeconds: remaining };
+        });
+      }, 250); // Check more frequently for smoother updates when returning from background
+    },
+    []
+  );
 
   // Start rest timer before failure set
   const startRestTimerForFailure = useCallback((seconds: number, exerciseIdx: number) => {
@@ -297,7 +336,7 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
     restIntervalRef.current = setInterval(() => {
       const remaining = Math.ceil((restEndTimeRef.current! - Date.now()) / 1000);
 
-      setPhase(prev => {
+      setPhase((prev) => {
         if (prev.type !== 'resting_for_failure') {
           if (restIntervalRef.current) {
             clearInterval(restIntervalRef.current);
@@ -324,128 +363,198 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
     }, 250); // Check more frequently for smoother updates when returning from background
   }, []);
 
+  // Start rest timer between exercises
+  const startRestTimerBetweenExercises = useCallback(
+    (seconds: number, completedIdx: number, nextIdx: number) => {
+      // Clear any existing rest interval
+      if (restIntervalRef.current) {
+        clearInterval(restIntervalRef.current);
+      }
+
+      // Store end time for background-safe timing
+      const endTime = Date.now() + seconds * 1000;
+      restEndTimeRef.current = endTime;
+      restNextStateRef.current = { exerciseIdx: nextIdx, setIdx: 0 };
+
+      setPhase({
+        type: 'resting_between_exercises',
+        completedExerciseIdx: completedIdx,
+        nextExerciseIdx: nextIdx,
+        remainingSeconds: seconds,
+      });
+
+      restIntervalRef.current = setInterval(() => {
+        const remaining = Math.ceil((restEndTimeRef.current! - Date.now()) / 1000);
+
+        setPhase((prev) => {
+          if (prev.type !== 'resting_between_exercises') {
+            if (restIntervalRef.current) {
+              clearInterval(restIntervalRef.current);
+              restIntervalRef.current = null;
+            }
+            restEndTimeRef.current = null;
+            restNextStateRef.current = null;
+            return prev;
+          }
+
+          if (remaining <= 0) {
+            if (restIntervalRef.current) {
+              clearInterval(restIntervalRef.current);
+              restIntervalRef.current = null;
+            }
+            restEndTimeRef.current = null;
+            restNextStateRef.current = null;
+            vibrateRestComplete();
+
+            // Initialize next exercise and transition
+            initializeExerciseState(nextIdx);
+            return { type: 'active', exerciseIdx: nextIdx, setIdx: 0 };
+          }
+
+          return { ...prev, remainingSeconds: remaining };
+        });
+      }, 250);
+    },
+    [initializeExerciseState]
+  );
+
   // Complete current set
-  const completeSet = useCallback((data?: SetCompletionData | number) => {
-    if (phase.type !== 'active') return;
+  const completeSet = useCallback(
+    (data?: SetCompletionData | number) => {
+      if (phase.type !== 'active') return;
 
-    const { exerciseIdx, setIdx } = phase;
-    const exercise = template.exercises[exerciseIdx];
-    if (!exercise) return;
+      const { exerciseIdx, setIdx } = phase;
+      const exercise = template.exercises[exerciseIdx];
+      if (!exercise) return;
 
-    vibrateSetComplete();
+      vibrateSetComplete();
 
-    const exerciseType = exercise.type || 'strength';
+      const exerciseType = exercise.type || 'strength';
 
-    // Create completed set data based on exercise type
-    let completedSet: CompletedSet;
+      // Create completed set data based on exercise type
+      let completedSet: CompletedSet;
 
-    if (typeof data === 'number') {
-      // Legacy support: number = actualReps for strength
-      completedSet = {
-        reps: data,
+      if (typeof data === 'number') {
+        // Legacy support: number = actualReps for strength
+        completedSet = {
+          reps: data,
+          weight: currentWeight,
+          completed_at: new Date().toISOString(),
+        };
+      } else if (data) {
+        // Type-specific data provided
+        completedSet = {
+          reps: data.reps,
+          weight: data.weight ?? currentWeight,
+          distance: data.distance,
+          time: data.time,
+          completed_at: new Date().toISOString(),
+        };
+      } else {
+        // Default based on exercise type
+        switch (exerciseType) {
+          case 'strength':
+            completedSet = {
+              reps: currentReps,
+              weight: currentWeight,
+              completed_at: new Date().toISOString(),
+            };
+            break;
+          case 'cardio':
+            completedSet = {
+              distance: exercise.distance,
+              time: exercise.target_time,
+              completed_at: new Date().toISOString(),
+            };
+            break;
+          case 'timed':
+            completedSet = {
+              time: exercise.target_time,
+              weight: currentWeight || undefined,
+              completed_at: new Date().toISOString(),
+            };
+            break;
+          default:
+            completedSet = {
+              reps: currentReps,
+              weight: currentWeight,
+              completed_at: new Date().toISOString(),
+            };
+        }
+      }
+
+      // Update session data
+      setSessionData((prev) => {
+        const updated = [...prev];
+        updated[exerciseIdx] = addSetToExercise(updated[exerciseIdx], completedSet);
+        return updated;
+      });
+
+      // Determine next phase
+      if (setIdx < exercise.sets - 1) {
+        // More main sets to do
+        startRestTimer(exercise.rest_time, exerciseIdx, setIdx + 1);
+      } else if (exercise.to_failure && exerciseType === 'strength') {
+        // Rest before failure set (strength only)
+        startRestTimerForFailure(exercise.rest_time, exerciseIdx);
+      } else if (exerciseIdx < template.exercises.length - 1) {
+        // Next exercise - use rest between exercises
+        const nextIdx = exerciseIdx + 1;
+        const restTime = exercise.rest_time; // Use completed exercise's rest time
+        startRestTimerBetweenExercises(restTime, exerciseIdx, nextIdx);
+      } else {
+        // Workout complete
+        vibrateWorkoutComplete();
+        setPhase({ type: 'complete' });
+      }
+    },
+    [
+      phase,
+      template.exercises,
+      currentWeight,
+      currentReps,
+      startRestTimer,
+      startRestTimerForFailure,
+      startRestTimerBetweenExercises,
+      initializeExerciseState,
+    ]
+  );
+
+  // Complete failure set
+  const completeFailureSet = useCallback(
+    (reps: number) => {
+      if (phase.type !== 'failure_set' && phase.type !== 'failure_input') return;
+
+      const { exerciseIdx } = phase;
+
+      vibrateSetComplete();
+
+      // Create failure set data
+      const failureSet: CompletedSet = {
+        reps,
         weight: currentWeight,
         completed_at: new Date().toISOString(),
       };
-    } else if (data) {
-      // Type-specific data provided
-      completedSet = {
-        reps: data.reps,
-        weight: data.weight ?? currentWeight,
-        distance: data.distance,
-        time: data.time,
-        completed_at: new Date().toISOString(),
-      };
-    } else {
-      // Default based on exercise type
-      switch (exerciseType) {
-        case 'strength':
-          completedSet = {
-            reps: currentReps,
-            weight: currentWeight,
-            completed_at: new Date().toISOString(),
-          };
-          break;
-        case 'cardio':
-          completedSet = {
-            distance: exercise.distance,
-            time: exercise.target_time,
-            completed_at: new Date().toISOString(),
-          };
-          break;
-        case 'timed':
-          completedSet = {
-            time: exercise.target_time,
-            weight: currentWeight || undefined,
-            completed_at: new Date().toISOString(),
-          };
-          break;
-        default:
-          completedSet = {
-            reps: currentReps,
-            weight: currentWeight,
-            completed_at: new Date().toISOString(),
-          };
+
+      // Update session data
+      setSessionData((prev) => {
+        const updated = [...prev];
+        updated[exerciseIdx] = addFailureSetToExercise(updated[exerciseIdx], failureSet);
+        return updated;
+      });
+
+      // Move to next exercise or complete
+      if (exerciseIdx < template.exercises.length - 1) {
+        const nextIdx = exerciseIdx + 1;
+        const exercise = template.exercises[exerciseIdx];
+        startRestTimerBetweenExercises(exercise.rest_time, exerciseIdx, nextIdx);
+      } else {
+        vibrateWorkoutComplete();
+        setPhase({ type: 'complete' });
       }
-    }
-
-    // Update session data
-    setSessionData(prev => {
-      const updated = [...prev];
-      updated[exerciseIdx] = addSetToExercise(updated[exerciseIdx], completedSet);
-      return updated;
-    });
-
-    // Determine next phase
-    if (setIdx < exercise.sets - 1) {
-      // More main sets to do
-      startRestTimer(exercise.rest_time, exerciseIdx, setIdx + 1);
-    } else if (exercise.to_failure && exerciseType === 'strength') {
-      // Rest before failure set (strength only)
-      startRestTimerForFailure(exercise.rest_time, exerciseIdx);
-    } else if (exerciseIdx < template.exercises.length - 1) {
-      // Next exercise
-      const nextIdx = exerciseIdx + 1;
-      initializeExerciseState(nextIdx);
-      setPhase({ type: 'active', exerciseIdx: nextIdx, setIdx: 0 });
-    } else {
-      // Workout complete
-      vibrateWorkoutComplete();
-      setPhase({ type: 'complete' });
-    }
-  }, [phase, template.exercises, currentWeight, currentReps, startRestTimer, startRestTimerForFailure, initializeExerciseState]);
-
-  // Complete failure set
-  const completeFailureSet = useCallback((reps: number) => {
-    if (phase.type !== 'failure_set' && phase.type !== 'failure_input') return;
-
-    const { exerciseIdx } = phase;
-
-    vibrateSetComplete();
-
-    // Create failure set data
-    const failureSet: CompletedSet = {
-      reps,
-      weight: currentWeight,
-      completed_at: new Date().toISOString(),
-    };
-
-    // Update session data
-    setSessionData(prev => {
-      const updated = [...prev];
-      updated[exerciseIdx] = addFailureSetToExercise(updated[exerciseIdx], failureSet);
-      return updated;
-    });
-
-    // Move to next exercise or complete
-    if (exerciseIdx < template.exercises.length - 1) {
-      const nextIdx = exerciseIdx + 1;
-      initializeExerciseState(nextIdx);
-      setPhase({ type: 'active', exerciseIdx: nextIdx, setIdx: 0 });
-    } else {
-      vibrateWorkoutComplete();
-      setPhase({ type: 'complete' });
-    }
-  }, [phase, template.exercises.length, currentWeight, initializeExerciseState]);
+    },
+    [phase, template.exercises, currentWeight, startRestTimerBetweenExercises]
+  );
 
   // Skip rest
   const skipRest = useCallback(() => {
@@ -461,8 +570,11 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
       setPhase({ type: 'active', exerciseIdx: phase.exerciseIdx, setIdx: phase.setIdx });
     } else if (phase.type === 'resting_for_failure') {
       setPhase({ type: 'failure_set', exerciseIdx: phase.exerciseIdx });
+    } else if (phase.type === 'resting_between_exercises') {
+      initializeExerciseState(phase.nextExerciseIdx);
+      setPhase({ type: 'active', exerciseIdx: phase.nextExerciseIdx, setIdx: 0 });
     }
-  }, [phase]);
+  }, [phase, initializeExerciseState]);
 
   // Toggle pause
   const togglePause = useCallback(() => {
@@ -478,9 +590,12 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
           previousPhase.setIdx
         );
       } else if (previousPhase.type === 'resting_for_failure') {
-        startRestTimerForFailure(
+        startRestTimerForFailure(previousPhase.remainingSeconds, previousPhase.exerciseIdx);
+      } else if (previousPhase.type === 'resting_between_exercises') {
+        startRestTimerBetweenExercises(
           previousPhase.remainingSeconds,
-          previousPhase.exerciseIdx
+          previousPhase.completedExerciseIdx,
+          previousPhase.nextExerciseIdx
         );
       } else {
         setPhase(previousPhase);
@@ -497,7 +612,7 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
 
       setPhase({ type: 'paused', previousPhase: phase });
     }
-  }, [phase, startRestTimer, startRestTimerForFailure]);
+  }, [phase, startRestTimer, startRestTimerForFailure, startRestTimerBetweenExercises]);
 
   // End workout and save
   const endWorkout = useCallback(async (): Promise<string | null> => {
@@ -555,14 +670,12 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
 
         // Only create log if not already completed
         if (!existingLog) {
-          const { error: habitError } = await supabase
-            .from('habit_logs')
-            .insert({
-              habit_id: template.linked_habit_id,
-              user_id: user.id,
-              date: today,
-              completed: true,
-            });
+          const { error: habitError } = await supabase.from('habit_logs').insert({
+            habit_id: template.linked_habit_id,
+            user_id: user.id,
+            date: today,
+            completed: true,
+          });
 
           if (!habitError) {
             // Award XP for completing a habit (Consistency)
@@ -584,11 +697,11 @@ export function useWorkoutSession(template: WorkoutTemplate): UseWorkoutSessionR
   // =============================================================================
 
   const adjustWeight = useCallback((delta: number) => {
-    setCurrentWeight(prev => Math.max(0, prev + delta));
+    setCurrentWeight((prev) => Math.max(0, prev + delta));
   }, []);
 
   const adjustReps = useCallback((delta: number) => {
-    setCurrentReps(prev => Math.max(1, prev + delta));
+    setCurrentReps((prev) => Math.max(1, prev + delta));
   }, []);
 
   // =============================================================================

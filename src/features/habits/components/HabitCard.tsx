@@ -21,7 +21,7 @@ export function HabitCard({ habit, onEdit, onDelete, onCompletionChange }: Habit
   const { accentColor } = useThemeStore();
 
   const today = format(new Date(), 'yyyy-MM-dd');
-  const isCompletedToday = logs.some(log => log.date === today && log.completed);
+  const isCompletedToday = logs.some((log) => log.date === today && log.completed);
 
   // Report completion status changes to parent
   useEffect(() => {
@@ -83,7 +83,9 @@ export function HabitCard({ habit, onEdit, onDelete, onCompletionChange }: Habit
               variant={isCompletedToday ? 'primary' : 'outline'}
               size="sm"
               onClick={handleTodayToggle}
-              aria-label={isCompletedToday ? 'Mark today as not completed' : 'Mark today as completed'}
+              aria-label={
+                isCompletedToday ? 'Mark today as not completed' : 'Mark today as completed'
+              }
               className={isCompletedToday ? '' : 'border-secondary-300 dark:border-secondary-600'}
             >
               <Check className="w-4 h-4" />
@@ -101,10 +103,7 @@ export function HabitCard({ habit, onEdit, onDelete, onCompletionChange }: Habit
           </div>
         ) : (
           <div>
-            <ContributionGraph
-              logs={logs}
-              color={habit.color}
-            />
+            <ContributionGraph logs={logs} color={habit.color} />
           </div>
         )}
       </Card>

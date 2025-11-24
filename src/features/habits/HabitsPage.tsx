@@ -16,7 +16,7 @@ function HabitsPage() {
 
   // Handle completion status changes from HabitCards
   const handleCompletionChange = useCallback((habitId: string, isCompleted: boolean) => {
-    setCompletionStatus(prev => {
+    setCompletionStatus((prev) => {
       if (prev[habitId] === isCompleted) return prev;
       return { ...prev, [habitId]: isCompleted };
     });
@@ -25,7 +25,7 @@ function HabitsPage() {
   // Extract unique habit types from all habits
   const habitTypes = useMemo(() => {
     const types = new Set<string>();
-    habits.forEach(habit => {
+    habits.forEach((habit) => {
       if (habit.habit_type) {
         types.add(habit.habit_type);
       }
@@ -38,7 +38,7 @@ function HabitsPage() {
     if (!selectedFilter) {
       return habits;
     }
-    return habits.filter(habit => habit.habit_type === selectedFilter);
+    return habits.filter((habit) => habit.habit_type === selectedFilter);
   }, [habits, selectedFilter]);
 
   // Sort habits: incomplete first, completed last
@@ -68,7 +68,11 @@ function HabitsPage() {
   };
 
   const handleDeleteClick = async (habit: Habit) => {
-    if (window.confirm(`Are you sure you want to delete "${habit.name}"? This will also delete all completion history. This action cannot be undone.`)) {
+    if (
+      window.confirm(
+        `Are you sure you want to delete "${habit.name}"? This will also delete all completion history. This action cannot be undone.`
+      )
+    ) {
       await deleteHabit(habit.id);
     }
   };
@@ -78,11 +82,19 @@ function HabitsPage() {
     setEditingHabit(null);
   };
 
-  const handleSave = async (name: string, color: string, description?: string, habitType?: string) => {
+  const handleSave = async (
+    name: string,
+    color: string,
+    description?: string,
+    habitType?: string
+  ) => {
     return await addHabit(name, color, description, 'check', 7, habitType);
   };
 
-  const handleUpdate = async (id: string, updates: { name: string; color: string; description?: string; habitType?: string }) => {
+  const handleUpdate = async (
+    id: string,
+    updates: { name: string; color: string; description?: string; habitType?: string }
+  ) => {
     return await updateHabit(id, {
       name: updates.name,
       color: updates.color,
@@ -110,26 +122,28 @@ function HabitsPage() {
             onClick={() => setSelectedFilter(null)}
             className={`
               px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors
-              ${selectedFilter === null
-                ? 'text-white'
-                : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
+              ${
+                selectedFilter === null
+                  ? 'text-white'
+                  : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
               }
             `}
             style={selectedFilter === null ? { backgroundColor: accentColor } : undefined}
           >
             All ({habits.length})
           </button>
-          {habitTypes.map(type => {
-            const count = habits.filter(h => h.habit_type === type).length;
+          {habitTypes.map((type) => {
+            const count = habits.filter((h) => h.habit_type === type).length;
             return (
               <button
                 key={type}
                 onClick={() => setSelectedFilter(type)}
                 className={`
                   px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors
-                  ${selectedFilter === type
-                    ? 'text-white'
-                    : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
+                  ${
+                    selectedFilter === type
+                      ? 'text-white'
+                      : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
                   }
                 `}
                 style={selectedFilter === type ? { backgroundColor: accentColor } : undefined}

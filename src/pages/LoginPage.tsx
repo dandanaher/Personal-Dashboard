@@ -46,7 +46,9 @@ function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo/Brand */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2" style={{ color: accentColor }}>MyDash</h1>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: accentColor }}>
+            MyDash
+          </h1>
           <p className="text-secondary-600 dark:text-secondary-400">
             Your personal productivity dashboard
           </p>

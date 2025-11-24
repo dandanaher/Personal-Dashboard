@@ -50,7 +50,14 @@ function App() {
   const { loading, error, initialize, user } = useAuthStore();
   const { accentColor } = useThemeStore();
 
-  console.log('App: Render - loading =', loading, ', user =', user?.email || 'none', ', error =', error);
+  console.log(
+    'App: Render - loading =',
+    loading,
+    ', user =',
+    user?.email || 'none',
+    ', error =',
+    error
+  );
 
   useEffect(() => {
     console.log('App: useEffect - calling initialize()');
@@ -68,7 +75,10 @@ function App() {
   if (loading) {
     console.log('App: Showing loading screen');
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: accentColor }}>
+      <div
+        className="min-h-screen flex flex-col items-center justify-center"
+        style={{ backgroundColor: accentColor }}
+      >
         <h1 className="text-4xl font-bold text-white mb-4">MyDash</h1>
         <LoadingSpinner size="md" className="[&_svg]:text-white" />
         <p className="mt-4 text-sm text-white/70">Loading: {loading.toString()}</p>

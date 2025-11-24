@@ -75,10 +75,7 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
     if (!userId) return;
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', userId);
+      const { error } = await supabase.from('profiles').update(updates).eq('id', userId);
 
       if (error) throw error;
 

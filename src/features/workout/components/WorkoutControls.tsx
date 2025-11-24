@@ -26,11 +26,7 @@ export default function WorkoutControls({
           style={{ backgroundColor: highlightColor }}
           aria-label={isPaused ? 'Resume workout' : 'Pause workout'}
         >
-          {isPaused ? (
-            <Play className="h-5 w-5" />
-          ) : (
-            <Pause className="h-5 w-5" />
-          )}
+          {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
         </button>
         <button
           onClick={onEnd}
@@ -43,15 +39,11 @@ export default function WorkoutControls({
       </div>
 
       <div className="text-center">
-        <div className="text-xs text-white/70">
-          {exerciseProgress}
-        </div>
+        <div className="text-xs text-white/70">{exerciseProgress}</div>
       </div>
 
       <div className="text-right">
-        <div className="text-lg font-mono font-bold text-white tabular-nums">
-          {elapsedTime}
-        </div>
+        <div className="text-lg font-mono font-bold text-white tabular-nums">{elapsedTime}</div>
       </div>
     </div>
   );

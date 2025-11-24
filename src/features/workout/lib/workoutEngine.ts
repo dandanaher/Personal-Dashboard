@@ -1,6 +1,12 @@
 // Workout state machine and engine utilities
 
-import type { Exercise, CompletedExercise, CompletedSet, WorkoutSession, WorkoutTemplate } from '@/lib/types';
+import type {
+  Exercise,
+  CompletedExercise,
+  CompletedSet,
+  WorkoutSession,
+  WorkoutTemplate,
+} from '@/lib/types';
 
 // =============================================================================
 // Volume Aggregation Types
@@ -33,6 +39,12 @@ export type WorkoutPhase =
   | { type: 'active'; exerciseIdx: number; setIdx: number }
   | { type: 'resting'; exerciseIdx: number; setIdx: number; remainingSeconds: number }
   | { type: 'resting_for_failure'; exerciseIdx: number; remainingSeconds: number }
+  | {
+      type: 'resting_between_exercises';
+      completedExerciseIdx: number;
+      nextExerciseIdx: number;
+      remainingSeconds: number;
+    }
   | { type: 'failure_set'; exerciseIdx: number }
   | { type: 'failure_input'; exerciseIdx: number }
   | { type: 'complete' }
@@ -200,29 +212,20 @@ export function calculateWorkoutVolume(exercises: CompletedExercise[]): WorkoutV
       }
       case 'cardio': {
         // Sum up actual distances covered
-        const distance = exercise.main_sets.reduce(
-          (sum, set) => sum + (set.distance || 0),
-          0
-        );
+        const distance = exercise.main_sets.reduce((sum, set) => sum + (set.distance || 0), 0);
         result.totalDistance += distance;
         // Use the exercise's distance unit (prefer first cardio exercise's unit)
         if (exercise.distance_unit) {
           result.distanceUnit = exercise.distance_unit;
         }
         // Sum actual times
-        const time = exercise.main_sets.reduce(
-          (sum, set) => sum + (set.time || 0),
-          0
-        );
+        const time = exercise.main_sets.reduce((sum, set) => sum + (set.time || 0), 0);
         result.totalTime += time;
         break;
       }
       case 'timed': {
         // Sum actual hold times
-        const time = exercise.main_sets.reduce(
-          (sum, set) => sum + (set.time || 0),
-          0
-        );
+        const time = exercise.main_sets.reduce((sum, set) => sum + (set.time || 0), 0);
         result.totalTime += time;
         // Timed exercises can also have weight volume
         const weightVolume = exercise.main_sets.reduce(
@@ -249,7 +252,10 @@ export function getVolumeLabel(exercises: CompletedExercise[]): string {
   if (exerciseCount.cardio > exerciseCount.strength && exerciseCount.cardio > exerciseCount.timed) {
     // Cardio-dominant
     return `${volume.totalDistance.toFixed(1)} ${volume.distanceUnit}`;
-  } else if (exerciseCount.timed > exerciseCount.strength && exerciseCount.timed > exerciseCount.cardio) {
+  } else if (
+    exerciseCount.timed > exerciseCount.strength &&
+    exerciseCount.timed > exerciseCount.cardio
+  ) {
     // Timed-dominant
     const mins = Math.floor(volume.totalTime / 60);
     const secs = volume.totalTime % 60;
@@ -309,7 +315,10 @@ export function calculateTotalTime(exercises: CompletedExercise[]): number {
 /**
  * Check if a workout session was fully completed (all sets done for all exercises)
  */
-export function isSessionFullyCompleted(session: WorkoutSession, template: WorkoutTemplate): boolean {
+export function isSessionFullyCompleted(
+  session: WorkoutSession,
+  template: WorkoutTemplate
+): boolean {
   // Session must have completed_at and duration
   if (!session.completed_at || !session.duration) return false;
 
@@ -342,10 +351,11 @@ export function calculateAverageDuration(
   template: WorkoutTemplate
 ): number | null {
   // Filter sessions for this template that were fully completed
-  const completedSessions = sessions.filter(session =>
-    session.template_id === template.id &&
-    session.duration &&
-    isSessionFullyCompleted(session, template)
+  const completedSessions = sessions.filter(
+    (session) =>
+      session.template_id === template.id &&
+      session.duration &&
+      isSessionFullyCompleted(session, template)
   );
 
   if (completedSessions.length === 0) return null;
@@ -498,7 +508,7 @@ export function getWeightIncrement(exerciseName: string): number {
     'leg press',
   ];
 
-  const isCompound = compoundMovements.some(compound =>
+  const isCompound = compoundMovements.some((compound) =>
     exerciseName.toLowerCase().includes(compound)
   );
 

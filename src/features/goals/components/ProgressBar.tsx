@@ -28,7 +28,9 @@ export function ProgressBar({
           </span>
         </div>
       )}
-      <div className={`w-full ${height} bg-secondary-200 dark:bg-secondary-700 rounded-full overflow-hidden`}>
+      <div
+        className={`w-full ${height} bg-secondary-200 dark:bg-secondary-700 rounded-full overflow-hidden`}
+      >
         <div
           className={`${height} ${barColor} transition-all duration-300 ease-out rounded-full`}
           style={{ width: `${clampedProgress}%` }}

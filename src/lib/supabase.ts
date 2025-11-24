@@ -7,7 +7,10 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 // Log environment variable status
 console.log('Supabase URL:', supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'MISSING');
-console.log('Supabase Key:', supabaseAnonKey ? supabaseAnonKey.substring(0, 20) + '...' : 'MISSING');
+console.log(
+  'Supabase Key:',
+  supabaseAnonKey ? supabaseAnonKey.substring(0, 20) + '...' : 'MISSING'
+);
 
 if (!supabaseUrl || !supabaseAnonKey) {
   const errorMsg = `Supabase credentials missing!

@@ -10,9 +10,17 @@ import type { Habit } from '@/lib/types';
 interface AddHabitModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (name: string, color: string, description?: string, habitType?: string) => Promise<boolean>;
+  onSave: (
+    name: string,
+    color: string,
+    description?: string,
+    habitType?: string
+  ) => Promise<boolean>;
   editingHabit?: Habit | null;
-  onUpdate?: (id: string, updates: { name: string; color: string; description?: string; habitType?: string }) => Promise<boolean>;
+  onUpdate?: (
+    id: string,
+    updates: { name: string; color: string; description?: string; habitType?: string }
+  ) => Promise<boolean>;
   existingTypes?: string[];
 }
 
@@ -73,7 +81,12 @@ export function AddHabitModal({
         habitType: habitType.trim() || undefined,
       });
     } else {
-      success = await onSave(name.trim(), color, description.trim() || undefined, habitType.trim() || undefined);
+      success = await onSave(
+        name.trim(),
+        color,
+        description.trim() || undefined,
+        habitType.trim() || undefined
+      );
     }
 
     setIsSubmitting(false);
@@ -111,10 +124,7 @@ export function AddHabitModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-secondary-200 dark:border-secondary-700">
-          <h2
-            id="modal-title"
-            className="text-lg font-semibold text-secondary-900 dark:text-white"
-          >
+          <h2 id="modal-title" className="text-lg font-semibold text-secondary-900 dark:text-white">
             {isEditing ? 'Edit Habit' : 'New Habit'}
           </h2>
           <button
@@ -194,7 +204,7 @@ export function AddHabitModal({
             />
             {existingTypes.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2">
-                {existingTypes.map(type => {
+                {existingTypes.map((type) => {
                   const isHovered = hoveredTag === type;
                   return (
                     <button

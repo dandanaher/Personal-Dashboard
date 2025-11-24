@@ -63,10 +63,9 @@ export async function calculateProgressiveOverload(
 
   // Find sessions with this exercise (case-insensitive match)
   const relevantSessions: SessionSummary[] = sessions
-    .map(session => {
+    .map((session) => {
       const exercise = session.data.exercises.find(
-        (e: CompletedExercise) =>
-          e.name.toLowerCase() === exerciseName.toLowerCase()
+        (e: CompletedExercise) => e.name.toLowerCase() === exerciseName.toLowerCase()
       );
 
       if (!exercise || exercise.main_sets.length === 0) return null;
@@ -101,7 +100,7 @@ export async function calculateProgressiveOverload(
 
   // Check if user hit target reps on all sets in last 2 sessions
   const lastTwoSessions = relevantSessions.slice(0, 2);
-  const allSetsComplete = lastTwoSessions.every(session => session.allTargetHit);
+  const allSetsComplete = lastTwoSessions.every((session) => session.allTargetHit);
 
   if (allSetsComplete) {
     // Suggest weight increase
@@ -170,10 +169,9 @@ export async function getExerciseHistory(
   let personalRecord: ExerciseHistory['personalRecord'] = null;
 
   const relevantSessions: SessionSummary[] = sessions
-    .map(session => {
+    .map((session) => {
       const exercise = session.data.exercises.find(
-        (e: CompletedExercise) =>
-          e.name.toLowerCase() === exerciseName.toLowerCase()
+        (e: CompletedExercise) => e.name.toLowerCase() === exerciseName.toLowerCase()
       );
 
       if (!exercise || exercise.main_sets.length === 0) return null;
@@ -231,7 +229,7 @@ export async function calculateTemplateOverloads(
 
   // Process all exercises in parallel
   const results = await Promise.all(
-    exercises.map(async exercise => {
+    exercises.map(async (exercise) => {
       const suggestion = await calculateProgressiveOverload(
         userId,
         exercise.name,

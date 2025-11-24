@@ -1,5 +1,15 @@
 import { useMemo, useRef, useCallback } from 'react';
-import { Edit2, Trash2, Check, RotateCcw, Calendar, AlertTriangle, Minus, Plus, Link } from 'lucide-react';
+import {
+  Edit2,
+  Trash2,
+  Check,
+  RotateCcw,
+  Calendar,
+  AlertTriangle,
+  Minus,
+  Plus,
+  Link,
+} from 'lucide-react';
 import { parseISO, differenceInDays } from 'date-fns';
 import { Card, Button } from '@/components/ui';
 import { Goal } from '@/lib/types';
@@ -92,32 +102,35 @@ export function GoalCard({
   }, []);
 
   // Handle hold-to-accelerate for increment/decrement
-  const handleHoldStart = useCallback((increment: number) => {
-    // Immediate first change
-    const newProgress = Math.min(100, Math.max(0, currentProgressRef.current + increment));
-    currentProgressRef.current = newProgress;
-    onProgressChange(newProgress);
+  const handleHoldStart = useCallback(
+    (increment: number) => {
+      // Immediate first change
+      const newProgress = Math.min(100, Math.max(0, currentProgressRef.current + increment));
+      currentProgressRef.current = newProgress;
+      onProgressChange(newProgress);
 
-    // Start accelerating interval after initial delay
-    timeoutRef.current = setTimeout(() => {
-      const tick = () => {
-        const updated = Math.min(100, Math.max(0, currentProgressRef.current + increment));
-        currentProgressRef.current = updated;
-        onProgressChange(updated);
+      // Start accelerating interval after initial delay
+      timeoutRef.current = setTimeout(() => {
+        const tick = () => {
+          const updated = Math.min(100, Math.max(0, currentProgressRef.current + increment));
+          currentProgressRef.current = updated;
+          onProgressChange(updated);
 
-        // Accelerate: decrease interval time (faster updates)
-        speedRef.current = Math.max(30, speedRef.current * 0.9);
+          // Accelerate: decrease interval time (faster updates)
+          speedRef.current = Math.max(30, speedRef.current * 0.9);
 
-        // Clear and restart with new speed
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-        }
+          // Clear and restart with new speed
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+          }
+          intervalRef.current = setInterval(tick, speedRef.current);
+        };
+
         intervalRef.current = setInterval(tick, speedRef.current);
-      };
-
-      intervalRef.current = setInterval(tick, speedRef.current);
-    }, 300); // Initial delay before repeat starts
-  }, [onProgressChange]);
+      }, 300); // Initial delay before repeat starts
+    },
+    [onProgressChange]
+  );
 
   // Handle mouse/touch release
   const handleHoldEnd = useCallback(() => {
@@ -145,8 +158,8 @@ export function GoalCard({
         isOverdue
           ? 'border-l-4 border-l-red-500 dark:border-l-red-400'
           : goal.completed
-          ? 'opacity-75'
-          : ''
+            ? 'opacity-75'
+            : ''
       }`}
     >
       {/* Header */}
@@ -180,13 +193,7 @@ export function GoalCard({
           )}
         </div>
         <div className="flex gap-1 ml-2 flex-shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onEdit}
-            aria-label="Edit goal"
-            className="p-2"
-          >
+          <Button variant="ghost" size="sm" onClick={onEdit} aria-label="Edit goal" className="p-2">
             <Edit2 className="w-4 h-4" />
           </Button>
           <Button
@@ -203,11 +210,7 @@ export function GoalCard({
 
       {/* Progress Bar */}
       <div className="mb-3">
-        <ProgressBar
-          progress={displayProgress}
-          color={progressColor}
-          showLabel
-        />
+        <ProgressBar progress={displayProgress} color={progressColor} showLabel />
       </div>
 
       {/* Footer with Progress Controls */}

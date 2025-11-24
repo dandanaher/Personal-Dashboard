@@ -49,17 +49,13 @@ export default function RestTimer({
         </svg>
         {/* Content inside circle */}
         <div className="absolute inset-0 flex flex-col items-center justify-center px-8">
-          <div className="text-lg font-semibold text-white mb-3">
-            REST
-          </div>
+          <div className="text-lg font-semibold text-white mb-3">REST</div>
 
           <span className="text-6xl font-bold text-white tabular-nums mb-4">
             {formatRestTime(remainingSeconds)}
           </span>
 
-          <div className="text-sm text-white/70 mb-4 text-center">
-            Next: {nextSetInfo}
-          </div>
+          <div className="text-sm text-white/70 mb-4 text-center">Next: {nextSetInfo}</div>
 
           <button
             onClick={onSkip}

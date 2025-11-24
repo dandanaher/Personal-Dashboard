@@ -50,9 +50,7 @@ function HomePage() {
             <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">
               {greeting}, {userName}
             </h1>
-            <p className="text-secondary-500 dark:text-secondary-400">
-              Total Level: {totalLevel}
-            </p>
+            <p className="text-secondary-500 dark:text-secondary-400">Total Level: {totalLevel}</p>
           </div>
           <SettingsMenu />
         </div>
@@ -64,11 +62,9 @@ function HomePage() {
 
         {/* Stat Cards Grid */}
         <div className="space-y-3">
-          <h2 className="font-semibold text-secondary-900 dark:text-white">
-            Your Stats
-          </h2>
+          <h2 className="font-semibold text-secondary-900 dark:text-white">Your Stats</h2>
           <div className="grid grid-cols-1 gap-3">
-            {attributes.map(attr => (
+            {attributes.map((attr) => (
               <StatCard key={attr.id} attribute={attr} />
             ))}
           </div>

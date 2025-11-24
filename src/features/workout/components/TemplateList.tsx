@@ -83,7 +83,7 @@ export default function TemplateList({
         </Button>
       </div>
 
-      {templates.map(template => (
+      {templates.map((template) => (
         <TemplateCard
           key={template.id}
           template={template}

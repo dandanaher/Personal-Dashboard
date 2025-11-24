@@ -57,12 +57,8 @@ export default function WorkoutHistory({
         <h3 className="text-lg font-semibold text-secondary-900 dark:text-secondary-100 mb-2">
           Failed to Load History
         </h3>
-        <p className="text-secondary-600 dark:text-secondary-400 mb-4">
-          {error}
-        </p>
-        <Button onClick={onRetry}>
-          Try Again
-        </Button>
+        <p className="text-secondary-600 dark:text-secondary-400 mb-4">{error}</p>
+        <Button onClick={onRetry}>Try Again</Button>
       </Card>
     );
   }
@@ -82,17 +78,20 @@ export default function WorkoutHistory({
   }
 
   // Group sessions by date
-  const groupedSessions = sessions.reduce((groups, session) => {
-    const date = new Date(session.started_at).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-    });
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(session);
-    return groups;
-  }, {} as Record<string, WorkoutSession[]>);
+  const groupedSessions = sessions.reduce(
+    (groups, session) => {
+      const date = new Date(session.started_at).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+      });
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(session);
+      return groups;
+    },
+    {} as Record<string, WorkoutSession[]>
+  );
 
   return (
     <div className="space-y-6">
@@ -102,7 +101,7 @@ export default function WorkoutHistory({
             {date}
           </h3>
           <div className="space-y-3">
-            {dateSessions.map(session => (
+            {dateSessions.map((session) => (
               <SessionCard
                 key={session.id}
                 session={session}

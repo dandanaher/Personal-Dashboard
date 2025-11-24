@@ -155,7 +155,7 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
   // Clamp target completions when max changes (due to date change)
   useEffect(() => {
     if (linkToHabit) {
-      setTargetCompletions(prev => prev > maxCompletions ? maxCompletions : prev);
+      setTargetCompletions((prev) => (prev > maxCompletions ? maxCompletions : prev));
     }
   }, [maxCompletions, linkToHabit]);
 
@@ -179,7 +179,9 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
     }
 
     if (completionsExceedDays) {
-      setError(`Target completions cannot exceed ${maxCompletions} (days remaining until deadline)`);
+      setError(
+        `Target completions cannot exceed ${maxCompletions} (days remaining until deadline)`
+      );
       return;
     }
 
@@ -277,7 +279,10 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto overflow-x-hidden max-h-[calc(90vh-8rem)]">
+        <form
+          onSubmit={handleSubmit}
+          className="p-4 space-y-4 overflow-y-auto overflow-x-hidden max-h-[calc(90vh-8rem)]"
+        >
           {/* Error message */}
           {error && (
             <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
@@ -392,7 +397,9 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
                 {loadingHabits ? (
                   <p className="text-sm text-secondary-500">Loading habits...</p>
                 ) : habits.length === 0 ? (
-                  <p className="text-sm text-secondary-500">No habits found. Create a habit first.</p>
+                  <p className="text-sm text-secondary-500">
+                    No habits found. Create a habit first.
+                  </p>
                 ) : (
                   <>
                     {/* Habit Select */}
@@ -433,7 +440,9 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
                           min="1"
                           max={maxCompletions}
                           value={targetCompletions}
-                          onChange={(e) => setTargetCompletions(Math.max(1, parseInt(e.target.value) || 1))}
+                          onChange={(e) =>
+                            setTargetCompletions(Math.max(1, parseInt(e.target.value) || 1))
+                          }
                           className={`flex-1 ${completionsExceedDays ? 'border-red-500 focus:ring-red-500' : ''}`}
                         />
                         <span className="text-sm text-secondary-500">times</span>
@@ -441,9 +450,7 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
                       {completionsExceedDays ? (
                         <div className="mt-1 flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
                           <AlertTriangle className="w-3 h-3" />
-                          <span>
-                            Cannot exceed {maxCompletions} days until deadline
-                          </span>
+                          <span>Cannot exceed {maxCompletions} days until deadline</span>
                         </div>
                       ) : (
                         <p className="mt-1 text-xs text-secondary-500">

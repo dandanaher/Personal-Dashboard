@@ -27,7 +27,7 @@ export default function WorkoutTimer({
   const elapsedTimeRef = useRef(0);
 
   // Calculate progress percentage (0 to 1)
-  const progress = 1 - (timeRemaining / targetTime);
+  const progress = 1 - timeRemaining / targetTime;
 
   // Format time as mm:ss
   const formatTime = (seconds: number) => {
@@ -95,11 +95,7 @@ export default function WorkoutTimer({
     <div className="flex flex-col items-center gap-4">
       {/* Timer Circle */}
       <div className="relative" style={{ width: size, height: size }}>
-        <svg
-          className="transform -rotate-90"
-          width={size}
-          height={size}
-        >
+        <svg className="transform -rotate-90" width={size} height={size}>
           {/* Background circle */}
           <circle
             cx={size / 2}
@@ -173,9 +169,7 @@ export default function WorkoutTimer({
 
       {/* Status text */}
       {timeRemaining === 0 && (
-        <div className="text-green-400 font-medium animate-pulse">
-          Complete!
-        </div>
+        <div className="text-green-400 font-medium animate-pulse">Complete!</div>
       )}
     </div>
   );

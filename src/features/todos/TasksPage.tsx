@@ -25,7 +25,7 @@ function TasksPageContent() {
     toggleTask: toggleDayTask,
     deleteTask: deleteDayTask,
     updateTask: updateDayTask,
-    refetch: refetchDay
+    refetch: refetchDay,
   } = useTasks(selectedDate);
 
   // All tasks for overview
@@ -47,11 +47,12 @@ function TasksPageContent() {
   // Only count truly overdue tasks (before today AND before selected date)
   const selectedDateString = format(selectedDate, 'yyyy-MM-dd');
   const todayString = format(new Date(), 'yyyy-MM-dd');
-  const hasTasksBeforeSelectedDate = allTasks.some(task =>
-    !task.completed &&
-    task.date !== null &&
-    task.date < selectedDateString &&
-    task.date < todayString  // Must be truly overdue (before today)
+  const hasTasksBeforeSelectedDate = allTasks.some(
+    (task) =>
+      !task.completed &&
+      task.date !== null &&
+      task.date < selectedDateString &&
+      task.date < todayString // Must be truly overdue (before today)
   );
 
   const { showToast } = useToast();
@@ -59,12 +60,12 @@ function TasksPageContent() {
 
   // Navigate to previous day
   const goToPreviousDay = () => {
-    setSelectedDate(prev => subDays(prev, 1));
+    setSelectedDate((prev) => subDays(prev, 1));
   };
 
   // Navigate to next day
   const goToNextDay = () => {
-    setSelectedDate(prev => addDays(prev, 1));
+    setSelectedDate((prev) => addDays(prev, 1));
   };
 
   // Go to today
@@ -99,7 +100,11 @@ function TasksPageContent() {
   };
 
   // Handle add task for overview
-  const handleAddOverviewTask = async (title: string, description?: string, date?: string | null) => {
+  const handleAddOverviewTask = async (
+    title: string,
+    description?: string,
+    date?: string | null
+  ) => {
     const success = await addAllTask(title, description, date);
     if (success) {
       showToast('Task added', 'success');
@@ -122,7 +127,7 @@ function TasksPageContent() {
 
   // Handle delete task for day view
   const handleDeleteDayTask = async (taskId: string) => {
-    const task = dayTasks.find(t => t.id === taskId);
+    const task = dayTasks.find((t) => t.id === taskId);
     if (!task) return;
 
     const confirmed = window.confirm(`Delete "${task.title}"?`);
@@ -136,7 +141,7 @@ function TasksPageContent() {
   // Handle delete task for overview
   const handleDeleteOverviewTask = async (taskId: string) => {
     const allTasks = [...overdueTasks, ...upcomingTasks, ...datelessTasks];
-    const task = allTasks.find(t => t.id === taskId);
+    const task = allTasks.find((t) => t.id === taskId);
     if (!task) return;
 
     const confirmed = window.confirm(`Delete "${task.title}"?`);
@@ -172,7 +177,7 @@ function TasksPageContent() {
   // Group upcoming tasks by date for display
   const groupTasksByDate = (tasks: Task[]) => {
     const groups: { [key: string]: Task[] } = {};
-    tasks.forEach(task => {
+    tasks.forEach((task) => {
       const date = task.date || 'No date';
       if (!groups[date]) {
         groups[date] = [];
@@ -326,10 +331,9 @@ function TasksPageContent() {
           {!dayLoading && !dayError && dayTasks.length > 0 && (
             <div className="text-center">
               <p className="text-sm text-secondary-400 dark:text-secondary-500">
-                {dayTasks.filter(t => !t.completed).length} remaining
-                {dayTasks.filter(t => t.completed).length > 0 &&
-                  ` • ${dayTasks.filter(t => t.completed).length} completed`
-                }
+                {dayTasks.filter((t) => !t.completed).length} remaining
+                {dayTasks.filter((t) => t.completed).length > 0 &&
+                  ` • ${dayTasks.filter((t) => t.completed).length} completed`}
               </p>
             </div>
           )}
@@ -339,17 +343,13 @@ function TasksPageContent() {
         <>
           {/* Add Task Form for overview */}
           <Card variant="default" padding="md">
-            <AddTaskForm
-              onAdd={handleAddOverviewTask}
-              defaultDate={null}
-              showDateToggle={true}
-            />
+            <AddTaskForm onAdd={handleAddOverviewTask} defaultDate={null} showDateToggle={true} />
           </Card>
 
           {/* Loading state */}
           {allLoading && (
             <div className="space-y-2">
-              {[1, 2, 3].map(i => (
+              {[1, 2, 3].map((i) => (
                 <div key={i} className="animate-pulse">
                   <div className="h-16 bg-secondary-200 dark:bg-secondary-700 rounded-lg" />
                 </div>
@@ -364,9 +364,7 @@ function TasksPageContent() {
               <h3 className="text-lg font-semibold text-secondary-700 dark:text-secondary-300 mb-2">
                 Failed to load tasks
               </h3>
-              <p className="text-sm text-secondary-500 dark:text-secondary-400 mb-4">
-                {allError}
-              </p>
+              <p className="text-sm text-secondary-500 dark:text-secondary-400 mb-4">{allError}</p>
               <Button variant="outline" onClick={refetchAll}>
                 Try Again
               </Button>
@@ -385,7 +383,7 @@ function TasksPageContent() {
                   </h2>
                   <Card variant="default" padding="none">
                     <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
-                      {overdueTasks.map(task => (
+                      {overdueTasks.map((task) => (
                         <div key={task.id} className="group">
                           <TaskItem
                             task={task}
@@ -411,7 +409,7 @@ function TasksPageContent() {
                       </h2>
                       <Card variant="default" padding="none">
                         <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
-                          {tasks.map(task => (
+                          {tasks.map((task) => (
                             <div key={task.id} className="group">
                               <TaskItem
                                 task={task}
@@ -437,7 +435,7 @@ function TasksPageContent() {
                   </h2>
                   <Card variant="default" padding="none">
                     <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
-                      {datelessTasks.map(task => (
+                      {datelessTasks.map((task) => (
                         <div key={task.id} className="group">
                           <TaskItem
                             task={task}
@@ -454,20 +452,22 @@ function TasksPageContent() {
               )}
 
               {/* Empty state */}
-              {upcomingTasks.length === 0 && datelessTasks.length === 0 && overdueTasks.length === 0 && (
-                <Card variant="outlined" className="text-center py-12">
-                  <List className="h-12 w-12 mx-auto text-secondary-400 dark:text-secondary-500 mb-4" />
-                  <p className="text-secondary-500 dark:text-secondary-400 mb-2">
-                    No tasks yet
-                  </p>
-                  <p className="text-sm text-secondary-400 dark:text-secondary-500">
-                    Add a task above to get started!
-                  </p>
-                </Card>
-              )}
+              {upcomingTasks.length === 0 &&
+                datelessTasks.length === 0 &&
+                overdueTasks.length === 0 && (
+                  <Card variant="outlined" className="text-center py-12">
+                    <List className="h-12 w-12 mx-auto text-secondary-400 dark:text-secondary-500 mb-4" />
+                    <p className="text-secondary-500 dark:text-secondary-400 mb-2">No tasks yet</p>
+                    <p className="text-sm text-secondary-400 dark:text-secondary-500">
+                      Add a task above to get started!
+                    </p>
+                  </Card>
+                )}
 
               {/* Summary */}
-              {(upcomingTasks.length > 0 || datelessTasks.length > 0 || overdueTasks.length > 0) && (
+              {(upcomingTasks.length > 0 ||
+                datelessTasks.length > 0 ||
+                overdueTasks.length > 0) && (
                 <div className="text-center">
                   <p className="text-sm text-secondary-400 dark:text-secondary-500">
                     {overdueTasks.length + upcomingTasks.length + datelessTasks.length} total tasks

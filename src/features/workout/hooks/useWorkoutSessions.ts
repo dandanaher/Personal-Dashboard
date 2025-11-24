@@ -93,7 +93,7 @@ export function useWorkoutSessions(): UseWorkoutSessionsReturn {
       if (!user) return null;
 
       // Check local cache first
-      const cached = sessions.find(s => s.id === id);
+      const cached = sessions.find((s) => s.id === id);
       if (cached) return cached;
 
       try {
@@ -124,9 +124,7 @@ export function useWorkoutSessions(): UseWorkoutSessionsReturn {
 
       try {
         // Optimistic update
-        setSessions(prev =>
-          prev.map(s => (s.id === id ? { ...s, ...updates } : s))
-        );
+        setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
 
         const updateData: WorkoutSessionUpdate = updates;
 
@@ -159,7 +157,7 @@ export function useWorkoutSessions(): UseWorkoutSessionsReturn {
 
       try {
         // Optimistic delete
-        setSessions(prev => prev.filter(s => s.id !== id));
+        setSessions((prev) => prev.filter((s) => s.id !== id));
 
         const { error: deleteError } = await supabase
           .from('workout_sessions')

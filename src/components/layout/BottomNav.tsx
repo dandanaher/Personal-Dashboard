@@ -41,14 +41,17 @@ function BottomNav() {
   const location = useLocation();
 
   // Find the active index
-  const activeIndex = navItems.findIndex(item => location.pathname.startsWith(item.path));
+  const activeIndex = navItems.findIndex((item) => location.pathname.startsWith(item.path));
   const safeActiveIndex = activeIndex === -1 ? 0 : activeIndex;
 
   // Circle size matches the nav bar height minus padding
   const circleSize = 48; // pixels
 
   return (
-    <nav className="fixed left-0 right-0 z-50 flex justify-center pointer-events-none" style={{ bottom: 'max(4px, env(safe-area-inset-bottom))' }}>
+    <nav
+      className="fixed left-0 right-0 z-50 flex justify-center pointer-events-none"
+      style={{ bottom: 'max(4px, env(safe-area-inset-bottom))' }}
+    >
       <div
         className="relative bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/40 dark:border-white/20 shadow-lg shadow-black/5 pointer-events-auto"
         style={{ borderRadius: `${(circleSize + 8) / 2}px` }}
@@ -77,9 +80,7 @@ function BottomNav() {
               key={item.path}
               to={item.path}
               className={`flex items-center justify-center rounded-full transition-colors duration-200 touch-manipulation ${
-                index === safeActiveIndex
-                  ? ''
-                  : 'text-secondary-500 dark:text-secondary-400'
+                index === safeActiveIndex ? '' : 'text-secondary-500 dark:text-secondary-400'
               }`}
               style={{
                 width: `${circleSize}px`,

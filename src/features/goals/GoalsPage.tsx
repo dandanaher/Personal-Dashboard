@@ -29,7 +29,7 @@ function GoalsPage() {
   // Filter goals based on active filter
   const filteredGoals = useMemo(() => {
     if (activeFilter === 'all') return goals;
-    return goals.filter(goal => goal.type === activeFilter);
+    return goals.filter((goal) => goal.type === activeFilter);
   }, [goals, activeFilter]);
 
   // Calculate counts for each filter
@@ -42,7 +42,7 @@ function GoalsPage() {
       open: 0,
     };
 
-    goals.forEach(goal => {
+    goals.forEach((goal) => {
       if (goal.type in counts) {
         counts[goal.type as FilterType]++;
       }
@@ -75,38 +75,52 @@ function GoalsPage() {
     setEditingGoal(null);
   }, []);
 
-  const handleSave = useCallback(async (goalData: {
-    title: string;
-    description?: string | null;
-    type: Goal['type'];
-    target_date?: string | null;
-    progress?: number;
-    linked_habit_id?: string | null;
-    target_completions?: number | null;
-  }): Promise<boolean> => {
-    if (editingGoal) {
-      // Update existing goal
-      return updateGoal(editingGoal.id, goalData);
-    } else {
-      // Add new goal
-      const result = await addGoal(goalData);
-      return result !== null;
-    }
-  }, [editingGoal, addGoal, updateGoal]);
+  const handleSave = useCallback(
+    async (goalData: {
+      title: string;
+      description?: string | null;
+      type: Goal['type'];
+      target_date?: string | null;
+      progress?: number;
+      linked_habit_id?: string | null;
+      target_completions?: number | null;
+    }): Promise<boolean> => {
+      if (editingGoal) {
+        // Update existing goal
+        return updateGoal(editingGoal.id, goalData);
+      } else {
+        // Add new goal
+        const result = await addGoal(goalData);
+        return result !== null;
+      }
+    },
+    [editingGoal, addGoal, updateGoal]
+  );
 
-  const handleDeleteClick = useCallback(async (goalId: string) => {
-    if (window.confirm('Are you sure you want to delete this goal? This action cannot be undone.')) {
-      await deleteGoal(goalId);
-    }
-  }, [deleteGoal]);
+  const handleDeleteClick = useCallback(
+    async (goalId: string) => {
+      if (
+        window.confirm('Are you sure you want to delete this goal? This action cannot be undone.')
+      ) {
+        await deleteGoal(goalId);
+      }
+    },
+    [deleteGoal]
+  );
 
-  const handleProgressChange = useCallback(async (goalId: string, progress: number) => {
-    await updateProgress(goalId, progress);
-  }, [updateProgress]);
+  const handleProgressChange = useCallback(
+    async (goalId: string, progress: number) => {
+      await updateProgress(goalId, progress);
+    },
+    [updateProgress]
+  );
 
-  const handleToggleComplete = useCallback(async (goalId: string) => {
-    await toggleComplete(goalId);
-  }, [toggleComplete]);
+  const handleToggleComplete = useCallback(
+    async (goalId: string) => {
+      await toggleComplete(goalId);
+    },
+    [toggleComplete]
+  );
 
   return (
     <div className="space-y-4">

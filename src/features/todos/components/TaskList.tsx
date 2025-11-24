@@ -45,9 +45,7 @@ export function TaskList({
         <h3 className="text-lg font-semibold text-secondary-700 dark:text-secondary-300 mb-2">
           Failed to load tasks
         </h3>
-        <p className="text-sm text-secondary-500 dark:text-secondary-400 mb-4">
-          {error}
-        </p>
+        <p className="text-sm text-secondary-500 dark:text-secondary-400 mb-4">{error}</p>
         <Button variant="outline" onClick={onRetry}>
           Try Again
         </Button>
@@ -71,9 +69,7 @@ export function TaskList({
     return (
       <Card variant="outlined" className="text-center py-12">
         <CheckSquare className="h-12 w-12 mx-auto text-secondary-400 dark:text-secondary-500 mb-4" />
-        <p className="text-secondary-500 dark:text-secondary-400 mb-2">
-          No tasks for this day
-        </p>
+        <p className="text-secondary-500 dark:text-secondary-400 mb-2">No tasks for this day</p>
         <p className="text-sm text-secondary-400 dark:text-secondary-500">
           Add one to get started!
         </p>
@@ -82,20 +78,15 @@ export function TaskList({
   }
 
   // Separate completed and incomplete tasks
-  const incompleteTasks = tasks.filter(task => !task.completed);
-  const completedTasks = tasks.filter(task => task.completed);
+  const incompleteTasks = tasks.filter((task) => !task.completed);
+  const completedTasks = tasks.filter((task) => task.completed);
 
   return (
     <div className="space-y-2">
       {/* Incomplete tasks */}
-      {incompleteTasks.map(task => (
+      {incompleteTasks.map((task) => (
         <div key={task.id} className="group">
-          <TaskItem
-            task={task}
-            onToggle={onToggle}
-            onDelete={onDelete}
-            onEdit={onEdit}
-          />
+          <TaskItem task={task} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
         </div>
       ))}
 
@@ -111,14 +102,9 @@ export function TaskList({
               <div className="flex-1 h-px bg-secondary-200 dark:bg-secondary-700" />
             </div>
           )}
-          {completedTasks.map(task => (
+          {completedTasks.map((task) => (
             <div key={task.id} className="group">
-              <TaskItem
-                task={task}
-                onToggle={onToggle}
-                onDelete={onDelete}
-                onEdit={onEdit}
-              />
+              <TaskItem task={task} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
             </div>
           ))}
         </>

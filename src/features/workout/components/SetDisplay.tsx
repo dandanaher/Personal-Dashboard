@@ -47,12 +47,8 @@ export default function SetDisplay({
     if (isFailureSet) {
       return (
         <div className="space-y-2">
-          <div className="text-xl text-orange-300 font-semibold">
-            Failure Set
-          </div>
-          <div className="text-lg text-primary-100">
-            Go until failure @ {weight}kg
-          </div>
+          <div className="text-xl text-orange-300 font-semibold">Failure Set</div>
+          <div className="text-lg text-primary-100">Go until failure @ {weight}kg</div>
         </div>
       );
     }
@@ -73,16 +69,12 @@ export default function SetDisplay({
       case 'cardio':
         return (
           <div className="space-y-2">
-            <div className="text-xl text-primary-100">
-              Target
-            </div>
+            <div className="text-xl text-primary-100">Target</div>
             <div className="text-2xl font-semibold text-white">
               {distance} {distanceUnit}
             </div>
             {targetTime > 0 && (
-              <div className="text-lg text-primary-200">
-                in {formatDuration(targetTime)}
-              </div>
+              <div className="text-lg text-primary-200">in {formatDuration(targetTime)}</div>
             )}
           </div>
         );
@@ -96,11 +88,7 @@ export default function SetDisplay({
             <div className="text-2xl font-semibold text-white">
               Hold for {formatDuration(targetTime)}
             </div>
-            {weight > 0 && (
-              <div className="text-lg text-primary-200">
-                @ {weight}kg
-              </div>
-            )}
+            {weight > 0 && <div className="text-lg text-primary-200">@ {weight}kg</div>}
           </div>
         );
 

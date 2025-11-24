@@ -90,11 +90,7 @@ export default function LiveWorkout({
   const handleScreenTap = (e: React.MouseEvent | React.TouchEvent) => {
     // Don't trigger if clicking on buttons or inputs
     const target = e.target as HTMLElement;
-    if (
-      target.closest('button') ||
-      target.closest('input') ||
-      target.closest('[data-no-tap]')
-    ) {
+    if (target.closest('button') || target.closest('input') || target.closest('[data-no-tap]')) {
       return;
     }
 
@@ -169,26 +165,20 @@ export default function LiveWorkout({
             <h1 className="text-2xl font-bold text-secondary-900 dark:text-secondary-100 mb-2">
               Workout Complete!
             </h1>
-            <p className="text-secondary-600 dark:text-secondary-400 mb-8">
-              {template.name}
-            </p>
+            <p className="text-secondary-600 dark:text-secondary-400 mb-8">{template.name}</p>
 
             <div className="grid grid-cols-2 gap-4 mb-8">
               <Card className="p-4 text-center">
                 <div className="text-2xl font-bold text-secondary-900 dark:text-secondary-100">
                   {formatTime(actualDuration)}
                 </div>
-                <div className="text-xs text-secondary-500 dark:text-secondary-400">
-                  Duration
-                </div>
+                <div className="text-xs text-secondary-500 dark:text-secondary-400">Duration</div>
               </Card>
               <Card className="p-4 text-center">
                 <div className="text-2xl font-bold text-secondary-900 dark:text-secondary-100">
                   {totalSets}
                 </div>
-                <div className="text-xs text-secondary-500 dark:text-secondary-400">
-                  Sets
-                </div>
+                <div className="text-xs text-secondary-500 dark:text-secondary-400">Sets</div>
               </Card>
 
               {/* Show distance for cardio workouts */}
@@ -221,9 +211,7 @@ export default function LiveWorkout({
                   <div className="text-2xl font-bold text-secondary-900 dark:text-secondary-100">
                     {volumeLabel}
                   </div>
-                  <div className="text-xs text-secondary-500 dark:text-secondary-400">
-                    Volume
-                  </div>
+                  <div className="text-xs text-secondary-500 dark:text-secondary-400">Volume</div>
                 </Card>
               )}
             </div>
@@ -277,9 +265,7 @@ export default function LiveWorkout({
         {/* Paused overlay */}
         {isPaused && (
           <div className="text-center">
-            <div className="text-3xl font-bold text-white mb-4">
-              PAUSED
-            </div>
+            <div className="text-3xl font-bold text-white mb-4">PAUSED</div>
             <Button onClick={togglePause} size="lg" variant="secondary">
               Resume
             </Button>
@@ -308,6 +294,17 @@ export default function LiveWorkout({
           />
         )}
 
+        {/* Resting between exercises */}
+        {phase.type === 'resting_between_exercises' && (
+          <RestTimer
+            remainingSeconds={phase.remainingSeconds}
+            totalSeconds={template.exercises[phase.completedExerciseIdx].rest_time}
+            nextSetInfo={template.exercises[phase.nextExerciseIdx].name}
+            onSkip={skipRest}
+            highlightColor={highlightColor}
+          />
+        )}
+
         {/* Active state */}
         {phase.type === 'active' && currentExercise && (
           <div className="w-full max-w-sm">
@@ -323,9 +320,7 @@ export default function LiveWorkout({
                   weight={currentExercise.currentWeight}
                 />
                 <div className="mt-8 text-center">
-                  <p className="text-sm text-white/70 mb-2">
-                    Tap anywhere to complete set
-                  </p>
+                  <p className="text-sm text-white/70 mb-2">Tap anywhere to complete set</p>
                 </div>
               </>
             )}
@@ -343,9 +338,7 @@ export default function LiveWorkout({
                   targetTime={currentExercise.exercise.target_time}
                 />
                 <div className="mt-8 text-center">
-                  <p className="text-sm text-white/70 mb-2">
-                    Tap when complete to log results
-                  </p>
+                  <p className="text-sm text-white/70 mb-2">Tap when complete to log results</p>
                 </div>
               </>
             )}
@@ -381,21 +374,17 @@ export default function LiveWorkout({
                 <h2 className="text-2xl font-bold text-white mb-2">
                   {currentExercise.exercise.name}
                 </h2>
-                <p className="text-white/70 mb-6">
-                  How many reps did you get?
-                </p>
+                <p className="text-white/70 mb-6">How many reps did you get?</p>
 
                 <form onSubmit={handleFailureSubmit} className="space-y-6">
                   <div>
-                    <div className="text-5xl font-bold text-white mb-4">
-                      {failureReps}
-                    </div>
+                    <div className="text-5xl font-bold text-white mb-4">{failureReps}</div>
                     <input
                       type="range"
                       min="1"
                       max="30"
                       value={failureReps}
-                      onChange={e => setFailureReps(Number(e.target.value))}
+                      onChange={(e) => setFailureReps(Number(e.target.value))}
                       className="w-full h-3 bg-white/30 rounded-full appearance-none cursor-pointer"
                       style={{ accentColor: 'white' }}
                     />
@@ -427,9 +416,7 @@ export default function LiveWorkout({
                 />
 
                 <div className="mt-8 text-center">
-                  <p className="text-sm text-white/70 mb-2">
-                    Tap when complete
-                  </p>
+                  <p className="text-sm text-white/70 mb-2">Tap when complete</p>
                 </div>
               </>
             )}
@@ -438,22 +425,27 @@ export default function LiveWorkout({
       </div>
 
       {/* Quick adjust footer - only for strength exercises */}
-      {(phase.type === 'active' || phase.type === 'ready') && currentExercise && getExerciseType() === 'strength' && (
-        <div className="flex-shrink-0 py-4 border-t" style={{ borderColor }} data-no-tap>
-          <QuickAdjust
-            weight={currentExercise.currentWeight}
-            reps={currentExercise.currentReps}
-            onAdjustWeight={adjustWeight}
-            onAdjustReps={adjustReps}
-            highlightColor={highlightColor}
-            accentColor={accentColor}
-          />
-        </div>
-      )}
+      {(phase.type === 'active' || phase.type === 'ready') &&
+        currentExercise &&
+        getExerciseType() === 'strength' && (
+          <div className="flex-shrink-0 py-4 border-t" style={{ borderColor }} data-no-tap>
+            <QuickAdjust
+              weight={currentExercise.currentWeight}
+              reps={currentExercise.currentReps}
+              onAdjustWeight={adjustWeight}
+              onAdjustReps={adjustReps}
+              highlightColor={highlightColor}
+              accentColor={accentColor}
+            />
+          </div>
+        )}
 
       {/* Cardio input modal */}
       {showCardioInput && currentExercise && (
-        <div className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4" data-no-tap>
+        <div
+          className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4"
+          data-no-tap
+        >
           <Card className="w-full max-w-sm p-6">
             <h3 className="font-semibold text-secondary-900 dark:text-secondary-100 mb-4">
               Log {currentExercise.exercise.name}
@@ -466,7 +458,7 @@ export default function LiveWorkout({
                 step="0.1"
                 min="0"
                 value={cardioDistance}
-                onChange={e => setCardioDistance(e.target.value)}
+                onChange={(e) => setCardioDistance(e.target.value)}
                 placeholder={currentExercise.exercise.distance?.toString() || '0'}
               />
               <Input
@@ -474,9 +466,13 @@ export default function LiveWorkout({
                 type="number"
                 min="0"
                 value={cardioTime}
-                onChange={e => setCardioTime(e.target.value)}
+                onChange={(e) => setCardioTime(e.target.value)}
                 placeholder={currentExercise.exercise.target_time?.toString() || '0'}
-                helperText={cardioTime ? `${Math.floor(parseInt(cardioTime) / 60)}:${(parseInt(cardioTime) % 60).toString().padStart(2, '0')}` : ''}
+                helperText={
+                  cardioTime
+                    ? `${Math.floor(parseInt(cardioTime) / 60)}:${(parseInt(cardioTime) % 60).toString().padStart(2, '0')}`
+                    : ''
+                }
               />
 
               <div className="flex gap-2 pt-2">
@@ -499,7 +495,10 @@ export default function LiveWorkout({
 
       {/* End workout confirmation */}
       {showEndConfirm && (
-        <div className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4" data-no-tap>
+        <div
+          className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4"
+          data-no-tap
+        >
           <Card className="w-full max-w-sm p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
@@ -516,17 +515,10 @@ export default function LiveWorkout({
             </div>
 
             <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                fullWidth
-                onClick={() => setShowEndConfirm(false)}
-              >
+              <Button variant="ghost" fullWidth onClick={() => setShowEndConfirm(false)}>
                 Cancel
               </Button>
-              <Button
-                fullWidth
-                onClick={handleEndWorkout}
-              >
+              <Button fullWidth onClick={handleEndWorkout}>
                 End Workout
               </Button>
             </div>
