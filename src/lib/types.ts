@@ -286,7 +286,16 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      increment_xp: {
+        Args: {
+          target_user_id: string;
+          target_attribute_id: string;
+          xp_amount: number;
+        };
+        Returns: void;
+      };
+    };
   };
 }
 
