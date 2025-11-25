@@ -513,9 +513,9 @@ export function getWeightIncrement(exerciseName: string): number {
     exerciseName.toLowerCase().includes(compound)
   );
 
-  return isCompound ? 2.5 : 1.25;
+  return isCompound ? 2.5 : 1;
 }
 
-export function roundToNearestIncrement(weight: number, increment: number = 1.25): number {
+export function roundToNearestIncrement(weight: number, increment: number = 1): number {
   return Math.round(weight / increment) * increment;
 }

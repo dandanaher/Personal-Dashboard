@@ -201,13 +201,16 @@ function WorkoutPageContent() {
           name: e.name,
           weight: e.weight!,
           reps_per_set: e.reps_per_set!,
+          to_failure: e.to_failure,
         }))
     );
 
-    // Check if any suggestions recommend increasing
-    const hasIncreases = Array.from(suggestions.values()).some((s) => s.shouldIncrease);
+    // Check if any suggestions recommend action
+    const hasSuggestions = Array.from(suggestions.values()).some(
+      (s) => s.shouldIncrease || s.shouldAddTestSet
+    );
 
-    if (hasIncreases) {
+    if (hasSuggestions) {
       setOverloadSuggestions(suggestions);
       setSelectedTemplateForWorkout(template);
       setShowOverloadSuggestions(true);
@@ -371,7 +374,9 @@ function WorkoutPageContent() {
                     className={`p-3 rounded-lg ${
                       suggestion.shouldIncrease
                         ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-                        : 'bg-secondary-50 dark:bg-secondary-800'
+                        : suggestion.shouldAddTestSet
+                          ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                          : 'bg-secondary-50 dark:bg-secondary-800'
                     }`}
                   >
                     <div className="font-medium text-secondary-900 dark:text-secondary-100 mb-1">
@@ -380,11 +385,15 @@ function WorkoutPageContent() {
                     {suggestion.shouldIncrease ? (
                       <div className="text-sm">
                         <span className="text-secondary-600 dark:text-secondary-400">
-                          {exercise.weight}kg →{' '}
+                          {`${exercise.weight}kg -> `}
                         </span>
                         <span className="font-semibold text-green-600 dark:text-green-400">
                           {suggestion.suggestedWeight}kg
                         </span>
+                      </div>
+                    ) : suggestion.shouldAddTestSet ? (
+                      <div className="text-sm text-secondary-600 dark:text-secondary-300">
+                        Add a test (failure) set this session
                       </div>
                     ) : (
                       <div className="text-sm text-secondary-500 dark:text-secondary-400">
@@ -403,13 +412,19 @@ function WorkoutPageContent() {
               <Button
                 fullWidth
                 onClick={() => {
-                  // Apply suggested weights
+                  // Apply suggested weights and add test sets when recommended
                   const updatedExercises = selectedTemplateForWorkout.exercises.map((exercise) => {
                     const suggestion = overloadSuggestions.get(exercise.name);
-                    if (suggestion?.shouldIncrease) {
-                      return { ...exercise, weight: suggestion.suggestedWeight };
-                    }
-                    return exercise;
+                    const nextWeight = suggestion?.shouldIncrease
+                      ? suggestion.suggestedWeight
+                      : exercise.weight;
+                    const addTestSet = suggestion?.shouldAddTestSet ? true : false;
+
+                    return {
+                      ...exercise,
+                      weight: nextWeight,
+                      to_failure: exercise.to_failure || addTestSet,
+                    };
                   });
                   handleConfirmWorkoutStart(updatedExercises);
                 }}

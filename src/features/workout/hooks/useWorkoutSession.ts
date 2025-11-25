@@ -8,6 +8,8 @@ import type {
   CompletedSet,
   WorkoutSessionData,
 } from '@/lib/types';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/stores/authStore';
 import { useWorkoutSessionStore } from '@/stores/workoutSessionStore';
 import type { WorkoutPhase } from '../lib/workoutEngine';
 
@@ -57,6 +59,7 @@ type SetCompletionData = {
 
 export function useWorkoutSession(template?: WorkoutTemplate): UseWorkoutSessionReturn {
   const store = useWorkoutSessionStore();
+  const { user } = useAuthStore();
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const {
     activeTemplate,
@@ -101,14 +104,55 @@ export function useWorkoutSession(template?: WorkoutTemplate): UseWorkoutSession
   const endWorkout = useCallback(async (): Promise<string | null> => {
     if (saveState !== 'idle') return null;
     setSaveState('saving');
+
+    // Ensure we have a user and template before attempting to save
+    if (!user || !resolvedTemplate) {
+      setSaveState('idle');
+      return null;
+    }
+
     const sessionId = await storeEndWorkout();
+
+    // Persist any updated starting weights back to the template
+    if (sessionId && resolvedTemplate?.id && user) {
+      try {
+        // Fetch the latest template to avoid persisting transient flags (e.g., ad-hoc test failure sets)
+        const { data: existingTemplate } = await supabase
+          .from('workout_templates')
+          .select('exercises')
+          .eq('id', resolvedTemplate.id)
+          .eq('user_id', user.id)
+          .single();
+
+        const mergedExercises =
+          existingTemplate?.exercises?.map((exercise: Exercise) => {
+            const updated = resolvedTemplate.exercises.find(
+              (ex) => ex.name.toLowerCase() === exercise.name.toLowerCase()
+            );
+            if (!updated) return exercise;
+            return { ...exercise, weight: updated.weight };
+          }) || resolvedTemplate.exercises;
+
+        await supabase
+          .from('workout_templates')
+          .update({
+            exercises: mergedExercises,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', resolvedTemplate.id)
+          .eq('user_id', user.id);
+      } catch (err) {
+        console.error('Error updating template weights after workout:', err);
+      }
+    }
+
     if (sessionId) {
       setSaveState('saved');
     } else {
       setSaveState('idle');
     }
     return sessionId;
-  }, [saveState, storeEndWorkout]);
+  }, [saveState, storeEndWorkout, resolvedTemplate, user]);
 
   const getCurrentExercise = useCallback((): CurrentExerciseState | null => {
     if (!resolvedTemplate) return null;

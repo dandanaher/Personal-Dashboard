@@ -13,6 +13,7 @@ export interface ProgressiveSuggestion {
   reason: string;
   previousSessions: SessionSummary[];
   shouldIncrease: boolean;
+  shouldAddTestSet: boolean;
 }
 
 export interface SessionSummary {
@@ -21,6 +22,8 @@ export interface SessionSummary {
   sets: number;
   avgReps: number;
   allTargetHit: boolean;
+  hasFailureSet: boolean;
+  failureReps: number;
 }
 
 export interface ExerciseHistory {
@@ -41,7 +44,8 @@ export async function calculateProgressiveOverload(
   userId: string,
   exerciseName: string,
   currentWeight: number,
-  targetReps: number
+  targetReps: number,
+  isTemplateFailure: boolean
 ): Promise<ProgressiveSuggestion> {
   // Fetch last 10 sessions to find relevant exercise data
   const { data: sessions, error } = await supabase
@@ -58,6 +62,7 @@ export async function calculateProgressiveOverload(
       reason: 'Unable to fetch history',
       previousSessions: [],
       shouldIncrease: false,
+      shouldAddTestSet: false,
     };
   }
 
@@ -74,9 +79,7 @@ export async function calculateProgressiveOverload(
         exercise.main_sets.reduce((sum: number, s: CompletedSet) => sum + (s.reps || 0), 0) /
         exercise.main_sets.length;
 
-      const allTargetHit = exercise.main_sets.every(
-        (s: CompletedSet) => (s.reps || 0) >= exercise.target_reps
-      );
+      const allTargetHit = exercise.main_sets.every((s: CompletedSet) => (s.reps || 0) >= targetReps);
 
       return {
         date: session.started_at,
@@ -84,61 +87,97 @@ export async function calculateProgressiveOverload(
         sets: exercise.main_sets.length,
         avgReps: Math.round(avgReps * 10) / 10,
         allTargetHit,
+        hasFailureSet: !!exercise.failure_set,
+        failureReps: exercise.failure_set?.reps || 0,
       };
     })
     .filter((s): s is SessionSummary => s !== null)
-    .slice(0, 3);
+    .slice(0, 5);
 
-  if (relevantSessions.length < 2) {
+  if (relevantSessions.length < 1) {
     return {
       suggestedWeight: currentWeight,
-      reason: 'Not enough history (need 2+ sessions)',
+      reason: 'New exercise',
       previousSessions: relevantSessions,
       shouldIncrease: false,
+      shouldAddTestSet: false,
     };
   }
 
-  // Check if user hit target reps on all sets in last 2 sessions
-  const lastTwoSessions = relevantSessions.slice(0, 2);
-  const allSetsComplete = lastTwoSessions.every((session) => session.allTargetHit);
-
-  if (allSetsComplete) {
-    // Suggest weight increase
-    const increment = getWeightIncrement(exerciseName);
-    const suggestedWeight = roundToNearestIncrement(currentWeight + increment, 1.25);
-
-    return {
-      suggestedWeight,
-      reason: `Hit ${targetReps}+ reps on all sets in last 2 sessions`,
-      previousSessions: relevantSessions,
-      shouldIncrease: true,
-    };
-  }
-
-  // Check if user is struggling (missing reps consistently)
-  const recentAvgReps = lastTwoSessions.reduce((sum, s) => sum + s.avgReps, 0) / 2;
-  if (recentAvgReps < targetReps - 2) {
-    // Suggest reducing weight if struggling significantly
-    const increment = getWeightIncrement(exerciseName);
-    const suggestedWeight = roundToNearestIncrement(
-      Math.max(currentWeight - increment, increment),
-      1.25
-    );
-
-    return {
-      suggestedWeight,
-      reason: `Struggling with reps (avg ${recentAvgReps.toFixed(1)}). Consider reducing.`,
-      previousSessions: relevantSessions,
-      shouldIncrease: false,
-    };
-  }
-
-  return {
+  const noChange = (reason: string): ProgressiveSuggestion => ({
     suggestedWeight: currentWeight,
-    reason: 'Keep current weight and focus on hitting target reps',
+    reason,
     previousSessions: relevantSessions,
     shouldIncrease: false,
-  };
+    shouldAddTestSet: false,
+  });
+
+  const increment = getWeightIncrement(exerciseName);
+
+  // Path A: Template includes a failure set by default
+  if (isTemplateFailure) {
+    if (relevantSessions.length < 2) {
+      return noChange('Need 2 sessions history');
+    }
+
+    const lastTwo = relevantSessions.slice(0, 2);
+    const strongFinish = lastTwo.every(
+      (s) => s.hasFailureSet && s.failureReps >= targetReps
+    );
+
+    if (strongFinish) {
+      const suggestedWeight = roundToNearestIncrement(currentWeight + increment, increment);
+      return {
+        suggestedWeight,
+        reason: `Hit ${targetReps}+ reps in failure sets 2x in a row`,
+        previousSessions: relevantSessions,
+        shouldIncrease: true,
+        shouldAddTestSet: false,
+      };
+    }
+
+    return noChange('Keep pushing on failure sets');
+  }
+
+  // Path B: Template normally does NOT have a failure set (use test sets)
+  const lastSession = relevantSessions[0];
+
+  if (lastSession.hasFailureSet) {
+    if (lastSession.failureReps > targetReps) {
+      const suggestedWeight = roundToNearestIncrement(currentWeight + increment, increment);
+      return {
+        suggestedWeight,
+        reason: `Test passed (${lastSession.failureReps} reps > ${targetReps}). Increasing weight.`,
+        previousSessions: relevantSessions,
+        shouldIncrease: true,
+        shouldAddTestSet: false,
+      };
+    }
+
+    return {
+      suggestedWeight: currentWeight,
+      reason: `Test incomplete (${lastSession.failureReps} reps). Retesting.`,
+      previousSessions: relevantSessions,
+      shouldIncrease: false,
+      shouldAddTestSet: true,
+    };
+  }
+
+  if (relevantSessions.length < 2) return noChange('Building history');
+  const lastTwo = relevantSessions.slice(0, 2);
+  const solidPerformance = lastTwo.every((s) => s.allTargetHit);
+
+  if (solidPerformance) {
+    return {
+      suggestedWeight: currentWeight,
+      reason: '2 solid sessions. Time to test max reps.',
+      previousSessions: relevantSessions,
+      shouldIncrease: false,
+      shouldAddTestSet: true,
+    };
+  }
+
+  return noChange('Focus on hitting main set targets');
 }
 
 // =============================================================================
@@ -205,6 +244,8 @@ export async function getExerciseHistory(
         sets: exercise.main_sets.length,
         avgReps: Math.round(avgReps * 10) / 10,
         allTargetHit,
+        hasFailureSet: !!exercise.failure_set,
+        failureReps: exercise.failure_set?.reps || 0,
       };
     })
     .filter((s): s is SessionSummary => s !== null)
@@ -223,7 +264,7 @@ export async function getExerciseHistory(
 
 export async function calculateTemplateOverloads(
   userId: string,
-  exercises: { name: string; weight: number; reps_per_set: number }[]
+  exercises: { name: string; weight: number; reps_per_set: number; to_failure?: boolean }[]
 ): Promise<Map<string, ProgressiveSuggestion>> {
   const suggestions = new Map<string, ProgressiveSuggestion>();
 
@@ -234,7 +275,8 @@ export async function calculateTemplateOverloads(
         userId,
         exercise.name,
         exercise.weight,
-        exercise.reps_per_set
+        exercise.reps_per_set,
+        !!exercise.to_failure
       );
       return { name: exercise.name, suggestion };
     })
