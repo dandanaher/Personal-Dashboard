@@ -33,12 +33,15 @@ interface WorkoutSessionStoreState {
   exerciseNotesHistory: Record<string, string[]>;
   isActive: boolean;
   isMinimized: boolean;
+  skippedExercises: number[];
 }
 
 interface WorkoutSessionActions {
   startWorkout: (template: WorkoutTemplate) => void;
   completeSet: (data?: SetCompletionData | number) => void;
   completeFailureSet: (reps: number) => void;
+  skipExercise: () => void;
+  returnToSkipped: (exerciseIdx: number) => void;
   skipRest: () => void;
   togglePause: () => void;
   endWorkout: () => Promise<string | null>;
@@ -78,6 +81,7 @@ const defaultState: WorkoutSessionStoreState = {
   exerciseNotesHistory: {},
   isActive: false,
   isMinimized: false,
+  skippedExercises: [],
 };
 
 export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => {
@@ -155,6 +159,16 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
         });
       }
     }, 250);
+  };
+
+  const findNextUnskippedExercise = (startIdx: number): number | null => {
+    const template = get().activeTemplate;
+    if (!template) return null;
+    const skipped = get().skippedExercises;
+    for (let i = startIdx; i < template.exercises.length; i++) {
+      if (!skipped.includes(i)) return i;
+    }
+    return null;
   };
 
   const startRestTimerForFailure = (seconds: number, exerciseIdx: number) => {
@@ -298,6 +312,7 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
         elapsedSeconds: 0,
         phase: { type: 'active', exerciseIdx: 0, setIdx: 0 },
         sessionData: template.exercises.map(createEmptyExerciseData),
+        skippedExercises: [],
       });
 
       initializeExerciseState(0);
@@ -308,7 +323,7 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
 
     completeSet: (data?: SetCompletionData | number) => {
       const state = get();
-      const { phase, activeTemplate, currentWeight, currentReps } = state;
+      const { phase, activeTemplate, currentWeight, currentReps, skippedExercises } = state;
       if (phase.type !== 'active' || !activeTemplate) return;
 
       const { exerciseIdx, setIdx } = phase;
@@ -374,12 +389,23 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
 
       if (setIdx < exercise.sets - 1) {
         startRestTimer(exercise.rest_time, exerciseIdx, setIdx + 1);
-      } else if (exercise.to_failure && exerciseType === 'strength') {
+        return;
+      }
+
+      if (exercise.to_failure && exerciseType === 'strength') {
         startRestTimerForFailure(exercise.rest_time, exerciseIdx);
-      } else if (exerciseIdx < activeTemplate.exercises.length - 1) {
-        const nextIdx = exerciseIdx + 1;
+        return;
+      }
+
+      const nextIdx = findNextUnskippedExercise(exerciseIdx + 1);
+      if (nextIdx !== null) {
         const restTime = exercise.rest_time;
         startRestTimerBetweenExercises(restTime, exerciseIdx, nextIdx);
+        return;
+      }
+
+      if (skippedExercises.length > 0) {
+        set({ phase: { type: 'skipped_exercises_prompt' } });
       } else {
         vibrateWorkoutComplete();
         set({ phase: { type: 'complete' } });
@@ -388,7 +414,7 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
 
     completeFailureSet: (reps: number) => {
       const state = get();
-      const { phase, activeTemplate, currentWeight } = state;
+      const { phase, activeTemplate, currentWeight, skippedExercises } = state;
       if ((phase.type !== 'failure_set' && phase.type !== 'failure_input') || !activeTemplate) {
         return;
       }
@@ -408,14 +434,49 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
         return { sessionData: updated };
       });
 
-      if (exerciseIdx < activeTemplate.exercises.length - 1) {
-        const nextIdx = exerciseIdx + 1;
+      const nextIdx = findNextUnskippedExercise(exerciseIdx + 1);
+      if (nextIdx !== null) {
         const exercise = activeTemplate.exercises[exerciseIdx];
         startRestTimerBetweenExercises(exercise.rest_time, exerciseIdx, nextIdx);
+      } else if (skippedExercises.length > 0) {
+        set({ phase: { type: 'skipped_exercises_prompt' } });
       } else {
         vibrateWorkoutComplete();
         set({ phase: { type: 'complete' } });
       }
+    },
+
+    skipExercise: () => {
+      const state = get();
+      const { phase, activeTemplate, skippedExercises } = state;
+      if (phase.type !== 'active' || !activeTemplate) return;
+
+      const alreadySkipped = skippedExercises.includes(phase.exerciseIdx);
+      const updatedSkipped = alreadySkipped
+        ? skippedExercises
+        : [...skippedExercises, phase.exerciseIdx];
+      set({ skippedExercises: updatedSkipped });
+
+      const nextIdx = findNextUnskippedExercise(phase.exerciseIdx + 1);
+      if (nextIdx !== null) {
+        initializeExerciseState(nextIdx);
+        set({ phase: { type: 'active', exerciseIdx: nextIdx, setIdx: 0 } });
+      } else if (updatedSkipped.length > 0) {
+        set({ phase: { type: 'skipped_exercises_prompt' } });
+      } else {
+        vibrateWorkoutComplete();
+        set({ phase: { type: 'complete' } });
+      }
+    },
+
+    returnToSkipped: (exerciseIdx: number) => {
+      const template = get().activeTemplate;
+      if (!template) return;
+      set((prev) => ({
+        skippedExercises: prev.skippedExercises.filter((idx) => idx !== exerciseIdx),
+      }));
+      initializeExerciseState(exerciseIdx);
+      set({ phase: { type: 'active', exerciseIdx, setIdx: 0 } });
     },
 
     skipRest: () => {

@@ -28,10 +28,13 @@ interface UseWorkoutSessionReturn {
   exerciseNotesHistory: Record<string, string[]>;
   isMinimized: boolean;
   isActive: boolean;
+  skippedExercises: number[];
   activeTemplate: WorkoutTemplate | null;
   startWorkout: () => void;
   completeSet: (data?: SetCompletionData | number) => void;
   completeFailureSet: (reps: number) => void;
+  skipExercise: () => void;
+  returnToSkipped: (exerciseIdx: number) => void;
   skipRest: () => void;
   togglePause: () => void;
   endWorkout: () => Promise<string | null>;
@@ -64,9 +67,12 @@ export function useWorkoutSession(template?: WorkoutTemplate): UseWorkoutSession
     exerciseNotesHistory,
     isMinimized,
     isActive,
+    skippedExercises,
     startWorkout: storeStartWorkout,
     completeSet,
     completeFailureSet,
+    skipExercise,
+    returnToSkipped,
     skipRest,
     togglePause,
     endWorkout,
@@ -93,7 +99,12 @@ export function useWorkoutSession(template?: WorkoutTemplate): UseWorkoutSession
   const getCurrentExercise = useCallback((): CurrentExerciseState | null => {
     if (!resolvedTemplate) return null;
 
-    if (phase.type === 'idle' || phase.type === 'complete' || phase.type === 'resting_between_exercises') {
+    if (
+      phase.type === 'idle' ||
+      phase.type === 'complete' ||
+      phase.type === 'resting_between_exercises' ||
+      phase.type === 'skipped_exercises_prompt'
+    ) {
       return null;
     }
 
@@ -139,10 +150,13 @@ export function useWorkoutSession(template?: WorkoutTemplate): UseWorkoutSession
     exerciseNotesHistory,
     isMinimized,
     isActive,
+    skippedExercises,
     activeTemplate: resolvedTemplate,
     startWorkout,
     completeSet,
     completeFailureSet,
+    skipExercise,
+    returnToSkipped,
     skipRest,
     togglePause,
     endWorkout,

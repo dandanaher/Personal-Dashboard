@@ -47,6 +47,7 @@ export type WorkoutPhase =
     }
   | { type: 'failure_set'; exerciseIdx: number }
   | { type: 'failure_input'; exerciseIdx: number }
+  | { type: 'skipped_exercises_prompt' }
   | { type: 'complete' }
   | { type: 'paused'; previousPhase: Exclude<WorkoutPhase, { type: 'paused' }> };
 

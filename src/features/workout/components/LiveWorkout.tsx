@@ -14,6 +14,7 @@ import WorkoutControls from './WorkoutControls';
 import SetDisplay from './SetDisplay';
 import RestTimer from './RestTimer';
 import RestBetweenExercises from './RestBetweenExercises';
+import SkippedExercises from './SkippedExercises';
 import QuickAdjust from './QuickAdjust';
 import WorkoutTimer from './WorkoutTimer';
 
@@ -46,6 +47,9 @@ export default function LiveWorkout({
     adjustReps,
     setExerciseNotes,
     minimizeWorkout,
+    skipExercise,
+    returnToSkipped,
+    skippedExercises,
   } = useWorkoutSession(template);
 
   const { accentColor } = useThemeStore();
@@ -360,6 +364,16 @@ export default function LiveWorkout({
           />
         )}
 
+        {/* Return to skipped exercises before finishing */}
+        {phase.type === 'skipped_exercises_prompt' && workoutTemplate && (
+          <SkippedExercises
+            skipped={skippedExercises}
+            exercises={workoutTemplate.exercises}
+            onReturn={returnToSkipped}
+            onSkipAll={handleEndWorkout}
+          />
+        )}
+
         {/* Active state */}
         {phase.type === 'active' && currentExercise && (
           <div className="w-full max-w-sm">
@@ -421,6 +435,19 @@ export default function LiveWorkout({
                 </div>
               </div>
             )}
+
+            <div className="mt-6 text-center" data-no-tap>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  skipExercise();
+                }}
+                className="px-4 py-2 rounded-full font-semibold active:scale-95 transition-all"
+                style={{ backgroundColor: highlightColor, color: '#ffffff' }}
+              >
+                Skip (come back later)
+              </button>
+            </div>
           </div>
         )}
       {/* Failure set state */}
