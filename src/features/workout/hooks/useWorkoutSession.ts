@@ -1,6 +1,6 @@
 // Thin wrapper around the global workout session store for component consumption
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import type {
   WorkoutTemplate,
   Exercise,
@@ -57,6 +57,7 @@ type SetCompletionData = {
 
 export function useWorkoutSession(template?: WorkoutTemplate): UseWorkoutSessionReturn {
   const store = useWorkoutSessionStore();
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const {
     activeTemplate,
     phase,
@@ -75,7 +76,7 @@ export function useWorkoutSession(template?: WorkoutTemplate): UseWorkoutSession
     returnToSkipped,
     skipRest,
     togglePause,
-    endWorkout,
+    endWorkout: storeEndWorkout,
     adjustWeight,
     adjustReps,
     setWeight,
@@ -94,7 +95,20 @@ export function useWorkoutSession(template?: WorkoutTemplate): UseWorkoutSession
     if (!activeTemplate || activeTemplate.id !== template.id) {
       storeStartWorkout(template);
     }
+    setSaveState('idle');
   }, [activeTemplate, storeStartWorkout, template]);
+
+  const endWorkout = useCallback(async (): Promise<string | null> => {
+    if (saveState !== 'idle') return null;
+    setSaveState('saving');
+    const sessionId = await storeEndWorkout();
+    if (sessionId) {
+      setSaveState('saved');
+    } else {
+      setSaveState('idle');
+    }
+    return sessionId;
+  }, [saveState, storeEndWorkout]);
 
   const getCurrentExercise = useCallback((): CurrentExerciseState | null => {
     if (!resolvedTemplate) return null;
