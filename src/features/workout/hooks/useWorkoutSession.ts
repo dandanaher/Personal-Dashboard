@@ -174,7 +174,8 @@ export function useWorkoutSession(template?: WorkoutTemplate): UseWorkoutSession
       if (
         prev.type === 'idle' ||
         prev.type === 'complete' ||
-        prev.type === 'resting_between_exercises'
+        prev.type === 'resting_between_exercises' ||
+        prev.type === 'skipped_exercises_prompt'
       ) {
         return null;
       }

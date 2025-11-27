@@ -116,7 +116,6 @@ function WorkoutPageContent() {
     activeTemplate,
     startWorkout: startWorkoutSession,
     resetSession,
-    resumeWorkout,
   } = useWorkoutSessionStore();
 
   // Handle template actions
