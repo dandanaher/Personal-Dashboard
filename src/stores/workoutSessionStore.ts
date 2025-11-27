@@ -6,7 +6,6 @@ import type {
   CompletedExercise,
   CompletedSet,
   WorkoutSessionData,
-  Exercise,
 } from '@/lib/types';
 import {
   WorkoutPhase,
@@ -68,7 +67,6 @@ type WorkoutSessionStore = WorkoutSessionStoreState & WorkoutSessionActions;
 let elapsedInterval: ReturnType<typeof setInterval> | null = null;
 let restInterval: ReturnType<typeof setInterval> | null = null;
 let restEndTime: number | null = null;
-let restNextState: { exerciseIdx: number; setIdx?: number; isFailure?: boolean } | null = null;
 
 const defaultState: WorkoutSessionStoreState = {
   activeTemplate: null,
@@ -91,7 +89,6 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
       restInterval = null;
     }
     restEndTime = null;
-    restNextState = null;
   };
 
   const clearElapsedTimer = () => {
@@ -126,7 +123,6 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
 
     const endTime = Date.now() + seconds * 1000;
     restEndTime = endTime;
-    restNextState = { exerciseIdx, setIdx };
 
     set({
       phase: {
@@ -176,7 +172,6 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
 
     const endTime = Date.now() + seconds * 1000;
     restEndTime = endTime;
-    restNextState = { exerciseIdx, isFailure: true };
 
     set({
       phase: {
@@ -213,7 +208,6 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
 
     const endTime = Date.now() + seconds * 1000;
     restEndTime = endTime;
-    restNextState = { exerciseIdx: nextIdx, setIdx: 0 };
 
     set({
       phase: {
