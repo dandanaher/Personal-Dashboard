@@ -44,6 +44,7 @@ export default {
           900: '#701a75',
           950: '#4a044e',
         },
+        'light-bg': '#FAF8F5',
       },
       screens: {
         xs: '375px',
