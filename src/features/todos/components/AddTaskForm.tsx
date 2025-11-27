@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Plus, ChevronDown, ChevronUp, Calendar, X } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { useThemeStore } from '@/stores/themeStore';
@@ -20,11 +20,6 @@ export function AddTaskForm({ onAdd, defaultDate, showDateToggle = false }: AddT
   const [isSubmitting, setIsSubmitting] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const { accentColor } = useThemeStore();
-
-  // Auto-focus title input when form is rendered
-  useEffect(() => {
-    titleInputRef.current?.focus();
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,8 +43,6 @@ export function AddTaskForm({ onAdd, defaultDate, showDateToggle = false }: AddT
       setShowDescription(false);
       setIsDateless(defaultDate === null);
       setSelectedDate(defaultDate || '');
-      // Re-focus title input for quick entry
-      titleInputRef.current?.focus();
     }
   };
 
