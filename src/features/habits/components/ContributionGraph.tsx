@@ -22,13 +22,15 @@ export function ContributionGraph({
   const isDragging = useRef(false);
   const startX = useRef(0);
   const scrollLeft = useRef(0);
+  const hasScrolledToEnd = useRef(false);
 
-  // Auto-scroll to the right (current day) on mount and when logs change
+  // Auto-scroll to the right (current day) on mount only
   useEffect(() => {
-    if (scrollContainerRef.current) {
+    if (scrollContainerRef.current && !hasScrolledToEnd.current) {
       scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
+      hasScrolledToEnd.current = true;
     }
-  }, [logs]);
+  }, []);
 
   // Mouse drag handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -161,7 +163,7 @@ export function ContributionGraph({
           {DAYS_OF_WEEK.map((day, idx) => (
             <div
               key={day}
-              className="h-[11px] md:h-[13px] flex items-center"
+              className="h-[11px] md:h-[13px] flex items-center justify-center leading-none"
               style={{ visibility: idx % 2 === 1 ? 'visible' : 'hidden' }}
             >
               {day[0]}
