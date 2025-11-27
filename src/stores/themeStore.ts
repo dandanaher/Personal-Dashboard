@@ -13,6 +13,17 @@ export const APP_COLORS = [
   { name: 'Yellow', value: '#eab308' },
   { name: 'Indigo', value: '#6366f1' },
   { name: 'Cyan', value: '#06b6d4' },
+  // Pastel versions
+  { name: 'Pastel Blue', value: '#a5c9f5' },
+  { name: 'Pastel Green', value: '#7bd4b6' },
+  { name: 'Pastel Red', value: '#f5a5a5' },
+  { name: 'Pastel Purple', value: '#c4a7e7' },
+  { name: 'Pastel Pink', value: '#f5a6d3' },
+  { name: 'Pastel Orange', value: '#fbb984' },
+  { name: 'Pastel Teal', value: '#7dd4c7' },
+  { name: 'Pastel Yellow', value: '#f5d77e' },
+  { name: 'Pastel Indigo', value: '#a5a9f5' },
+  { name: 'Pastel Cyan', value: '#7dd7ea' },
 ] as const;
 
 interface ThemeState {
