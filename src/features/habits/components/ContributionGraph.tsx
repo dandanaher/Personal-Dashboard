@@ -98,10 +98,10 @@ export function ContributionGraph({
           {DAYS_OF_WEEK.map((day, idx) => (
             <div
               key={day}
-              className="h-[11px] md:h-[13px] flex items-center justify-center leading-none"
+              className="h-[11px] md:h-[13px] flex items-center justify-center"
               style={{ visibility: idx % 2 === 1 ? 'visible' : 'hidden' }}
             >
-              {day[0]}
+              <span className="translate-y-[5px]">{day[0]}</span>
             </div>
           ))}
         </div>
