@@ -9,7 +9,8 @@
       "Bash(npm install:*)",
       "Bash(rm:*)",
       "Bash(npm run format:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(npx eslint:*)"
     ],
     "deny": [],
     "ask": []

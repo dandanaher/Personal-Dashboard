@@ -1,12 +1,13 @@
 import { useAuthStore } from '@/stores/authStore';
-import { useProfileStats, useProfile } from '@/features/gamification/hooks';
-import { FloraGrowth, StatCard, SettingsMenu } from '@/features/gamification/components';
+import { useProfileStats, useProfile, useRankDecay } from '@/features/gamification/hooks';
+import { RankDisplay, StatCard, SettingsMenu } from '@/features/gamification/components';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 function HomePage() {
   const { user } = useAuthStore();
   const { attributes, loading: statsLoading, error: statsError } = useProfileStats();
   const { profile, loading: profileLoading } = useProfile();
+  const { taxApplied, processing: decayProcessing } = useRankDecay();
 
   // Get username with fallbacks: username -> email prefix -> "Traveler"
   const userName = profile?.username || user?.email?.split('@')[0] || 'Traveler';
@@ -38,8 +39,8 @@ function HomePage() {
     );
   }
 
-  // Calculate total level for display
-  const totalLevel = attributes.reduce((sum, attr) => sum + attr.level, 0);
+  // Calculate total XP for rank system (future-proof: sums ALL attributes)
+  const totalXP = attributes.reduce((sum, attr) => sum + attr.current_xp, 0);
 
   return (
     <div className="min-h-full pb-20">
@@ -50,14 +51,21 @@ function HomePage() {
             <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">
               {greeting}, {userName}
             </h1>
-            <p className="text-secondary-500 dark:text-secondary-400">Total Level: {totalLevel}</p>
+            <p className="text-secondary-500 dark:text-secondary-400">
+              Total XP: {totalXP.toLocaleString()}
+              {taxApplied > 0 && (
+                <span className="ml-2 text-amber-600 dark:text-amber-400 text-sm">
+                  (-{taxApplied} XP decay)
+                </span>
+              )}
+            </p>
           </div>
           <SettingsMenu />
         </div>
 
-        {/* Flora Growth */}
+        {/* Rank Display */}
         <div className="mb-4">
-          <FloraGrowth totalLevel={totalLevel} />
+          <RankDisplay totalXP={totalXP} isLoading={statsLoading || decayProcessing} />
         </div>
 
         {/* Stat Cards Grid */}
