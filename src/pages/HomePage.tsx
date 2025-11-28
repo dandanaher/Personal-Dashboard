@@ -7,7 +7,7 @@ function HomePage() {
   const { user } = useAuthStore();
   const { attributes, loading: statsLoading, error: statsError } = useProfileStats();
   const { profile, loading: profileLoading } = useProfile();
-  const { taxApplied, processing: decayProcessing } = useRankDecay();
+  const { processing: decayProcessing } = useRankDecay();
 
   // Get username with fallbacks: username -> email prefix -> "Traveler"
   const userName = profile?.username || user?.email?.split('@')[0] || 'Traveler';
@@ -47,19 +47,9 @@ function HomePage() {
       <div className="max-w-lg mx-auto px-4 pt-2 pb-4">
         {/* Header with Settings */}
         <div className="flex items-start justify-between mb-3">
-          <div>
-            <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">
-              {greeting}, {userName}
-            </h1>
-            <p className="text-secondary-500 dark:text-secondary-400">
-              Total XP: {totalXP.toLocaleString()}
-              {taxApplied > 0 && (
-                <span className="ml-2 text-amber-600 dark:text-amber-400 text-sm">
-                  (-{taxApplied} XP decay)
-                </span>
-              )}
-            </p>
-          </div>
+          <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">
+            {greeting}, {userName}
+          </h1>
           <SettingsMenu />
         </div>
 
