@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect } from 'react';
+import { useMemo } from 'react';
 import { format, addDays, subDays, startOfWeek } from 'date-fns';
 import type { HabitLog } from '@/lib/types';
 
@@ -6,7 +6,6 @@ interface ContributionGraphProps {
   logs: HabitLog[];
   color: string;
   showMonthLabels?: boolean;
-  allowDragScroll?: boolean;
 }
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -16,71 +15,7 @@ export function ContributionGraph({
   logs,
   color,
   showMonthLabels = false,
-  allowDragScroll = false,
 }: ContributionGraphProps) {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const isDragging = useRef(false);
-  const startX = useRef(0);
-  const scrollLeft = useRef(0);
-  const hasScrolledToEnd = useRef(false);
-
-  // Auto-scroll to the right (current day) on mount only
-  useEffect(() => {
-    if (scrollContainerRef.current && !hasScrolledToEnd.current) {
-      scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
-      hasScrolledToEnd.current = true;
-    }
-  }, []);
-
-  // Mouse drag handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!scrollContainerRef.current) return;
-    isDragging.current = true;
-    startX.current = e.pageX - scrollContainerRef.current.offsetLeft;
-    scrollLeft.current = scrollContainerRef.current.scrollLeft;
-    scrollContainerRef.current.style.cursor = 'grabbing';
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging.current || !scrollContainerRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - scrollContainerRef.current.offsetLeft;
-    const walk = (x - startX.current) * 1.5;
-    scrollContainerRef.current.scrollLeft = scrollLeft.current - walk;
-  };
-
-  const handleMouseUp = () => {
-    isDragging.current = false;
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.style.cursor = 'grab';
-    }
-  };
-
-  const handleMouseLeave = () => {
-    isDragging.current = false;
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.style.cursor = 'grab';
-    }
-  };
-
-  // Touch drag handlers
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (!scrollContainerRef.current) return;
-    isDragging.current = true;
-    startX.current = e.touches[0].pageX - scrollContainerRef.current.offsetLeft;
-    scrollLeft.current = scrollContainerRef.current.scrollLeft;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging.current || !scrollContainerRef.current) return;
-    const x = e.touches[0].pageX - scrollContainerRef.current.offsetLeft;
-    const walk = (x - startX.current) * 1.5;
-    scrollContainerRef.current.scrollLeft = scrollLeft.current - walk;
-  };
-
-  const handleTouchEnd = () => {
-    isDragging.current = false;
-  };
 
   // Create a Set of completed dates for quick lookup
   const completedDates = useMemo(() => {
@@ -171,18 +106,8 @@ export function ContributionGraph({
           ))}
         </div>
 
-        {/* Scrollable graph container */}
-        <div
-          ref={scrollContainerRef}
-          className={`overflow-x-auto scrollbar-hide select-none ${allowDragScroll ? 'cursor-grab' : ''}`}
-          onMouseDown={allowDragScroll ? handleMouseDown : undefined}
-          onMouseMove={allowDragScroll ? handleMouseMove : undefined}
-          onMouseUp={allowDragScroll ? handleMouseUp : undefined}
-          onMouseLeave={allowDragScroll ? handleMouseLeave : undefined}
-          onTouchStart={allowDragScroll ? handleTouchStart : undefined}
-          onTouchMove={allowDragScroll ? handleTouchMove : undefined}
-          onTouchEnd={allowDragScroll ? handleTouchEnd : undefined}
-        >
+        {/* Non-scrollable graph container - always shows right side (current day) */}
+        <div className="overflow-x-hidden flex justify-end flex-1">
           <div
             className="inline-block"
             style={
@@ -196,17 +121,10 @@ export function ContributionGraph({
                 .dark [style*="--graph-empty"] {
                   --graph-empty: rgb(55 65 81);
                 }
-                .scrollbar-hide {
-                  -ms-overflow-style: none;
-                  scrollbar-width: none;
-                }
-                .scrollbar-hide::-webkit-scrollbar {
-                  display: none;
-                }
               `}
             </style>
 
-            {/* Month labels - inside scrollable area */}
+            {/* Month labels */}
             {showMonthLabels && (
               <div className="flex mb-1 text-xs text-secondary-500 dark:text-secondary-400 h-4">
                 {weeks.map((_week, weekIdx) => {

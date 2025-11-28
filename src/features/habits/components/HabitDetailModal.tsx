@@ -129,7 +129,6 @@ export function HabitDetailModal({
               logs={logs}
               color={habit.color}
               showMonthLabels={true}
-              allowDragScroll={true}
             />
           </div>
 
