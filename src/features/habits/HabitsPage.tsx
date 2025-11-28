@@ -117,11 +117,11 @@ function HabitsPage() {
 
       {/* Filter Tags */}
       {habitTypes.length > 0 && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
           <button
             onClick={() => setSelectedFilter(null)}
             className={`
-              px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors
+              px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0
               ${
                 selectedFilter === null
                   ? 'text-white'
@@ -139,7 +139,7 @@ function HabitsPage() {
                 key={type}
                 onClick={() => setSelectedFilter(type)}
                 className={`
-                  px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors
+                  px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0
                   ${
                     selectedFilter === type
                       ? 'text-white'
