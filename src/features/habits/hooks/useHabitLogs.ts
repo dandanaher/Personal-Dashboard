@@ -158,10 +158,15 @@ export function useHabitLogs(habitId: string): UseHabitLogsReturn {
     const completedDays = completedDates.size;
     const completionRate = Math.round((completedDays / 365) * 100);
 
-    // Calculate current streak (consecutive days up to today)
+    // Calculate current streak (consecutive days up to today or yesterday)
     let currentStreak = 0;
     const today = startOfDay(new Date());
-    let checkDate = today;
+    const todayStr = format(today, 'yyyy-MM-dd');
+    const todayCompleted = completedDates.has(todayStr);
+
+    // If today is completed, count from today backward
+    // If today is NOT completed, count from yesterday backward (giving user until end of day)
+    let checkDate = todayCompleted ? today : subDays(today, 1);
 
     while (true) {
       const dateStr = format(checkDate, 'yyyy-MM-dd');

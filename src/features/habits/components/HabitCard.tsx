@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Check } from 'lucide-react';
 import { format } from 'date-fns';
-import { Card, Button } from '@/components/ui';
+import { Card } from '@/components/ui';
 import { useThemeStore } from '@/stores/themeStore';
 import { useHabitLogs } from '../hooks';
 import { ContributionGraph } from './ContributionGraph';
@@ -79,17 +79,23 @@ export function HabitCard({ habit, onEdit, onDelete, onCompletionChange }: Habit
             </div>
 
             {/* Quick toggle for today */}
-            <Button
-              variant={isCompletedToday ? 'primary' : 'outline'}
-              size="sm"
+            <button
               onClick={handleTodayToggle}
               aria-label={
                 isCompletedToday ? 'Mark today as not completed' : 'Mark today as completed'
               }
-              className={isCompletedToday ? '' : 'border-secondary-300 dark:border-secondary-600'}
+              className="w-10 h-10 rounded-full bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/40 dark:border-white/20 shadow-md flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              style={
+                isCompletedToday
+                  ? {
+                      backgroundColor: `${accentColor}30`,
+                      borderColor: `${accentColor}50`,
+                    }
+                  : undefined
+              }
             >
-              <Check className="w-4 h-4" />
-            </Button>
+              <Check className="w-5 h-5" style={{ color: accentColor }} />
+            </button>
           </div>
         </div>
 
