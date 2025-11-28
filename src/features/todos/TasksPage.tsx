@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Calendar, List, CalendarDays, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, List, CalendarDays, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { format, addDays, subDays, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { Button, Card } from '@/components/ui';
 import { useThemeStore } from '@/stores/themeStore';
@@ -15,6 +15,7 @@ type ViewMode = 'day' | 'overview';
 function TasksPageContent() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
+  const [showCompletedTasks, setShowCompletedTasks] = useState(false);
 
   // Day view tasks
   const {
@@ -173,6 +174,11 @@ function TasksPageContent() {
     }
     return success;
   };
+
+  // Get completed tasks sorted reverse chronologically (newest first)
+  const completedTasks = allTasks
+    .filter((task) => task.completed)
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
   // Group upcoming tasks by date for display
   const groupTasksByDate = (tasks: Task[]) => {
@@ -475,6 +481,41 @@ function TasksPageContent() {
                       <span className="text-red-500"> • {overdueTasks.length} overdue</span>
                     )}
                   </p>
+                </div>
+              )}
+
+              {/* Completed Tasks Section */}
+              {completedTasks.length > 0 && (
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setShowCompletedTasks(!showCompletedTasks)}
+                    className="w-full flex items-center justify-between px-1 py-2 text-sm font-semibold text-secondary-600 dark:text-secondary-400 hover:text-secondary-800 dark:hover:text-secondary-200 transition-colors"
+                  >
+                    <span>Completed Tasks ({completedTasks.length})</span>
+                    {showCompletedTasks ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </button>
+
+                  {showCompletedTasks && (
+                    <Card variant="default" padding="none">
+                      <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
+                        {completedTasks.map((task) => (
+                          <div key={task.id} className="group">
+                            <TaskItem
+                              task={task}
+                              onToggle={handleToggleOverviewTask}
+                              onDelete={handleDeleteOverviewTask}
+                              onEdit={handleEditOverviewTask}
+                              showDate={true}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
                 </div>
               )}
             </>
