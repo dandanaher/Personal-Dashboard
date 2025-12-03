@@ -166,24 +166,6 @@ export default function RestBetweenExercises({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-black/15 rounded-2xl p-4 border border-white/10 text-left">
-          <div className="text-xs font-semibold uppercase text-white/60 mb-1">Completed</div>
-          <div className="text-lg font-semibold">{completedExercise.name}</div>
-          <ul className="mt-2 space-y-1 text-sm text-white/80">
-            {summaryLines.map((line, idx) => (
-              <li key={idx}>{line}</li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="bg-black/15 rounded-2xl p-4 border border-white/10 text-left">
-          <div className="text-xs font-semibold uppercase text-white/60 mb-1">Next Up</div>
-          <div className="text-lg font-semibold">{nextExercise.name}</div>
-          {nextPreview && <div className="mt-2 text-sm text-white/80">{nextPreview}</div>}
-        </div>
-      </div>
-
       <div className="bg-black/20 rounded-2xl p-4 border border-white/10 text-left">
         <div className="flex items-center justify-between mb-2">
           <div className="text-xs font-semibold uppercase text-white/60">
@@ -197,9 +179,27 @@ export default function RestBetweenExercises({
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
           placeholder="How did it feel? Form cues, adjustments, or wins..."
-          rows={3}
+          rows={2}
           className="w-full rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/60 p-3 focus:outline-none focus:ring-2 focus:ring-white/40 resize-none"
         />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-black/15 rounded-2xl p-3 border border-white/10 text-left">
+          <div className="text-xs font-semibold uppercase text-white/60 mb-1">Completed</div>
+          <div className="text-base font-semibold leading-tight mb-2">{completedExercise.name}</div>
+          <ul className="space-y-0.5 text-xs text-white/80">
+            {summaryLines.map((line, idx) => (
+              <li key={idx}>{line}</li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="bg-black/15 rounded-2xl p-3 border border-white/10 text-left">
+          <div className="text-xs font-semibold uppercase text-white/60 mb-1">Next Up</div>
+          <div className="text-base font-semibold leading-tight mb-2">{nextExercise.name}</div>
+          {nextPreview && <div className="text-xs text-white/80">{nextPreview}</div>}
+        </div>
       </div>
     </div>
   );
