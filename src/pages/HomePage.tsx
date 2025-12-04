@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProfileStats, useProfile, useRankDecay } from '@/features/gamification/hooks';
-import { RankDisplay, StatCard, SettingsMenu } from '@/features/gamification/components';
+import { RankDisplay, StatCard, SettingsMenu, RankPreviewControls } from '@/features/gamification/components';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 function HomePage() {
@@ -8,6 +9,7 @@ function HomePage() {
   const { attributes, loading: statsLoading, error: statsError } = useProfileStats();
   const { profile, loading: profileLoading } = useProfile();
   const { processing: decayProcessing } = useRankDecay();
+  const [previewXP, setPreviewXP] = useState<number | null>(null);
 
   // Get username with fallbacks: username -> email prefix -> "Traveler"
   const userName = profile?.username || user?.email?.split('@')[0] || 'Traveler';
@@ -43,25 +45,33 @@ function HomePage() {
   const totalXP = attributes.reduce((sum, attr) => sum + attr.current_xp, 0);
 
   return (
-    <div className="min-h-full pb-20">
-      <div className="max-w-lg mx-auto px-4 pt-2 pb-4">
+    <div className="min-h-full pb-20 bg-secondary-50 dark:bg-secondary-900">
+      <div className="max-w-2xl mx-auto px-4 pt-4 pb-4">
         {/* Header with Settings */}
-        <div className="flex items-start justify-between mb-3">
-          <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">
-            {greeting}, {userName}
-          </h1>
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-secondary-900 dark:text-white">
+              {greeting}
+            </h1>
+            <p className="text-secondary-600 dark:text-secondary-400 mt-1">
+              {userName}
+            </p>
+          </div>
           <SettingsMenu />
         </div>
 
+        {/* Dev Tool: Rank Preview Controls */}
+        <RankPreviewControls onPreviewChange={setPreviewXP} currentXP={totalXP} />
+
         {/* Rank Display */}
-        <div className="mb-4">
-          <RankDisplay totalXP={totalXP} isLoading={statsLoading || decayProcessing} />
+        <div className="mb-6">
+          <RankDisplay totalXP={totalXP} isLoading={statsLoading || decayProcessing} previewXP={previewXP} />
         </div>
 
         {/* Stat Cards Grid */}
-        <div className="space-y-3">
-          <h2 className="font-semibold text-secondary-900 dark:text-white">Your Stats</h2>
-          <div className="grid grid-cols-1 gap-3">
+        <div className="space-y-4">
+          <h2 className="text-lg font-bold text-secondary-900 dark:text-white">Attributes</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {attributes.map((attr) => (
               <StatCard key={attr.id} attribute={attr} />
             ))}

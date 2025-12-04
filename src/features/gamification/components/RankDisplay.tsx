@@ -15,6 +15,28 @@ function getRankImagePath(rankName: string, tier: 'I' | 'II' | 'III'): string {
 }
 
 /**
+ * Get glow effect for specific rank/tier combinations
+ */
+function getRankGlow(rankName: string, tier: 'I' | 'II' | 'III'): string {
+  const key = `${rankName}-${tier}`;
+  const glowMap: Record<string, string> = {
+    'Silver-III': 'drop-shadow(0 0 8px rgba(0, 50, 150, 0.4))', // subtle deep blue
+    'Gold-II': 'drop-shadow(0 0 8px rgba(255, 215, 0, 0.4))', // subtle gold
+    'Gold-III': 'drop-shadow(0 0 12px rgba(255, 215, 0, 0.6))', // moderate gold
+    'Ruby-II': 'drop-shadow(0 0 8px rgba(224, 17, 95, 0.4))', // subtle red
+    'Ruby-III': 'drop-shadow(0 0 12px rgba(224, 17, 95, 0.6))', // moderate red
+    'Platinum-II': 'drop-shadow(0 0 8px rgba(135, 206, 250, 0.4))', // subtle light blue
+    'Platinum-III': 'drop-shadow(0 0 12px rgba(135, 206, 250, 0.6))', // moderate light blue
+    'Diamond-II': 'drop-shadow(0 0 12px rgba(255, 255, 255, 0.6))', // moderate white
+    'Diamond-III': 'drop-shadow(0 0 16px rgba(255, 255, 255, 0.8))', // significant white
+    'Palladium-II': 'drop-shadow(0 0 12px rgba(147, 51, 234, 0.6))', // moderate purple
+    'Palladium-III': 'drop-shadow(0 0 16px rgba(255, 215, 0, 0.8))', // significant gold
+  };
+
+  return glowMap[key] || 'none';
+}
+
+/**
  * Display user's current material rank with tier progression
  */
 export function RankDisplay({ totalXP, isLoading = false, previewXP = null }: RankDisplayProps) {
@@ -33,50 +55,62 @@ export function RankDisplay({ totalXP, isLoading = false, previewXP = null }: Ra
   const rankInfo = getRankFromXP(displayXP);
   const isPreviewMode = previewXP !== null;
   const imagePath = getRankImagePath(rankInfo.rankName, rankInfo.tier);
+  const glowEffect = getRankGlow(rankInfo.rankName, rankInfo.tier);
 
   return (
     <div className="pb-4">
       {/* Preview Badge */}
       {isPreviewMode && (
-        <div className="flex justify-center mb-3">
-          <span className="text-xs bg-yellow-200 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 px-3 py-1 rounded font-medium">
+        <div className="flex justify-center mb-2">
+          <span className="text-xs bg-yellow-200 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 px-2 py-0.5 rounded font-medium">
             PREVIEW MODE
           </span>
         </div>
       )}
 
-      {/* Rank Image */}
-      <div className="flex items-center justify-center mb-6">
-        <img
-          src={imagePath}
-          alt={`${rankInfo.rankName} ${rankInfo.tier}`}
-          className="w-full max-w-sm h-auto object-contain"
-        />
-      </div>
-
-      {/* Progress Bar */}
-      {rankInfo.level < 30 && (
-        <div className="mb-4">
-          <div className="h-3 bg-secondary-200 dark:bg-secondary-700 rounded-full overflow-hidden">
-            <div
-              className="h-full transition-all duration-500 rounded-full"
-              style={{
-                width: `${rankInfo.progressToNextTier}%`,
-                backgroundColor: rankInfo.color,
-              }}
-            />
-          </div>
+      <div className="flex items-center gap-4">
+        {/* Rank Image - Smaller and on the left */}
+        <div className="flex-shrink-0">
+          <img
+            src={imagePath}
+            alt={`${rankInfo.rankName} ${rankInfo.tier}`}
+            className="w-24 h-24 md:w-28 md:h-28 object-contain transition-all duration-500"
+            style={{ filter: glowEffect }}
+          />
         </div>
-      )}
 
-      {/* Rank Info Below Progress Bar */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold" style={{ color: rankInfo.color }}>
-          {rankInfo.rankName.toUpperCase()} - TIER {rankInfo.tier}
-        </h3>
-        <p className="text-sm text-secondary-500 dark:text-secondary-400">
-          Level {rankInfo.level} • {displayXP.toLocaleString()} XP
-        </p>
+        {/* Rank Info - Takes remaining space */}
+        <div className="flex-1 min-w-0">
+          <h3 className="text-xl md:text-2xl font-bold mb-1" style={{ color: rankInfo.color }}>
+            {rankInfo.rankName.toUpperCase()}
+          </h3>
+          <p className="text-sm text-secondary-600 dark:text-secondary-400 mb-3">
+            Tier {rankInfo.tier} • Level {rankInfo.level} • {displayXP.toLocaleString()} XP
+          </p>
+
+          {/* Progress Bar */}
+          {rankInfo.level < 30 && (
+            <div>
+              <div className="h-2 bg-secondary-200 dark:bg-secondary-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full transition-all duration-500 rounded-full"
+                  style={{
+                    width: `${rankInfo.progressToNextTier}%`,
+                    backgroundColor: rankInfo.color,
+                  }}
+                />
+              </div>
+              <p className="text-xs text-secondary-500 dark:text-secondary-400 mt-1">
+                {Math.round(rankInfo.progressToNextTier)}% to next tier
+              </p>
+            </div>
+          )}
+          {rankInfo.level === 30 && (
+            <p className="text-xs font-semibold" style={{ color: rankInfo.color }}>
+              MAX RANK ACHIEVED
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
