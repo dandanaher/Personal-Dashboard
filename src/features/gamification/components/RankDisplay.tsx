@@ -1,6 +1,7 @@
 import { getRankFromXP } from '../utils';
 import { LayoutGrid } from 'lucide-react';
 import { useThemeStore } from '@/stores/themeStore';
+import { ProgressBar } from '@/features/goals/components/ProgressBar';
 
 interface RankDisplayProps {
   totalXP: number;
@@ -117,15 +118,12 @@ export function RankDisplay({ totalXP, isLoading = false, previewXP = null, onVi
           {/* Progress Bar */}
           {rankInfo.level < 30 && (
             <div>
-              <div className="h-2 bg-secondary-200 dark:bg-secondary-700 rounded-full overflow-hidden">
-                <div
-                  className="h-full transition-all duration-500 rounded-full"
-                  style={{
-                    width: `${rankInfo.progressToNextTier}%`,
-                    backgroundColor: rankInfo.color,
-                  }}
-                />
-              </div>
+              <ProgressBar 
+                progress={rankInfo.progressToNextTier} 
+                color={rankInfo.color}
+                height="h-2"
+                showLabel={false}
+              />
               <p className="text-xs text-secondary-500 dark:text-secondary-400 mt-1">
                 {Math.round(rankInfo.progressToNextTier)}% to next tier
               </p>

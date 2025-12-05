@@ -1,3 +1,5 @@
+import { useThemeStore } from '@/stores/themeStore';
+
 interface ProgressBarProps {
   progress: number;
   color?: string;
@@ -13,9 +15,44 @@ export function ProgressBar({
   showLabel = false,
   className = '',
 }: ProgressBarProps) {
+  const { stylePreset, accentColor } = useThemeStore();
   const clampedProgress = Math.min(100, Math.max(0, progress));
 
-  // Determine color based on progress if not provided
+  // Retro Style Rendering
+  if (stylePreset === 'retro') {
+    // Increase blocks to fill width better (approx 68 chars fits most screens in mono)
+    const totalBlocks = 68;
+    const filledBlocks = Math.round((clampedProgress / 100) * totalBlocks);
+    const emptyBlocks = totalBlocks - filledBlocks;
+    
+    return (
+      <div className={`${className} font-mono text-xs w-full`}>
+        {showLabel && (
+          <div className="flex items-center justify-between mb-1">
+            <span className="uppercase tracking-wider text-secondary-600 dark:text-secondary-400">
+              Progress
+            </span>
+            <span className="font-bold text-secondary-900 dark:text-white">
+              {clampedProgress}%
+            </span>
+          </div>
+        )}
+        <div
+          className="text-secondary-900 dark:text-white whitespace-nowrap overflow-hidden font-bold flex"
+          role="progressbar"
+          aria-valuenow={clampedProgress}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Progress: ${clampedProgress}%`}
+        >
+          <span style={{ color: accentColor }}>{'▓'.repeat(filledBlocks)}</span>
+          <span className="opacity-30">{'░'.repeat(emptyBlocks)}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Modern (Default) Style Rendering
   const barColor = color || getProgressColor(clampedProgress);
 
   return (

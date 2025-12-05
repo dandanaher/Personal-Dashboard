@@ -29,9 +29,11 @@ export const APP_COLORS = [
 interface ThemeState {
   accentColor: string;
   darkMode: boolean;
+  stylePreset: 'modern' | 'retro';
   setAccentColor: (color: string) => void;
   toggleDarkMode: () => void;
   setDarkMode: (isDark: boolean) => void;
+  setStylePreset: (style: 'modern' | 'retro') => void;
 }
 
 // Get initial dark mode state from localStorage or system preference
@@ -43,11 +45,72 @@ const getInitialDarkMode = () => {
   );
 };
 
+// Style Variables
+const MODERN_VARS = {
+  '--radius-none': '0px',
+  '--radius-sm': '0.125rem',
+  '--radius-default': '0.25rem',
+  '--radius-md': '0.375rem',
+  '--radius-lg': '0.5rem',
+  '--radius-xl': '0.75rem',
+  '--radius-2xl': '1rem',
+  '--radius-3xl': '1.5rem',
+  '--radius-full': '9999px',
+  '--font-sans': 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
+  '--color-light-bg': '#FAF8F5',
+  // Slate Colors
+  '--color-secondary-50': '248 250 252',
+  '--color-secondary-100': '241 245 249',
+  '--color-secondary-200': '226 232 240',
+  '--color-secondary-300': '203 213 225',
+  '--color-secondary-400': '148 163 184',
+  '--color-secondary-500': '100 116 139',
+  '--color-secondary-600': '71 85 105',
+  '--color-secondary-700': '51 65 85',
+  '--color-secondary-800': '30 41 59',
+  '--color-secondary-900': '15 23 42',
+  '--color-secondary-950': '2 6 23',
+};
+
+const RETRO_VARS = {
+  '--radius-none': '0px',
+  '--radius-sm': '0px',
+  '--radius-default': '0px',
+  '--radius-md': '0px',
+  '--radius-lg': '0px',
+  '--radius-xl': '0px',
+  '--radius-2xl': '0px',
+  '--radius-3xl': '0px',
+  '--radius-full': '0px',
+  '--font-sans': '"Courier New", Courier, "Lucida Sans Typewriter", "Lucida Console", monospace',
+  '--color-light-bg': 'rgb(245, 245, 245)',
+  // High Contrast Grayscale
+  '--color-secondary-50': '255 255 255',
+  '--color-secondary-100': '245 245 245',
+  '--color-secondary-200': '220 220 220',
+  '--color-secondary-300': '190 190 190',
+  '--color-secondary-400': '160 160 160',
+  '--color-secondary-500': '128 128 128',
+  '--color-secondary-600': '96 96 96',
+  '--color-secondary-700': '64 64 64',
+  '--color-secondary-800': '32 32 32',
+  '--color-secondary-900': '16 16 16',
+  '--color-secondary-950': '0 0 0',
+};
+
+function applyThemeVariables(style: 'modern' | 'retro') {
+  const vars = style === 'retro' ? RETRO_VARS : MODERN_VARS;
+  Object.entries(vars).forEach(([key, value]) => {
+    document.documentElement.style.setProperty(key, value);
+  });
+}
+
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
       accentColor: '#3b82f6', // Default blue
       darkMode: getInitialDarkMode(),
+      stylePreset: 'modern',
       setAccentColor: (color: string) => {
         set({ accentColor: color });
         // Update CSS custom property for global access
@@ -74,6 +137,13 @@ export const useThemeStore = create<ThemeState>()(
           localStorage.theme = 'light';
         }
       },
+      setStylePreset: (style: 'modern' | 'retro') => {
+        const currentStyle = get().stylePreset;
+        document.documentElement.classList.remove(`style-${currentStyle}`);
+        set({ stylePreset: style });
+        document.documentElement.classList.add(`style-${style}`);
+        applyThemeVariables(style);
+      },
     }),
     {
       name: 'theme-storage',
@@ -91,6 +161,15 @@ export const useThemeStore = create<ThemeState>()(
             document.documentElement.classList.remove('dark');
             localStorage.theme = 'light';
           }
+        }
+        // Apply the persisted style preset on rehydration
+        if (state?.stylePreset) {
+          document.documentElement.classList.add(`style-${state.stylePreset}`);
+          applyThemeVariables(state.stylePreset);
+        } else {
+          // Default to modern if not set
+          document.documentElement.classList.add('style-modern');
+          applyThemeVariables('modern');
         }
       },
     }

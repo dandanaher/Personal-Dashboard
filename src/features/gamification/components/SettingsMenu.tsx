@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Settings, LogOut, Sun, Moon, Check, Palette, User, Pencil } from 'lucide-react';
+import { Settings, LogOut, Sun, Moon, Check, Palette, User, Pencil, Layers } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore, APP_COLORS } from '@/stores/themeStore';
 import { useProfileStore } from '@/stores/profileStore';
@@ -12,7 +12,7 @@ export function SettingsMenu() {
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { user, signOut } = useAuthStore();
-  const { accentColor, setAccentColor, darkMode, toggleDarkMode } = useThemeStore();
+  const { accentColor, setAccentColor, darkMode, toggleDarkMode, stylePreset, setStylePreset } = useThemeStore();
   const { profile, updateProfile } = useProfileStore();
 
   // Close menu when clicking outside
@@ -175,6 +175,34 @@ export function SettingsMenu() {
                 {darkMode ? 'Dark mode' : 'Light mode'}
               </span>
             </button>
+          </div>
+
+          {/* Style Preset */}
+          <div className="p-4 border-b border-white/30 dark:border-white/10">
+            <div className="flex items-center gap-2 mb-3">
+              <Layers className="h-4 w-4 text-secondary-500" />
+              <span className="text-sm font-medium text-secondary-700 dark:text-secondary-300">
+                Style
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {(['modern', 'retro'] as const).map((style) => (
+                <button
+                  key={style}
+                  onClick={() => setStylePreset(style)}
+                  className={`
+                    px-3 py-2 rounded-lg text-sm font-medium capitalize transition-all duration-200
+                    ${
+                      stylePreset === style
+                        ? 'bg-white dark:bg-white/20 text-secondary-900 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                        : 'hover:bg-white/40 dark:hover:bg-white/10 text-secondary-600 dark:text-secondary-400'
+                    }
+                  `}
+                >
+                  {style}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Accent Color */}

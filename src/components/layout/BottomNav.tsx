@@ -78,7 +78,7 @@ function BottomNav() {
 
         <div
           className="relative bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/40 dark:border-white/20 shadow-lg shadow-black/5 pointer-events-auto"
-          style={{ borderRadius: `${(circleSize + 8) / 2}px` }}
+          style={{ borderRadius: 'var(--radius-full)' }}
         >
           {/* Animated circle indicator */}
           <div
@@ -87,12 +87,14 @@ function BottomNav() {
               left: `${4 + safeActiveIndex * circleSize}px`,
               width: `${circleSize}px`,
               height: `${circleSize}px`,
+              borderRadius: 'var(--radius-full)',
             }}
           >
             <div
-              className="w-full h-full rounded-full"
+              className="w-full h-full"
               style={{
                 backgroundColor: `${accentColor}20`,
+                borderRadius: 'var(--radius-full)',
               }}
             />
           </div>
@@ -103,12 +105,13 @@ function BottomNav() {
               <NavLink
                 key={item.path}
                 to={item.path}
-                className={`flex items-center justify-center rounded-full transition-colors duration-200 touch-manipulation ${
+                className={`flex items-center justify-center transition-colors duration-200 touch-manipulation ${
                   index === safeActiveIndex ? '' : 'text-secondary-500 dark:text-secondary-400'
                 }`}
                 style={{
                   width: `${circleSize}px`,
                   height: `${circleSize}px`,
+                  borderRadius: 'var(--radius-full)',
                   ...(index === safeActiveIndex ? { color: accentColor } : {}),
                 }}
               >

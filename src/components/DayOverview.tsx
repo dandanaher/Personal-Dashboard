@@ -10,6 +10,7 @@ import type { HabitLog } from '@/lib/types';
 import { CheckCircle2, Circle, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import LoadingSpinner from './ui/LoadingSpinner';
+import Card from './ui/Card';
 
 interface DayOverviewProps {
   className?: string;
@@ -78,7 +79,7 @@ export function DayOverview({ className = '' }: DayOverviewProps) {
       <h2 className="text-lg font-bold text-secondary-900 dark:text-white">Day Overview</h2>
 
       {/* Tasks Section */}
-      <div className="bg-white dark:bg-secondary-800 rounded-3xl border border-secondary-200 dark:border-secondary-700 overflow-hidden">
+      <Card padding="none" variant="outlined" className="overflow-hidden">
         <div className="px-4 py-3 border-b border-secondary-200 dark:border-secondary-700 flex items-center justify-between">
           <h3 className="font-semibold text-secondary-900 dark:text-white">
             Tasks Today ({incompleteTasks.length})
@@ -116,10 +117,10 @@ export function DayOverview({ className = '' }: DayOverviewProps) {
             </ul>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Habits Section */}
-      <div className="bg-white dark:bg-secondary-800 rounded-3xl border border-secondary-200 dark:border-secondary-700 overflow-hidden">
+      <Card padding="none" variant="outlined" className="overflow-hidden">
         <div className="px-4 py-3 border-b border-secondary-200 dark:border-secondary-700 flex items-center justify-between">
           <h3 className="font-semibold text-secondary-900 dark:text-white">
             Habits ({habits.filter((h) => habitLogsMap.get(h.id)).length}/{habits.length})
@@ -176,10 +177,10 @@ export function DayOverview({ className = '' }: DayOverviewProps) {
             </ul>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Goals Section */}
-      <div className="bg-white dark:bg-secondary-800 rounded-3xl border border-secondary-200 dark:border-secondary-700 overflow-hidden">
+      <Card padding="none" variant="outlined" className="overflow-hidden">
         <div className="px-4 py-3 border-b border-secondary-200 dark:border-secondary-700 flex items-center justify-between">
           <h3 className="font-semibold text-secondary-900 dark:text-white">
             Active Goals ({activeGoals.length})
@@ -221,7 +222,7 @@ export function DayOverview({ className = '' }: DayOverviewProps) {
             </ul>
           )}
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
