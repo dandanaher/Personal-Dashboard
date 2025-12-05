@@ -1,9 +1,13 @@
 import { getRankFromXP } from '../utils';
+import { LayoutGrid } from 'lucide-react';
+import { useThemeStore } from '@/stores/themeStore';
 
 interface RankDisplayProps {
   totalXP: number;
   isLoading?: boolean;
   previewXP?: number | null; // Optional XP override for preview mode
+  onViewRanks?: () => void; // Optional callback for viewing all ranks
+  showRanks?: boolean; // Whether ranks view is currently shown
 }
 
 /**
@@ -39,7 +43,8 @@ function getRankGlow(rankName: string, tier: 'I' | 'II' | 'III'): string {
 /**
  * Display user's current material rank with tier progression
  */
-export function RankDisplay({ totalXP, isLoading = false, previewXP = null }: RankDisplayProps) {
+export function RankDisplay({ totalXP, isLoading = false, previewXP = null, onViewRanks, showRanks = false }: RankDisplayProps) {
+  const { accentColor } = useThemeStore();
   if (isLoading) {
     return (
       <div className="pb-4">
@@ -81,9 +86,30 @@ export function RankDisplay({ totalXP, isLoading = false, previewXP = null }: Ra
 
         {/* Rank Info - Takes remaining space */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-xl md:text-2xl font-bold mb-1" style={{ color: rankInfo.color }}>
-            {rankInfo.rankName.toUpperCase()}
-          </h3>
+          <div className="flex items-start justify-between mb-1">
+            <h3 className="text-xl md:text-2xl font-bold" style={{ color: rankInfo.color }}>
+              {rankInfo.rankName.toUpperCase()}
+            </h3>
+            {onViewRanks && (
+              <button
+                onClick={onViewRanks}
+                className={`
+                  flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all
+                  ${showRanks
+                    ? 'text-white shadow-md'
+                    : 'hover:opacity-90'
+                  }
+                `}
+                style={{
+                  backgroundColor: showRanks ? accentColor : `${accentColor}20`,
+                  color: showRanks ? 'white' : accentColor,
+                }}
+              >
+                <LayoutGrid size={14} />
+                {showRanks ? 'Hide Ranks' : 'View Ranks'}
+              </button>
+            )}
+          </div>
           <p className="text-sm text-secondary-600 dark:text-secondary-400 mb-3">
             Tier {rankInfo.tier} • Level {rankInfo.level} • {displayXP.toLocaleString()} XP
           </p>

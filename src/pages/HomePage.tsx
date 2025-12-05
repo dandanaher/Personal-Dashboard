@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProfileStats, useProfile, useRankDecay } from '@/features/gamification/hooks';
-import { RankDisplay, StatCard, SettingsMenu, RankPreviewControls } from '@/features/gamification/components';
+import { RankDisplay, SettingsMenu, RankPreviewControls, RankOverview } from '@/features/gamification/components';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { DayOverview } from '@/components/DayOverview';
 
 function HomePage() {
   const { user } = useAuthStore();
@@ -10,6 +11,7 @@ function HomePage() {
   const { profile, loading: profileLoading } = useProfile();
   const { processing: decayProcessing } = useRankDecay();
   const [previewXP, setPreviewXP] = useState<number | null>(null);
+  const [showRankOverview, setShowRankOverview] = useState(false);
 
   // Get username with fallbacks: username -> email prefix -> "Traveler"
   const userName = profile?.username || user?.email?.split('@')[0] || 'Traveler';
@@ -65,18 +67,21 @@ function HomePage() {
 
         {/* Rank Display */}
         <div className="mb-6">
-          <RankDisplay totalXP={totalXP} isLoading={statsLoading || decayProcessing} previewXP={previewXP} />
+          <RankDisplay
+            totalXP={totalXP}
+            isLoading={statsLoading || decayProcessing}
+            previewXP={previewXP}
+            onViewRanks={() => setShowRankOverview(!showRankOverview)}
+            showRanks={showRankOverview}
+          />
         </div>
 
-        {/* Stat Cards Grid */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-bold text-secondary-900 dark:text-white">Attributes</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {attributes.map((attr) => (
-              <StatCard key={attr.id} attribute={attr} />
-            ))}
-          </div>
-        </div>
+        {/* Conditional View */}
+        {showRankOverview ? (
+          <RankOverview totalXP={totalXP} />
+        ) : (
+          <DayOverview />
+        )}
       </div>
     </div>
   );
