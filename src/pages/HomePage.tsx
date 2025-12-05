@@ -47,7 +47,7 @@ function HomePage() {
   const totalXP = attributes.reduce((sum, attr) => sum + attr.current_xp, 0);
 
   return (
-    <div className="min-h-full pb-20 bg-secondary-50 dark:bg-secondary-900">
+    <div className="min-h-full pb-20">
       <div className="max-w-2xl mx-auto px-4 pt-4 pb-4">
         {/* Header with Settings */}
         <div className="flex items-start justify-between mb-6">
