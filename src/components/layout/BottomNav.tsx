@@ -61,7 +61,8 @@ function BottomNav() {
 
   return (
     <nav
-      className="fixed left-0 right-0 bottom-0 z-50 flex justify-center pointer-events-none"
+      className="fixed left-0 right-0 z-50 flex justify-center pointer-events-none"
+      style={{ bottom: '2px' }}
     >
       <div className="relative w-full flex justify-center">
         {showResume && (
