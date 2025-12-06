@@ -62,7 +62,7 @@ function BottomNav() {
   return (
     <nav
       className="fixed left-0 right-0 z-50 flex justify-center pointer-events-none"
-      style={{ bottom: '2px' }}
+      style={{ bottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="relative w-full flex justify-center">
         {showResume && (
