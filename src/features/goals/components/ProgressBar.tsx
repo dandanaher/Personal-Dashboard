@@ -1,4 +1,5 @@
 import { useThemeStore } from '@/stores/themeStore';
+import { useRef, useState, useEffect } from 'react';
 
 interface ProgressBarProps {
   progress: number;
@@ -17,14 +18,35 @@ export function ProgressBar({
 }: ProgressBarProps) {
   const { stylePreset, accentColor } = useThemeStore();
   const clampedProgress = Math.min(100, Math.max(0, progress));
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [blockCount, setBlockCount] = useState(50);
 
   // Retro Style Rendering
   if (stylePreset === 'retro') {
-    // Increase blocks to fill width better (approx 68 chars fits most screens in mono)
-    const totalBlocks = 68;
-    const filledBlocks = Math.round((clampedProgress / 100) * totalBlocks);
-    const emptyBlocks = totalBlocks - filledBlocks;
-    
+    // Dynamically calculate block count based on container width
+    useEffect(() => {
+      const updateBlockCount = () => {
+        if (containerRef.current) {
+          const width = containerRef.current.offsetWidth;
+          // Each block character is approximately 6.8px wide in text-xs font-mono
+          // Using a slightly smaller value ensures we fill the entire width
+          const charWidth = 6.8;
+          const calculatedBlocks = Math.floor(width / charWidth);
+          // Ensure we have at least 20 blocks and cap at 120 for performance
+          setBlockCount(Math.min(120, Math.max(20, calculatedBlocks)));
+        }
+      };
+
+      updateBlockCount();
+      // Small delay to ensure accurate width measurement after render
+      setTimeout(updateBlockCount, 100);
+      window.addEventListener('resize', updateBlockCount);
+      return () => window.removeEventListener('resize', updateBlockCount);
+    }, []);
+
+    const filledBlocks = Math.round((clampedProgress / 100) * blockCount);
+    const emptyBlocks = blockCount - filledBlocks;
+
     return (
       <div className={`${className} font-mono text-xs w-full`}>
         {showLabel && (
@@ -38,7 +60,8 @@ export function ProgressBar({
           </div>
         )}
         <div
-          className="text-secondary-900 dark:text-white whitespace-nowrap overflow-hidden font-bold flex"
+          ref={containerRef}
+          className="text-secondary-900 dark:text-white whitespace-nowrap overflow-hidden font-bold w-full"
           role="progressbar"
           aria-valuenow={clampedProgress}
           aria-valuemin={0}
