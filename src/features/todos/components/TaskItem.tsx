@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, memo } from 'react';
 import { Check, Trash2, Pencil, X, Save } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { useThemeStore } from '@/stores/themeStore';
+import { formatRelativeDate } from '@/lib/dateUtils';
 import type { Task, TaskUpdate } from '@/lib/types';
 
 interface TaskItemProps {
@@ -12,7 +13,13 @@ interface TaskItemProps {
   showDate?: boolean;
 }
 
-export function TaskItem({ task, onToggle, onDelete, onEdit, showDate = false }: TaskItemProps) {
+export const TaskItem = memo(function TaskItem({
+  task,
+  onToggle,
+  onDelete,
+  onEdit,
+  showDate = false,
+}: TaskItemProps) {
   const [showDelete, setShowDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [translateX, setTranslateX] = useState(0);
@@ -106,25 +113,6 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, showDate = false }:
     }
   };
 
-  // Format date for display
-  const formatTaskDate = (dateStr: string | null) => {
-    if (!dateStr) return 'No date';
-    const date = new Date(dateStr + 'T00:00:00');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const taskDate = new Date(date);
-    taskDate.setHours(0, 0, 0, 0);
-
-    const diffDays = Math.floor((taskDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Tomorrow';
-    if (diffDays === -1) return 'Yesterday';
-    if (diffDays < -1) return `${Math.abs(diffDays)} days ago`;
-    if (diffDays > 1 && diffDays <= 7) return `In ${diffDays} days`;
-
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
 
   // Edit mode rendering
   if (isEditing) {
@@ -273,7 +261,7 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, showDate = false }:
                   }
                 `}
               >
-                {formatTaskDate(task.date)}
+                {formatRelativeDate(task.date)}
               </p>
             )}
           </div>
@@ -312,6 +300,6 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, showDate = false }:
       </div>
     </div>
   );
-}
+});
 
 export default TaskItem;

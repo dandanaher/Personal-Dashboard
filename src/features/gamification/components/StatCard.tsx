@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Repeat, Heart, Zap, Target, LucideIcon } from 'lucide-react';
 import type { AttributeWithXP } from '@/lib/types';
 
@@ -13,7 +14,7 @@ const iconMap: Record<string, LucideIcon> = {
   Target,
 };
 
-export function StatCard({ attribute }: StatCardProps) {
+export const StatCard = memo(function StatCard({ attribute }: StatCardProps) {
   const Icon = iconMap[attribute.icon] || Target;
 
   return (
@@ -58,6 +59,6 @@ export function StatCard({ attribute }: StatCardProps) {
       </div>
     </div>
   );
-}
+});
 
 export default StatCard;

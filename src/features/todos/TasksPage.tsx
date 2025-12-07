@@ -1,6 +1,15 @@
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Calendar, List, CalendarDays, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
-import { format, addDays, subDays, isToday, isTomorrow, isYesterday } from 'date-fns';
+import { useState, useMemo, useCallback } from 'react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  List,
+  CalendarDays,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
+import { addDays, subDays, isToday } from 'date-fns';
 import { Button, Card } from '@/components/ui';
 import { useThemeStore } from '@/stores/themeStore';
 import { useTasks, useAllTasks } from './hooks';
@@ -8,6 +17,7 @@ import { TaskList } from './components/TaskList';
 import { TaskItem } from './components/TaskItem';
 import { AddTaskForm } from './components/AddTaskForm';
 import { ToastProvider, useToast } from './components/Toast';
+import { formatDisplayDate, formatDateHeader, toDateString, getTodayString } from '@/lib/dateUtils';
 import type { Task, TaskUpdate } from '@/lib/types';
 
 type ViewMode = 'day' | 'overview';
@@ -44,49 +54,40 @@ function TasksPageContent() {
     refetch: refetchAll,
   } = useAllTasks();
 
+  const selectedDateString = toDateString(selectedDate);
+  const todayString = getTodayString();
+
   // Check if there are uncompleted tasks BEFORE the selected date
-  // Only count truly overdue tasks (before today AND before selected date)
-  const selectedDateString = format(selectedDate, 'yyyy-MM-dd');
-  const todayString = format(new Date(), 'yyyy-MM-dd');
-  const hasTasksBeforeSelectedDate = allTasks.some(
-    (task) =>
-      !task.completed &&
-      task.date !== null &&
-      task.date < selectedDateString &&
-      task.date < todayString // Must be truly overdue (before today)
+  const hasTasksBeforeSelectedDate = useMemo(
+    () =>
+      allTasks.some(
+        (task) =>
+          !task.completed &&
+          task.date !== null &&
+          task.date < selectedDateString &&
+          task.date < todayString
+      ),
+    [allTasks, selectedDateString, todayString]
   );
 
   const { showToast } = useToast();
   const { accentColor } = useThemeStore();
 
-  // Navigate to previous day
-  const goToPreviousDay = () => {
+  // Navigation handlers
+  const goToPreviousDay = useCallback(() => {
     setSelectedDate((prev) => subDays(prev, 1));
-  };
+  }, []);
 
-  // Navigate to next day
-  const goToNextDay = () => {
+  const goToNextDay = useCallback(() => {
     setSelectedDate((prev) => addDays(prev, 1));
-  };
+  }, []);
 
-  // Go to today
-  const goToToday = () => {
+  const goToToday = useCallback(() => {
     setSelectedDate(new Date());
-  };
+  }, []);
 
-  // Format display date
-  const getDisplayDate = () => {
-    if (isToday(selectedDate)) {
-      return `Today, ${format(selectedDate, 'MMM d')}`;
-    }
-    if (isTomorrow(selectedDate)) {
-      return `Tomorrow, ${format(selectedDate, 'MMM d')}`;
-    }
-    if (isYesterday(selectedDate)) {
-      return `Yesterday, ${format(selectedDate, 'MMM d')}`;
-    }
-    return format(selectedDate, 'EEEE, MMM d');
-  };
+  // Display date string
+  const displayDate = useMemo(() => formatDisplayDate(selectedDate), [selectedDate]);
 
   // Handle add task for day view
   const handleAddDayTask = async (title: string, description?: string) => {
@@ -176,14 +177,18 @@ function TasksPageContent() {
   };
 
   // Get completed tasks sorted reverse chronologically (newest first)
-  const completedTasks = allTasks
-    .filter((task) => task.completed)
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+  const completedTasks = useMemo(
+    () =>
+      allTasks
+        .filter((task) => task.completed)
+        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()),
+    [allTasks]
+  );
 
   // Group upcoming tasks by date for display
-  const groupTasksByDate = (tasks: Task[]) => {
+  const groupedUpcomingTasks = useMemo(() => {
     const groups: { [key: string]: Task[] } = {};
-    tasks.forEach((task) => {
+    upcomingTasks.forEach((task) => {
       const date = task.date || 'No date';
       if (!groups[date]) {
         groups[date] = [];
@@ -191,27 +196,7 @@ function TasksPageContent() {
       groups[date].push(task);
     });
     return groups;
-  };
-
-  // Format date header
-  const formatDateHeader = (dateStr: string) => {
-    if (dateStr === 'No date') return 'General Tasks';
-
-    const date = new Date(dateStr + 'T00:00:00');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (date.toDateString() === today.toDateString()) {
-      return `Today, ${format(date, 'MMM d')}`;
-    }
-
-    const tomorrow = addDays(today, 1);
-    if (date.toDateString() === tomorrow.toDateString()) {
-      return `Tomorrow, ${format(date, 'MMM d')}`;
-    }
-
-    return format(date, 'EEEE, MMM d');
-  };
+  }, [upcomingTasks]);
 
   return (
     <div className="space-y-4">
@@ -282,7 +267,7 @@ function TasksPageContent() {
 
               {/* Date display - centered */}
               <h1 className="text-lg font-semibold text-secondary-900 dark:text-white text-center">
-                {getDisplayDate()}
+                {displayDate}
               </h1>
 
               {/* Right side - equal width container */}
@@ -408,7 +393,7 @@ function TasksPageContent() {
               {/* Upcoming Tasks by date */}
               {upcomingTasks.length > 0 && (
                 <div className="space-y-4">
-                  {Object.entries(groupTasksByDate(upcomingTasks)).map(([date, tasks]) => (
+                  {Object.entries(groupedUpcomingTasks).map(([date, tasks]) => (
                     <div key={date} className="space-y-2">
                       <h2 className="text-sm font-semibold text-secondary-600 dark:text-secondary-400 px-1">
                         {formatDateHeader(date)}

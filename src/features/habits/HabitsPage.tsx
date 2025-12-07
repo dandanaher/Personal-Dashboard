@@ -57,51 +57,59 @@ function HabitsPage() {
     });
   }, [filteredHabits, completionStatus]);
 
-  const handleAddClick = () => {
+  const handleAddClick = useCallback(() => {
     setEditingHabit(null);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleEditClick = (habit: Habit) => {
+  const handleEditClick = useCallback((habit: Habit) => {
     setEditingHabit(habit);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleDeleteClick = async (habit: Habit) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete "${habit.name}"? This will also delete all completion history. This action cannot be undone.`
-      )
-    ) {
-      await deleteHabit(habit.id);
-    }
-  };
+  const handleDeleteClick = useCallback(
+    async (habit: Habit) => {
+      if (
+        window.confirm(
+          `Are you sure you want to delete "${habit.name}"? This will also delete all completion history. This action cannot be undone.`
+        )
+      ) {
+        await deleteHabit(habit.id);
+      }
+    },
+    [deleteHabit]
+  );
 
-  const handleModalClose = () => {
+  const handleModalClose = useCallback(() => {
     setIsModalOpen(false);
     setEditingHabit(null);
-  };
+  }, []);
 
-  const handleSave = async (
-    name: string,
-    color: string,
-    description?: string,
-    habitType?: string
-  ) => {
-    return await addHabit(name, color, description, 'check', 7, habitType);
-  };
+  const handleSave = useCallback(
+    async (name: string, color: string, description?: string, habitType?: string) => {
+      return await addHabit(name, color, description, 'check', 7, habitType);
+    },
+    [addHabit]
+  );
 
-  const handleUpdate = async (
-    id: string,
-    updates: { name: string; color: string; description?: string; habitType?: string }
-  ) => {
-    return await updateHabit(id, {
-      name: updates.name,
-      color: updates.color,
-      description: updates.description,
-      habit_type: updates.habitType,
-    });
-  };
+  const handleUpdate = useCallback(
+    async (
+      id: string,
+      updates: { name: string; color: string; description?: string; habitType?: string }
+    ) => {
+      return await updateHabit(id, {
+        name: updates.name,
+        color: updates.color,
+        description: updates.description,
+        habit_type: updates.habitType,
+      });
+    },
+    [updateHabit]
+  );
+
+  const handleFilterChange = useCallback((filter: string | null) => {
+    setSelectedFilter(filter);
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -119,7 +127,7 @@ function HabitsPage() {
       {habitTypes.length > 0 && (
         <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
           <button
-            onClick={() => setSelectedFilter(null)}
+            onClick={() => handleFilterChange(null)}
             className={`
               px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0
               ${
@@ -137,7 +145,7 @@ function HabitsPage() {
             return (
               <button
                 key={type}
-                onClick={() => setSelectedFilter(type)}
+                onClick={() => handleFilterChange(type)}
                 className={`
                   px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0
                   ${

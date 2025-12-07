@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import supabase from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
+import { logger } from '@/lib/logger';
 import type { Habit } from '@/lib/types';
 
 interface UseHabitsReturn {
@@ -50,7 +51,7 @@ export function useHabits(): UseHabitsReturn {
       if (fetchError) throw fetchError;
       setHabits(data || []);
     } catch (err) {
-      console.error('Error fetching habits:', err);
+      logger.error('Error fetching habits:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch habits');
     } finally {
       setLoading(false);
@@ -107,7 +108,7 @@ export function useHabits(): UseHabitsReturn {
         setHabits((prev) => prev.map((h) => (h.id === tempId ? data : h)));
         return true;
       } catch (err) {
-        console.error('Error adding habit:', err);
+        logger.error('Error adding habit:', err);
         // Rollback optimistic update
         setHabits((prev) => prev.filter((h) => h.id !== tempId));
         setError(err instanceof Error ? err.message : 'Failed to add habit');
@@ -147,7 +148,7 @@ export function useHabits(): UseHabitsReturn {
         if (updateError) throw updateError;
         return true;
       } catch (err) {
-        console.error('Error updating habit:', err);
+        logger.error('Error updating habit:', err);
         // Rollback
         setHabits((prev) => prev.map((h) => (h.id === id ? originalHabit : h)));
         setError(err instanceof Error ? err.message : 'Failed to update habit');
@@ -178,7 +179,7 @@ export function useHabits(): UseHabitsReturn {
         if (deleteError) throw deleteError;
         return true;
       } catch (err) {
-        console.error('Error deleting habit:', err);
+        logger.error('Error deleting habit:', err);
         // Rollback
         setHabits((prev) =>
           [...prev, originalHabit].sort(
@@ -197,7 +198,7 @@ export function useHabits(): UseHabitsReturn {
     fetchHabits();
   }, [fetchHabits]);
 
-  // Real-time subscription
+  // Real-time subscription with targeted updates
   useEffect(() => {
     if (!user) return;
 
@@ -211,8 +212,23 @@ export function useHabits(): UseHabitsReturn {
           table: 'habits',
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
-          fetchHabits();
+        (payload) => {
+          // Targeted updates - no full refetch needed
+          if (payload.eventType === 'INSERT') {
+            const newHabit = payload.new as Habit;
+            setHabits((prev) => {
+              if (prev.some((h) => h.id === newHabit.id)) return prev;
+              return [...prev, newHabit].sort(
+                (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+              );
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedHabit = payload.new as Habit;
+            setHabits((prev) => prev.map((h) => (h.id === updatedHabit.id ? updatedHabit : h)));
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as { id: string }).id;
+            setHabits((prev) => prev.filter((h) => h.id !== deletedId));
+          }
         }
       )
       .subscribe();
@@ -220,7 +236,7 @@ export function useHabits(): UseHabitsReturn {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, fetchHabits]);
+  }, [user]);
 
   return {
     habits,

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useCallback } from 'react';
+import { useMemo, useRef, useCallback, memo } from 'react';
 import {
   Edit2,
   Trash2,
@@ -25,7 +25,7 @@ interface GoalCardProps {
   habitCompletions?: number;
 }
 
-export function GoalCard({
+export const GoalCard = memo(function GoalCard({
   goal,
   onEdit,
   onDelete,
@@ -310,6 +310,6 @@ export function GoalCard({
       </div>
     </Card>
   );
-}
+});
 
 export default GoalCard;

@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabaseAuth, supabase } from '@/lib/supabase';
 import { useProfileStore } from '@/stores/profileStore';
+import { logger } from '@/lib/logger';
 
 interface AuthState {
   user: User | null;
@@ -40,14 +41,14 @@ export const useAuthStore = create<AuthStore>()(
       setUser: (user) => set({ user }),
       setSession: (session) => set({ session }),
       setLoading: (loading) => {
-        console.log('Auth store: Setting loading =', loading);
+        logger.log('Auth store: Setting loading =', loading);
         set({ loading });
       },
       setError: (error) => set({ error }),
       clearError: () => set({ error: null }),
 
       signIn: async (email: string, password: string) => {
-        console.log('Auth store: signIn called');
+        logger.log('Auth store: signIn called');
         set({ loading: true, error: null });
         try {
           const { data, error } = await supabaseAuth.signInWithPassword({
@@ -59,7 +60,7 @@ export const useAuthStore = create<AuthStore>()(
             throw error;
           }
 
-          console.log('Auth store: signIn success');
+          logger.log('Auth store: signIn success');
           set({
             user: data.user,
             session: data.session,
@@ -68,7 +69,7 @@ export const useAuthStore = create<AuthStore>()(
           });
         } catch (error) {
           const authError = error as AuthError;
-          console.error('Auth store: signIn error:', authError.message);
+          logger.error('Auth store: signIn error:', authError.message);
           set({
             loading: false,
             error: authError.message || 'Failed to sign in',
@@ -78,7 +79,7 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       signUp: async (email: string, password: string, username?: string) => {
-        console.log('Auth store: signUp called');
+        logger.log('Auth store: signUp called');
         set({ loading: true, error: null });
         try {
           const { data, error } = await supabaseAuth.signUp({
@@ -98,7 +99,7 @@ export const useAuthStore = create<AuthStore>()(
             });
 
             if (profileError) {
-              console.error('Auth store: profile creation error:', profileError.message);
+              logger.error('Auth store: profile creation error:', profileError.message);
               // Don't throw - user is created, profile can be added later
             } else {
               // Fetch profile into global store so it's immediately available
@@ -106,7 +107,7 @@ export const useAuthStore = create<AuthStore>()(
             }
           }
 
-          console.log('Auth store: signUp success');
+          logger.log('Auth store: signUp success');
           set({
             user: data.user,
             session: data.session,
@@ -115,7 +116,7 @@ export const useAuthStore = create<AuthStore>()(
           });
         } catch (error) {
           const authError = error as AuthError;
-          console.error('Auth store: signUp error:', authError.message);
+          logger.error('Auth store: signUp error:', authError.message);
           set({
             loading: false,
             error: authError.message || 'Failed to sign up',
@@ -125,7 +126,7 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       signOut: async () => {
-        console.log('Auth store: signOut called');
+        logger.log('Auth store: signOut called');
         set({ loading: true, error: null });
         try {
           const { error } = await supabaseAuth.signOut();
@@ -134,7 +135,7 @@ export const useAuthStore = create<AuthStore>()(
             throw error;
           }
 
-          console.log('Auth store: signOut success');
+          logger.log('Auth store: signOut success');
 
           // Clear profile from global store
           useProfileStore.getState().clearProfile();
@@ -147,7 +148,7 @@ export const useAuthStore = create<AuthStore>()(
           });
         } catch (error) {
           const authError = error as AuthError;
-          console.error('Auth store: signOut error:', authError.message);
+          logger.error('Auth store: signOut error:', authError.message);
           set({
             loading: false,
             error: authError.message || 'Failed to sign out',
@@ -157,18 +158,18 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       initialize: async () => {
-        console.log('Auth store: Starting initialization');
+        logger.log('Auth store: Starting initialization');
 
         // Prevent multiple initializations
         if (get().initialized) {
-          console.log('Auth store: Already initialized, skipping');
+          logger.log('Auth store: Already initialized, skipping');
           return;
         }
 
         // Set up timeout fallback
         const timeoutId = setTimeout(() => {
           if (get().loading) {
-            console.error('Auth store: Initialization timeout (5s) - forcing loading to false');
+            logger.error('Auth store: Initialization timeout (5s) - forcing loading to false');
             set({
               loading: false,
               error: 'Authentication initialization timed out',
@@ -178,7 +179,7 @@ export const useAuthStore = create<AuthStore>()(
         }, 5000);
 
         try {
-          console.log('Auth store: Calling getSession...');
+          logger.log('Auth store: Calling getSession...');
           const {
             data: { session },
             error,
@@ -187,11 +188,11 @@ export const useAuthStore = create<AuthStore>()(
           clearTimeout(timeoutId);
 
           if (error) {
-            console.error('Auth store: getSession error:', error.message);
+            logger.error('Auth store: getSession error:', error.message);
             throw error;
           }
 
-          console.log('Auth store: Session retrieved, user =', session?.user?.email || 'none');
+          logger.log('Auth store: Session retrieved, user =', session?.user?.email || 'none');
 
           set({
             user: session?.user ?? null,
@@ -201,15 +202,15 @@ export const useAuthStore = create<AuthStore>()(
             initialized: true,
           });
 
-          console.log('Auth store: Loading = false, initialization complete');
+          logger.log('Auth store: Loading = false, initialization complete');
 
           // Set up auth state change listener
-          console.log('Auth store: Setting up onAuthStateChange listener');
+          logger.log('Auth store: Setting up onAuthStateChange listener');
           supabaseAuth.onAuthStateChange((event, session) => {
-            console.log('Auth store: onAuthStateChange event:', event);
+            logger.log('Auth store: onAuthStateChange event:', event);
             const currentState = get();
             if (currentState.session?.access_token !== session?.access_token) {
-              console.log('Auth store: Session changed, updating state');
+              logger.log('Auth store: Session changed, updating state');
               set({
                 user: session?.user ?? null,
                 session,
@@ -219,13 +220,13 @@ export const useAuthStore = create<AuthStore>()(
         } catch (error) {
           clearTimeout(timeoutId);
           const authError = error as AuthError;
-          console.error('Auth store: Initialization failed:', authError.message);
+          logger.error('Auth store: Initialization failed:', authError.message);
           set({
             loading: false,
             error: authError.message || 'Failed to initialize auth',
             initialized: true,
           });
-          console.log('Auth store: Loading = false (error path)');
+          logger.log('Auth store: Loading = false (error path)');
         }
       },
     }),

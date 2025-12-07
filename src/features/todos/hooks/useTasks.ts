@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import supabase from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
+import { logger } from '@/lib/logger';
 import type { Task, TaskInsert, TaskUpdate } from '@/lib/types';
 import { incrementXP } from '@/features/gamification/hooks/useProfileStats';
 import { XP_REWARDS } from '@/features/gamification/utils';
@@ -66,7 +67,7 @@ export function useTasks(date: Date): UseTasksReturn {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch tasks';
       setError(errorMessage);
-      console.error('Error fetching tasks:', err);
+      logger.error('Error fetching tasks:', err);
     } finally {
       setLoading(false);
     }
@@ -126,7 +127,7 @@ export function useTasks(date: Date): UseTasksReturn {
         setTasks((prev) => prev.filter((task) => task.id !== tempId));
         const errorMessage = err instanceof Error ? err.message : 'Failed to add task';
         setError(errorMessage);
-        console.error('Error adding task:', err);
+        logger.error('Error adding task:', err);
         return false;
       }
     },
@@ -176,7 +177,7 @@ export function useTasks(date: Date): UseTasksReturn {
         );
         const errorMessage = err instanceof Error ? err.message : 'Failed to update task';
         setError(errorMessage);
-        console.error('Error toggling task:', err);
+        logger.error('Error toggling task:', err);
       }
     },
     [tasks, sortTasks]
@@ -202,7 +203,7 @@ export function useTasks(date: Date): UseTasksReturn {
         setTasks((prev) => sortTasks([...prev, task]));
         const errorMessage = err instanceof Error ? err.message : 'Failed to delete task';
         setError(errorMessage);
-        console.error('Error deleting task:', err);
+        logger.error('Error deleting task:', err);
       }
     },
     [tasks, sortTasks]
@@ -242,7 +243,7 @@ export function useTasks(date: Date): UseTasksReturn {
         setTasks((prev) => sortTasks(prev.map((t) => (t.id === taskId ? task : t))));
         const errorMessage = err instanceof Error ? err.message : 'Failed to update task';
         setError(errorMessage);
-        console.error('Error updating task:', err);
+        logger.error('Error updating task:', err);
         return false;
       }
     },
@@ -255,7 +256,7 @@ export function useTasks(date: Date): UseTasksReturn {
     fetchTasks();
   }, [fetchTasks]);
 
-  // Subscribe to real-time changes
+  // Subscribe to real-time changes with targeted updates (no full refetch)
   useEffect(() => {
     if (!user) return;
 
@@ -270,17 +271,31 @@ export function useTasks(date: Date): UseTasksReturn {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          console.log('Real-time update:', payload);
+          logger.log('Real-time update:', payload.eventType);
 
-          // Only refetch if the change is for the current date
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          // Targeted updates - no full refetch needed
+          if (payload.eventType === 'INSERT') {
             const newTask = payload.new as Task;
             if (newTask.date === dateString) {
-              fetchTasks();
+              setTasks((prev) => {
+                // Avoid duplicates (from optimistic updates)
+                if (prev.some((t) => t.id === newTask.id)) return prev;
+                return sortTasks([...prev, newTask]);
+              });
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedTask = payload.new as Task;
+            if (updatedTask.date === dateString) {
+              setTasks((prev) =>
+                sortTasks(prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)))
+              );
+            } else {
+              // Task moved to different date, remove from current view
+              setTasks((prev) => prev.filter((t) => t.id !== updatedTask.id));
             }
           } else if (payload.eventType === 'DELETE') {
-            // For deletes, always refetch as we can't check the date
-            fetchTasks();
+            const deletedId = (payload.old as { id: string }).id;
+            setTasks((prev) => prev.filter((t) => t.id !== deletedId));
           }
         }
       )
@@ -289,7 +304,7 @@ export function useTasks(date: Date): UseTasksReturn {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, dateString, fetchTasks]);
+  }, [user, dateString, sortTasks]);
 
   return {
     tasks,

@@ -1,21 +1,46 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { AppShell } from '@/components/layout';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { LoadingSpinner } from '@/components/ui';
+import { logger } from '@/lib/logger';
 
-// Pages
+// Pages (loaded eagerly for fast initial load)
 import LoginPage from '@/pages/LoginPage';
 import NotFoundPage from '@/pages/NotFoundPage';
-import HomePage from '@/pages/HomePage';
 
-// Feature pages
-import TasksPage from '@/features/todos/TasksPage';
-import GoalsPage from '@/features/goals/GoalsPage';
-import HabitsPage from '@/features/habits/HabitsPage';
-import WorkoutPage from '@/features/workout/WorkoutPage';
+// Feature pages (lazy loaded for code splitting)
+const HomePage = lazy(() => import('@/pages/HomePage'));
+const TasksPage = lazy(() => import('@/features/todos/TasksPage'));
+const GoalsPage = lazy(() => import('@/features/goals/GoalsPage'));
+const HabitsPage = lazy(() => import('@/features/habits/HabitsPage'));
+const WorkoutPage = lazy(() => import('@/features/workout/WorkoutPage'));
+
+// Route preloading map for instant navigation
+const routePreloaders: Record<string, () => void> = {
+  '/home': () => import('@/pages/HomePage'),
+  '/tasks': () => import('@/features/todos/TasksPage'),
+  '/goals': () => import('@/features/goals/GoalsPage'),
+  '/habits': () => import('@/features/habits/HabitsPage'),
+  '/workout': () => import('@/features/workout/WorkoutPage'),
+};
+
+// Preload route on hover/focus for instant navigation
+export function preloadRoute(path: string) {
+  const preloader = routePreloaders[path];
+  if (preloader) preloader();
+}
+
+// Loading fallback for lazy routes
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <LoadingSpinner size="md" />
+    </div>
+  );
+}
 
 // Protected route wrapper
 interface ProtectedRouteProps {
@@ -25,7 +50,7 @@ interface ProtectedRouteProps {
 function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuthStore();
 
-  console.log('ProtectedRoute: loading =', loading, ', user =', user?.email || 'none');
+  logger.log('ProtectedRoute: loading =', loading, ', user =', user?.email || 'none');
 
   if (loading) {
     return (
@@ -39,7 +64,7 @@ function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!user) {
-    console.log('ProtectedRoute: No user, redirecting to login');
+    logger.log('ProtectedRoute: No user, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
@@ -50,19 +75,12 @@ function App() {
   const { loading, error, initialize, user } = useAuthStore();
   const { accentColor } = useThemeStore();
 
-  console.log(
-    'App: Render - loading =',
-    loading,
-    ', user =',
-    user?.email || 'none',
-    ', error =',
-    error
-  );
+  logger.log('App: Render - loading =', loading, ', user =', user?.email || 'none', ', error =', error);
 
   useEffect(() => {
-    console.log('App: useEffect - calling initialize()');
+    logger.log('App: useEffect - calling initialize()');
     initialize().catch((err) => {
-      console.error('App: Initialize failed:', err);
+      logger.error('App: Initialize failed:', err);
     });
   }, [initialize]);
 
@@ -73,7 +91,7 @@ function App() {
 
   // Show loading screen while initializing auth
   if (loading) {
-    console.log('App: Showing loading screen');
+    logger.log('App: Showing loading screen');
     return (
       <div
         className="min-h-screen flex flex-col items-center justify-center"
@@ -81,8 +99,7 @@ function App() {
       >
         <h1 className="text-4xl font-bold text-white mb-4">MyDash</h1>
         <LoadingSpinner size="md" className="[&_svg]:text-white" />
-        <p className="mt-4 text-sm text-white/70">Loading: {loading.toString()}</p>
-        <p className="text-xs text-white/50">Check console for details</p>
+        <p className="mt-4 text-sm text-white/70">Loading...</p>
         {error && (
           <div className="mt-4 text-center">
             <p className="text-sm text-red-200">{error}</p>
@@ -99,7 +116,7 @@ function App() {
     );
   }
 
-  console.log('App: Rendering main app');
+  logger.log('App: Rendering main app');
 
   return (
     <ErrorBoundary>
@@ -110,29 +127,31 @@ function App() {
           v7_relativeSplatPath: true,
         }}
       >
-        <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<LoginPage />} />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<LoginPage />} />
 
-          {/* Protected routes with AppShell layout */}
-          <Route
-            element={
-              <ProtectedRoute>
-                <AppShell />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/home" replace />} />
-            <Route path="/home" element={<HomePage />} />
-            <Route path="/tasks" element={<TasksPage />} />
-            <Route path="/goals" element={<GoalsPage />} />
-            <Route path="/habits" element={<HabitsPage />} />
-            <Route path="/workout" element={<WorkoutPage />} />
-          </Route>
+            {/* Protected routes with AppShell layout */}
+            <Route
+              element={
+                <ProtectedRoute>
+                  <AppShell />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Navigate to="/home" replace />} />
+              <Route path="/home" element={<HomePage />} />
+              <Route path="/tasks" element={<TasksPage />} />
+              <Route path="/goals" element={<GoalsPage />} />
+              <Route path="/habits" element={<HabitsPage />} />
+              <Route path="/workout" element={<WorkoutPage />} />
+            </Route>
 
-          {/* 404 route */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+            {/* 404 route */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </ErrorBoundary>
   );

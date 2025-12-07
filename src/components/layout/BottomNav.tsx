@@ -1,8 +1,10 @@
+import { memo, useMemo, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { CheckSquare, Target, Grid, Dumbbell, Home } from 'lucide-react';
 import { useThemeStore } from '@/stores/themeStore';
 import { useWorkoutSessionStore } from '@/stores/workoutSessionStore';
 import { formatTime } from '@/features/workout/lib/workoutEngine';
+import { preloadRoute } from '@/App';
 
 interface NavItem {
   path: string;
@@ -38,26 +40,28 @@ const navItems: NavItem[] = [
   },
 ];
 
-function BottomNav() {
-  const { accentColor } = useThemeStore();
+// Circle size for nav items
+const CIRCLE_SIZE = 48;
+
+const BottomNav = memo(function BottomNav() {
+  const accentColor = useThemeStore((state) => state.accentColor);
   const location = useLocation();
   const navigate = useNavigate();
   const { isActive, isMinimized, activeTemplate, elapsedSeconds, resumeWorkout } =
     useWorkoutSessionStore();
 
-  // Find the active index
-  const activeIndex = navItems.findIndex((item) => location.pathname.startsWith(item.path));
-  const safeActiveIndex = activeIndex === -1 ? 0 : activeIndex;
-
-  // Circle size matches the nav bar height minus padding
-  const circleSize = 48; // pixels
+  // Find the active index - memoized
+  const safeActiveIndex = useMemo(() => {
+    const activeIndex = navItems.findIndex((item) => location.pathname.startsWith(item.path));
+    return activeIndex === -1 ? 0 : activeIndex;
+  }, [location.pathname]);
 
   const showResume = isActive && isMinimized && !!activeTemplate;
 
-  const handleResume = () => {
+  const handleResume = useCallback(() => {
     resumeWorkout();
     navigate('/workout');
-  };
+  }, [resumeWorkout, navigate]);
 
   return (
     <nav
@@ -80,14 +84,15 @@ function BottomNav() {
           className="relative bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/40 dark:border-white/20 shadow-lg shadow-black/5 pointer-events-auto"
           style={{ borderRadius: 'var(--radius-full)' }}
         >
-          {/* Animated circle indicator */}
+          {/* Animated circle indicator - using transform for GPU acceleration */}
           <div
-            className="absolute top-1 transition-all duration-300 ease-out pointer-events-none"
+            className="absolute top-1 pointer-events-none will-change-transform"
             style={{
-              left: `${4 + safeActiveIndex * circleSize}px`,
-              width: `${circleSize}px`,
-              height: `${circleSize}px`,
+              transform: `translateX(${4 + safeActiveIndex * CIRCLE_SIZE}px)`,
+              width: `${CIRCLE_SIZE}px`,
+              height: `${CIRCLE_SIZE}px`,
               borderRadius: 'var(--radius-full)',
+              transition: 'transform 200ms cubic-bezier(0.4, 0, 0.2, 1)',
             }}
           >
             <div
@@ -105,13 +110,16 @@ function BottomNav() {
               <NavLink
                 key={item.path}
                 to={item.path}
-                className={`flex items-center justify-center transition-colors duration-200 touch-manipulation ${
+                onMouseEnter={() => preloadRoute(item.path)}
+                onFocus={() => preloadRoute(item.path)}
+                className={`flex items-center justify-center touch-manipulation ${
                   index === safeActiveIndex ? '' : 'text-secondary-500 dark:text-secondary-400'
                 }`}
                 style={{
-                  width: `${circleSize}px`,
-                  height: `${circleSize}px`,
+                  width: `${CIRCLE_SIZE}px`,
+                  height: `${CIRCLE_SIZE}px`,
                   borderRadius: 'var(--radius-full)',
+                  transition: 'color 150ms',
                   ...(index === safeActiveIndex ? { color: accentColor } : {}),
                 }}
               >
@@ -123,6 +131,6 @@ function BottomNav() {
       </div>
     </nav>
   );
-}
+});
 
 export default BottomNav;
