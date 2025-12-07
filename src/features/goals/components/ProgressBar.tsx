@@ -21,29 +21,32 @@ export function ProgressBar({
   const containerRef = useRef<HTMLDivElement>(null);
   const [blockCount, setBlockCount] = useState(50);
 
+  // Dynamically calculate block count based on container width (for retro style)
+  // Must be called unconditionally to follow React's Rules of Hooks
+  useEffect(() => {
+    if (stylePreset !== 'retro') return;
+
+    const updateBlockCount = () => {
+      if (containerRef.current) {
+        const width = containerRef.current.offsetWidth;
+        // Each block character is approximately 6.8px wide in text-xs font-mono
+        // Using a slightly smaller value ensures we fill the entire width
+        const charWidth = 6.8;
+        const calculatedBlocks = Math.floor(width / charWidth);
+        // Ensure we have at least 20 blocks and cap at 120 for performance
+        setBlockCount(Math.min(120, Math.max(20, calculatedBlocks)));
+      }
+    };
+
+    updateBlockCount();
+    // Small delay to ensure accurate width measurement after render
+    setTimeout(updateBlockCount, 100);
+    window.addEventListener('resize', updateBlockCount);
+    return () => window.removeEventListener('resize', updateBlockCount);
+  }, [stylePreset]);
+
   // Retro Style Rendering
   if (stylePreset === 'retro') {
-    // Dynamically calculate block count based on container width
-    useEffect(() => {
-      const updateBlockCount = () => {
-        if (containerRef.current) {
-          const width = containerRef.current.offsetWidth;
-          // Each block character is approximately 6.8px wide in text-xs font-mono
-          // Using a slightly smaller value ensures we fill the entire width
-          const charWidth = 6.8;
-          const calculatedBlocks = Math.floor(width / charWidth);
-          // Ensure we have at least 20 blocks and cap at 120 for performance
-          setBlockCount(Math.min(120, Math.max(20, calculatedBlocks)));
-        }
-      };
-
-      updateBlockCount();
-      // Small delay to ensure accurate width measurement after render
-      setTimeout(updateBlockCount, 100);
-      window.addEventListener('resize', updateBlockCount);
-      return () => window.removeEventListener('resize', updateBlockCount);
-    }, []);
-
     const filledBlocks = Math.round((clampedProgress / 100) * blockCount);
     const emptyBlocks = blockCount - filledBlocks;
 
