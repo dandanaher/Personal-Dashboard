@@ -74,53 +74,50 @@ export function SettingsMenu() {
       {/* Trigger button - glass pill style matching BottomNav */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/40 dark:border-white/20 shadow-lg shadow-black/5 hover:bg-white/30 dark:hover:bg-white/20 transition-all duration-200"
+        className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/40 dark:border-white/20 shadow-lg shadow-black/5 hover:bg-white/30 dark:hover:bg-white/20 transition-all duration-200"
         aria-label="Settings menu"
       >
         <Settings className="h-4 w-4 text-secondary-600 dark:text-secondary-400" />
-        <span className="text-sm font-medium text-secondary-700 dark:text-secondary-300">
-          Settings
-        </span>
       </button>
 
       {/* Dropdown menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 bg-white/20 dark:bg-white/10 backdrop-blur-md rounded-3xl border border-white/40 dark:border-white/20 shadow-lg shadow-black/5 z-50 overflow-hidden">
+        <div className="absolute right-0 mt-2 w-64 bg-white/20 dark:bg-white/10 backdrop-blur-md rounded-2xl border border-white/40 dark:border-white/20 shadow-lg shadow-black/5 z-50 overflow-hidden">
           {/* Username */}
-          <div className="p-4 border-b border-white/30 dark:border-white/10">
-            <div className="flex items-center gap-2 mb-3">
-              <User className="h-4 w-4 text-secondary-500" />
-              <span className="text-sm font-medium text-secondary-700 dark:text-secondary-300">
+          <div className="p-3 border-b border-white/30 dark:border-white/10">
+            <div className="flex items-center gap-2 mb-2">
+              <User className="h-3.5 w-3.5 text-secondary-500" />
+              <span className="text-xs font-medium text-secondary-700 dark:text-secondary-300">
                 Username
               </span>
             </div>
             {isEditingUsername ? (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <input
                   ref={inputRef}
                   type="text"
                   value={newUsername}
                   onChange={(e) => setNewUsername(e.target.value)}
                   placeholder="Enter username"
-                  className="w-full px-3 py-2 text-sm rounded-lg bg-white/50 dark:bg-white/10 border border-white/40 dark:border-white/20 text-secondary-900 dark:text-white placeholder-secondary-400 focus:outline-none focus:ring-2 focus:ring-offset-0"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white/50 dark:bg-white/10 border border-white/40 dark:border-white/20 text-secondary-900 dark:text-white placeholder-secondary-400 focus:outline-none focus:ring-2 focus:ring-offset-0"
                   style={{ '--tw-ring-color': accentColor } as React.CSSProperties}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleSaveUsername();
                     if (e.key === 'Escape') handleCancelEdit();
                   }}
                 />
-                <div className="flex gap-2">
+                <div className="flex gap-1.5">
                   <button
                     onClick={handleSaveUsername}
                     disabled={savingUsername}
-                    className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg text-white transition-colors disabled:opacity-50"
+                    className="flex-1 px-2.5 py-1 text-xs font-medium rounded-lg text-white transition-colors disabled:opacity-50"
                     style={{ backgroundColor: accentColor }}
                   >
                     {savingUsername ? 'Saving...' : 'Save'}
                   </button>
                   <button
                     onClick={handleCancelEdit}
-                    className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-secondary-200 dark:bg-secondary-700 text-secondary-700 dark:text-secondary-300 transition-colors"
+                    className="flex-1 px-2.5 py-1 text-xs font-medium rounded-lg bg-secondary-200 dark:bg-secondary-700 text-secondary-700 dark:text-secondary-300 transition-colors"
                   >
                     Cancel
                   </button>
@@ -129,25 +126,25 @@ export function SettingsMenu() {
             ) : (
               <button
                 onClick={handleEditUsername}
-                className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-white/30 dark:hover:bg-white/10 transition-colors"
+                className="flex items-center justify-between w-full p-1.5 rounded-lg hover:bg-white/30 dark:hover:bg-white/10 transition-colors"
               >
-                <span className="text-sm text-secondary-700 dark:text-secondary-300 truncate">
+                <span className="text-xs text-secondary-700 dark:text-secondary-300 truncate">
                   {displayUsername}
                 </span>
-                <Pencil className="h-3.5 w-3.5 text-secondary-400 flex-shrink-0" />
+                <Pencil className="h-3 w-3 text-secondary-400 flex-shrink-0" />
               </button>
             )}
           </div>
 
           {/* Theme Toggle */}
-          <div className="p-4 border-b border-white/30 dark:border-white/10">
-            <div className="flex items-center gap-2 mb-3">
+          <div className="p-3 border-b border-white/30 dark:border-white/10">
+            <div className="flex items-center gap-2 mb-2">
               {darkMode ? (
-                <Moon className="h-4 w-4 text-secondary-500" />
+                <Moon className="h-3.5 w-3.5 text-secondary-500" />
               ) : (
-                <Sun className="h-4 w-4 text-secondary-500" />
+                <Sun className="h-3.5 w-3.5 text-secondary-500" />
               )}
-              <span className="text-sm font-medium text-secondary-700 dark:text-secondary-300">
+              <span className="text-xs font-medium text-secondary-700 dark:text-secondary-300">
                 Theme
               </span>
             </div>
@@ -178,10 +175,10 @@ export function SettingsMenu() {
           </div>
 
           {/* Style Preset */}
-          <div className="p-4 border-b border-white/30 dark:border-white/10">
-            <div className="flex items-center gap-2 mb-3">
-              <Layers className="h-4 w-4 text-secondary-500" />
-              <span className="text-sm font-medium text-secondary-700 dark:text-secondary-300">
+          <div className="p-3 border-b border-white/30 dark:border-white/10">
+            <div className="flex items-center gap-2 mb-2">
+              <Layers className="h-3.5 w-3.5 text-secondary-500" />
+              <span className="text-xs font-medium text-secondary-700 dark:text-secondary-300">
                 Style
               </span>
             </div>
@@ -206,10 +203,10 @@ export function SettingsMenu() {
           </div>
 
           {/* Accent Color */}
-          <div className="p-4 border-b border-white/30 dark:border-white/10">
-            <div className="flex items-center gap-2 mb-3">
-              <Palette className="h-4 w-4 text-secondary-500" />
-              <span className="text-sm font-medium text-secondary-700 dark:text-secondary-300">
+          <div className="p-3 border-b border-white/30 dark:border-white/10">
+            <div className="flex items-center gap-2 mb-2">
+              <Palette className="h-3.5 w-3.5 text-secondary-500" />
+              <span className="text-xs font-medium text-secondary-700 dark:text-secondary-300">
                 Accent Color
               </span>
             </div>
@@ -219,7 +216,7 @@ export function SettingsMenu() {
                   key={color.value}
                   type="button"
                   className={`
-                    relative w-8 h-8 rounded-full border-2 transition-all duration-150
+                    relative w-7 h-7 rounded-full border-2 transition-all duration-150
                     hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2
                     ${
                       accentColor === color.value
@@ -238,7 +235,7 @@ export function SettingsMenu() {
                 >
                   {accentColor === color.value && (
                     <span className="absolute inset-0 flex items-center justify-center">
-                      <Check className="w-4 h-4 text-white drop-shadow-md" />
+                      <Check className="w-3.5 h-3.5 text-white drop-shadow-md" />
                     </span>
                   )}
                 </button>
@@ -250,10 +247,10 @@ export function SettingsMenu() {
           <div className="p-2">
             <button
               onClick={handleSignOut}
-              className="flex items-center gap-3 w-full p-3 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-500/20 dark:hover:bg-red-500/20 transition-colors"
+              className="flex items-center gap-2 w-full p-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-500/20 dark:hover:bg-red-500/20 transition-colors"
             >
-              <LogOut className="h-4 w-4" />
-              <span className="text-sm font-medium">Sign Out</span>
+              <LogOut className="h-3.5 w-3.5" />
+              <span className="text-xs font-medium">Sign Out</span>
             </button>
           </div>
         </div>

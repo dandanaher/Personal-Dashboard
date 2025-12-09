@@ -75,42 +75,42 @@ export function DayOverview({ className = '' }: DayOverviewProps) {
   const habitLogsMap = new Map(habitLogs.map((log) => [log.habit_id, log.completed]));
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      <h2 className="text-lg font-bold text-secondary-900 dark:text-white">Day Overview</h2>
+    <div className={`space-y-3 ${className}`}>
+      <h2 className="text-base font-bold text-secondary-900 dark:text-white">Day Overview</h2>
 
       {/* Tasks Section */}
       <Card padding="none" variant="outlined" className="overflow-hidden">
-        <div className="px-4 py-3 border-b border-secondary-200 dark:border-secondary-700 flex items-center justify-between">
-          <h3 className="font-semibold text-secondary-900 dark:text-white">
+        <div className="px-3 py-2 border-b border-secondary-200 dark:border-secondary-700 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-secondary-900 dark:text-white">
             Tasks Today ({incompleteTasks.length})
           </h3>
           <Link
             to="/tasks"
-            className="text-sm flex items-center gap-1 hover:opacity-80 transition-opacity"
+            className="text-xs flex items-center gap-0.5 hover:opacity-80 transition-opacity"
             style={{ color: accentColor }}
           >
             View All
-            <ChevronRight size={16} />
+            <ChevronRight size={14} />
           </Link>
         </div>
-        <div className="p-4">
+        <div className="p-3">
           {incompleteTasks.length === 0 ? (
-            <p className="text-sm text-secondary-500 dark:text-secondary-400 text-center py-2">
+            <p className="text-xs text-secondary-500 dark:text-secondary-400 text-center py-1">
               No tasks for today. You're all clear!
             </p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-1.5">
               {incompleteTasks.slice(0, 3).map((task) => (
                 <li
                   key={task.id}
                   className="flex items-start gap-2 text-sm text-secondary-700 dark:text-secondary-300"
                 >
-                  <Circle size={16} className="mt-0.5 flex-shrink-0" />
+                  <Circle size={14} className="mt-0.5 flex-shrink-0" />
                   <span className="line-clamp-1">{task.title}</span>
                 </li>
               ))}
               {incompleteTasks.length > 3 && (
-                <li className="text-xs text-secondary-500 dark:text-secondary-400 text-center pt-1">
+                <li className="text-xs text-secondary-500 dark:text-secondary-400 text-center pt-0.5">
                   +{incompleteTasks.length - 3} more tasks
                 </li>
               )}
@@ -121,26 +121,26 @@ export function DayOverview({ className = '' }: DayOverviewProps) {
 
       {/* Habits Section */}
       <Card padding="none" variant="outlined" className="overflow-hidden">
-        <div className="px-4 py-3 border-b border-secondary-200 dark:border-secondary-700 flex items-center justify-between">
-          <h3 className="font-semibold text-secondary-900 dark:text-white">
+        <div className="px-3 py-2 border-b border-secondary-200 dark:border-secondary-700 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-secondary-900 dark:text-white">
             Habits ({habits.filter((h) => habitLogsMap.get(h.id)).length}/{habits.length})
           </h3>
           <Link
             to="/habits"
-            className="text-sm flex items-center gap-1 hover:opacity-80 transition-opacity"
+            className="text-xs flex items-center gap-0.5 hover:opacity-80 transition-opacity"
             style={{ color: accentColor }}
           >
             View All
-            <ChevronRight size={16} />
+            <ChevronRight size={14} />
           </Link>
         </div>
-        <div className="p-4">
+        <div className="p-3">
           {habits.length === 0 ? (
-            <p className="text-sm text-secondary-500 dark:text-secondary-400 text-center py-2">
+            <p className="text-xs text-secondary-500 dark:text-secondary-400 text-center py-1">
               No habits tracked yet.
             </p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-1.5">
               {habits.slice(0, 4).map((habit) => {
                 const isCompleted = habitLogsMap.get(habit.id) === true;
                 return (
@@ -150,17 +150,17 @@ export function DayOverview({ className = '' }: DayOverviewProps) {
                   >
                     {isCompleted ? (
                       <CheckCircle2
-                        size={16}
+                        size={14}
                         className="flex-shrink-0 text-green-600 dark:text-green-400"
                       />
                     ) : (
                       <Circle
-                        size={16}
+                        size={14}
                         className="flex-shrink-0 text-secondary-400 dark:text-secondary-500"
                       />
                     )}
                     <div
-                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                       style={{ backgroundColor: habit.color }}
                     />
                     <span className={isCompleted ? 'line-through opacity-60' : ''}>
@@ -170,7 +170,7 @@ export function DayOverview({ className = '' }: DayOverviewProps) {
                 );
               })}
               {habits.length > 4 && (
-                <li className="text-xs text-secondary-500 dark:text-secondary-400 text-center pt-1">
+                <li className="text-xs text-secondary-500 dark:text-secondary-400 text-center pt-0.5">
                   +{habits.length - 4} more habits
                 </li>
               )}
@@ -181,28 +181,28 @@ export function DayOverview({ className = '' }: DayOverviewProps) {
 
       {/* Goals Section */}
       <Card padding="none" variant="outlined" className="overflow-hidden">
-        <div className="px-4 py-3 border-b border-secondary-200 dark:border-secondary-700 flex items-center justify-between">
-          <h3 className="font-semibold text-secondary-900 dark:text-white">
+        <div className="px-3 py-2 border-b border-secondary-200 dark:border-secondary-700 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-secondary-900 dark:text-white">
             Active Goals ({activeGoals.length})
           </h3>
           <Link
             to="/goals"
-            className="text-sm flex items-center gap-1 hover:opacity-80 transition-opacity"
+            className="text-xs flex items-center gap-0.5 hover:opacity-80 transition-opacity"
             style={{ color: accentColor }}
           >
             View All
-            <ChevronRight size={16} />
+            <ChevronRight size={14} />
           </Link>
         </div>
-        <div className="p-4">
+        <div className="p-3">
           {activeGoals.length === 0 ? (
-            <p className="text-sm text-secondary-500 dark:text-secondary-400 text-center py-2">
+            <p className="text-xs text-secondary-500 dark:text-secondary-400 text-center py-1">
               No active goals. Set one to get started!
             </p>
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-2">
               {activeGoals.map((goal) => (
-                <li key={goal.id} className="space-y-1">
+                <li key={goal.id} className="space-y-0.5">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-secondary-700 dark:text-secondary-300 line-clamp-1">
                       {goal.title}

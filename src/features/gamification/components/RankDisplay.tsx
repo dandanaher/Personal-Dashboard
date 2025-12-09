@@ -60,30 +60,30 @@ export function RankDisplay({ totalXP, isLoading = false, onViewRanks, showRanks
   const glowEffect = getRankGlow(rankInfo.rankName, rankInfo.tier);
 
   return (
-    <div className="pb-4">
+    <div className="pb-2">
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         {/* Rank Image - Smaller and on the left */}
         <div className="flex-shrink-0">
           <img
             src={imagePath}
             alt={`${rankInfo.rankName} ${rankInfo.tier}`}
-            className="w-24 h-24 md:w-28 md:h-28 object-contain transition-all duration-500"
+            className="w-20 h-20 md:w-28 md:h-28 object-contain transition-all duration-500"
             style={{ filter: glowEffect }}
           />
         </div>
 
         {/* Rank Info - Takes remaining space */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between mb-1">
-            <h3 className="text-xl md:text-2xl font-bold" style={{ color: rankInfo.color }}>
+          <div className="flex items-start justify-between mb-0.5">
+            <h3 className="text-lg md:text-2xl font-bold" style={{ color: rankInfo.color }}>
               {rankInfo.rankName.toUpperCase()}
             </h3>
             {onViewRanks && (
               <button
                 onClick={onViewRanks}
                 className={`
-                  flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all
+                  flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-all
                   ${showRanks
                     ? 'text-white shadow-md'
                     : 'hover:opacity-90'
@@ -94,25 +94,25 @@ export function RankDisplay({ totalXP, isLoading = false, onViewRanks, showRanks
                   color: showRanks ? 'white' : accentColor,
                 }}
               >
-                <LayoutGrid size={14} />
-                {showRanks ? 'Hide Ranks' : 'View Ranks'}
+                <LayoutGrid size={12} />
+                {showRanks ? 'Hide' : 'Ranks'}
               </button>
             )}
           </div>
-          <p className="text-sm text-secondary-600 dark:text-secondary-400 mb-3">
+          <p className="text-xs text-secondary-600 dark:text-secondary-400 mb-2">
             Tier {rankInfo.tier} • Level {rankInfo.level} • {totalXP.toLocaleString()} XP
           </p>
 
           {/* Progress Bar */}
           {rankInfo.level < 30 && (
             <div>
-              <ProgressBar 
-                progress={rankInfo.progressToNextTier} 
+              <ProgressBar
+                progress={rankInfo.progressToNextTier}
                 color={rankInfo.color}
-                height="h-2"
+                height="h-1.5"
                 showLabel={false}
               />
-              <p className="text-xs text-secondary-500 dark:text-secondary-400 mt-1">
+              <p className="text-xs text-secondary-500 dark:text-secondary-400 mt-0.5">
                 {Math.round(rankInfo.progressToNextTier)}% to next tier
               </p>
             </div>

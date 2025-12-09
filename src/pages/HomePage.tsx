@@ -47,14 +47,14 @@ function HomePage() {
 
   return (
     <div className="min-h-full pb-20">
-      <div className="max-w-2xl mx-auto px-4 pt-4 pb-4">
+      <div className="max-w-2xl mx-auto px-3 pt-safe-top pt-3 pb-3">
         {/* Header with Settings */}
-        <div className="flex items-start justify-between mb-6">
+        <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-secondary-900 dark:text-white">
+            <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">
               {greeting}
             </h1>
-            <p className="text-secondary-600 dark:text-secondary-400 mt-1">
+            <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-0.5">
               {userName}
             </p>
           </div>
@@ -62,7 +62,7 @@ function HomePage() {
         </div>
 
         {/* Rank Display */}
-        <div className="mb-6">
+        <div className="mb-4">
           <RankDisplay
             totalXP={totalXP}
             isLoading={statsLoading || decayProcessing}
