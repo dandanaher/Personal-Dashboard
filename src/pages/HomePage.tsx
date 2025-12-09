@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProfileStats, useProfile, useRankDecay } from '@/features/gamification/hooks';
 import { RankDisplay, SettingsMenu, RankOverview } from '@/features/gamification/components';
@@ -11,6 +11,14 @@ function HomePage() {
   const { profile, loading: profileLoading } = useProfile();
   const { processing: decayProcessing } = useRankDecay();
   const [showRankOverview, setShowRankOverview] = useState(false);
+
+  // Scroll to top on mount to align with other pages
+  useEffect(() => {
+    const mainElement = document.querySelector('main');
+    if (mainElement) {
+      mainElement.scrollTop = 0;
+    }
+  }, []);
 
   // Get username with fallbacks: username -> email prefix -> "Traveler"
   const userName = profile?.username || user?.email?.split('@')[0] || 'Traveler';
