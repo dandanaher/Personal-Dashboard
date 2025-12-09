@@ -25,7 +25,7 @@ export function DayOverview({ className = '' }: DayOverviewProps) {
   // Fetch data from all features
   const { tasks, loading: tasksLoading } = useTasks(today);
   const { habits, loading: habitsLoading } = useHabits();
-  const { goals, loading: goalsLoading } = useGoals();
+  const { goals, loading: goalsLoading, habitData } = useGoals();
 
   // Fetch today's habit logs
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
@@ -201,24 +201,35 @@ export function DayOverview({ className = '' }: DayOverviewProps) {
             </p>
           ) : (
             <ul className="space-y-2">
-              {activeGoals.map((goal) => (
-                <li key={goal.id} className="space-y-0.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-secondary-700 dark:text-secondary-300 line-clamp-1">
-                      {goal.title}
-                    </span>
-                    <span className="text-xs text-secondary-500 dark:text-secondary-400 flex-shrink-0 ml-2">
-                      {goal.progress}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-secondary-200 dark:bg-secondary-700 rounded-full h-1.5">
-                    <div
-                      className="bg-primary-600 dark:bg-primary-500 h-1.5 rounded-full transition-all"
-                      style={{ width: `${goal.progress}%` }}
-                    />
-                  </div>
-                </li>
-              ))}
+              {activeGoals.map((goal) => {
+                // Calculate display progress (same logic as GoalCard)
+                const isHabitLinked = goal.linked_habit_id && goal.target_completions;
+                const hData = goal.linked_habit_id ? habitData.get(goal.linked_habit_id) : undefined;
+                const habitCompletions = hData?.completions || 0;
+
+                const displayProgress = isHabitLinked && goal.target_completions
+                  ? Math.min(100, Math.round((habitCompletions / goal.target_completions) * 100))
+                  : goal.completed ? 100 : goal.progress;
+
+                return (
+                  <li key={goal.id} className="space-y-0.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-secondary-700 dark:text-secondary-300 line-clamp-1">
+                        {goal.title}
+                      </span>
+                      <span className="text-xs text-secondary-500 dark:text-secondary-400 flex-shrink-0 ml-2">
+                        {displayProgress}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-secondary-200 dark:bg-secondary-700 rounded-full h-1.5">
+                      <div
+                        className="h-1.5 rounded-full transition-all"
+                        style={{ width: `${displayProgress}%`, backgroundColor: accentColor }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
