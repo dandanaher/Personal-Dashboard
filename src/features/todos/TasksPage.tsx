@@ -199,26 +199,26 @@ function TasksPageContent() {
   }, [upcomingTasks]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* View Mode Toggle */}
-      <Card variant="default" padding="md">
+      <Card variant="default" padding="sm">
         <div className="flex items-center justify-center gap-2">
           <Button
             variant={viewMode === 'overview' ? 'primary' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('overview')}
-            className="flex-1"
+            className="flex-1 text-xs"
           >
-            <List className="h-4 w-4 mr-2" />
+            <List className="h-3.5 w-3.5 mr-1.5" />
             Overview
           </Button>
           <Button
             variant={viewMode === 'day' ? 'primary' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('day')}
-            className="flex-1"
+            className="flex-1 text-xs"
           >
-            <CalendarDays className="h-4 w-4 mr-2" />
+            <CalendarDays className="h-3.5 w-3.5 mr-1.5" />
             Day View
           </Button>
         </div>
@@ -228,7 +228,7 @@ function TasksPageContent() {
         // Day View Mode
         <>
           {/* Date Navigation */}
-          <Card variant="default" padding="md">
+          <Card variant="default" padding="sm">
             <div className="flex items-center">
               {/* Left side - equal width container */}
               <div className="flex-1 flex items-center justify-start gap-1">
@@ -238,14 +238,14 @@ function TasksPageContent() {
                     size="sm"
                     onClick={goToPreviousDay}
                     aria-label="Previous day"
-                    className="p-2"
+                    className="p-1.5"
                   >
-                    <ChevronLeft className="h-5 w-5" />
+                    <ChevronLeft className="h-4 w-4" />
                   </Button>
                   {/* Red circle indicator for uncompleted tasks before selected date */}
                   {hasTasksBeforeSelectedDate && (
                     <span
-                      className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"
+                      className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full"
                       title="You have uncompleted tasks from previous days"
                     />
                   )}
@@ -266,7 +266,7 @@ function TasksPageContent() {
               </div>
 
               {/* Date display - centered */}
-              <h1 className="text-lg font-semibold text-secondary-900 dark:text-white text-center">
+              <h1 className="text-base font-semibold text-secondary-900 dark:text-white text-center">
                 {displayDate}
               </h1>
 
@@ -290,16 +290,16 @@ function TasksPageContent() {
                   size="sm"
                   onClick={goToNextDay}
                   aria-label="Next day"
-                  className="p-2"
+                  className="p-1.5"
                 >
-                  <ChevronRight className="h-5 w-5" />
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
           </Card>
 
           {/* Add Task Form */}
-          <Card variant="default" padding="md">
+          <Card variant="default" padding="sm">
             <AddTaskForm
               onAdd={handleAddDayTask}
               defaultDate={selectedDateString}
@@ -321,7 +321,7 @@ function TasksPageContent() {
           {/* Task count */}
           {!dayLoading && !dayError && dayTasks.length > 0 && (
             <div className="text-center">
-              <p className="text-sm text-secondary-400 dark:text-secondary-500">
+              <p className="text-xs text-secondary-400 dark:text-secondary-500">
                 {dayTasks.filter((t) => !t.completed).length} remaining
                 {dayTasks.filter((t) => t.completed).length > 0 &&
                   ` • ${dayTasks.filter((t) => t.completed).length} completed`}
@@ -333,7 +333,7 @@ function TasksPageContent() {
         // Overview Mode
         <>
           {/* Add Task Form for overview */}
-          <Card variant="default" padding="md">
+          <Card variant="default" padding="sm">
             <AddTaskForm onAdd={handleAddOverviewTask} defaultDate={null} showDateToggle={true} />
           </Card>
 
@@ -350,13 +350,13 @@ function TasksPageContent() {
 
           {/* Error state */}
           {allError && (
-            <Card variant="outlined" className="text-center py-8">
-              <AlertCircle className="h-10 w-10 mx-auto text-red-500 mb-3" />
-              <h3 className="text-lg font-semibold text-secondary-700 dark:text-secondary-300 mb-2">
+            <Card variant="outlined" className="text-center py-6">
+              <AlertCircle className="h-8 w-8 mx-auto text-red-500 mb-2" />
+              <h3 className="text-base font-semibold text-secondary-700 dark:text-secondary-300 mb-1">
                 Failed to load tasks
               </h3>
-              <p className="text-sm text-secondary-500 dark:text-secondary-400 mb-4">{allError}</p>
-              <Button variant="outline" onClick={refetchAll}>
+              <p className="text-xs text-secondary-500 dark:text-secondary-400 mb-3">{allError}</p>
+              <Button variant="outline" size="sm" onClick={refetchAll}>
                 Try Again
               </Button>
             </Card>
@@ -368,8 +368,8 @@ function TasksPageContent() {
               {/* Overdue Tasks */}
               {overdueTasks.length > 0 && (
                 <div className="space-y-2">
-                  <h2 className="text-sm font-semibold text-red-500 dark:text-red-400 px-1 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
+                  <h2 className="text-xs font-semibold text-red-500 dark:text-red-400 px-1 flex items-center gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5" />
                     Overdue ({overdueTasks.length})
                   </h2>
                   <Card variant="default" padding="none">
@@ -392,10 +392,10 @@ function TasksPageContent() {
 
               {/* Upcoming Tasks by date */}
               {upcomingTasks.length > 0 && (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {Object.entries(groupedUpcomingTasks).map(([date, tasks]) => (
                     <div key={date} className="space-y-2">
-                      <h2 className="text-sm font-semibold text-secondary-600 dark:text-secondary-400 px-1">
+                      <h2 className="text-xs font-semibold text-secondary-600 dark:text-secondary-400 px-1">
                         {formatDateHeader(date)}
                       </h2>
                       <Card variant="default" padding="none">
@@ -421,7 +421,7 @@ function TasksPageContent() {
               {/* Dateless/General Tasks */}
               {datelessTasks.length > 0 && (
                 <div className="space-y-2">
-                  <h2 className="text-sm font-semibold text-secondary-600 dark:text-secondary-400 px-1">
+                  <h2 className="text-xs font-semibold text-secondary-600 dark:text-secondary-400 px-1">
                     General Tasks ({datelessTasks.length})
                   </h2>
                   <Card variant="default" padding="none">
@@ -446,10 +446,10 @@ function TasksPageContent() {
               {upcomingTasks.length === 0 &&
                 datelessTasks.length === 0 &&
                 overdueTasks.length === 0 && (
-                  <Card variant="outlined" className="text-center py-12">
-                    <List className="h-12 w-12 mx-auto text-secondary-400 dark:text-secondary-500 mb-4" />
-                    <p className="text-secondary-500 dark:text-secondary-400 mb-2">No tasks yet</p>
-                    <p className="text-sm text-secondary-400 dark:text-secondary-500">
+                  <Card variant="outlined" className="text-center py-8">
+                    <List className="h-10 w-10 mx-auto text-secondary-400 dark:text-secondary-500 mb-3" />
+                    <p className="text-sm text-secondary-500 dark:text-secondary-400 mb-1">No tasks yet</p>
+                    <p className="text-xs text-secondary-400 dark:text-secondary-500">
                       Add a task above to get started!
                     </p>
                   </Card>
@@ -460,7 +460,7 @@ function TasksPageContent() {
                 datelessTasks.length > 0 ||
                 overdueTasks.length > 0) && (
                 <div className="text-center">
-                  <p className="text-sm text-secondary-400 dark:text-secondary-500">
+                  <p className="text-xs text-secondary-400 dark:text-secondary-500">
                     {overdueTasks.length + upcomingTasks.length + datelessTasks.length} total tasks
                     {overdueTasks.length > 0 && (
                       <span className="text-red-500"> • {overdueTasks.length} overdue</span>
@@ -474,13 +474,13 @@ function TasksPageContent() {
                 <div className="space-y-2">
                   <button
                     onClick={() => setShowCompletedTasks(!showCompletedTasks)}
-                    className="w-full flex items-center justify-between px-1 py-2 text-sm font-semibold text-secondary-600 dark:text-secondary-400 hover:text-secondary-800 dark:hover:text-secondary-200 transition-colors"
+                    className="w-full flex items-center justify-between px-1 py-1.5 text-xs font-semibold text-secondary-600 dark:text-secondary-400 hover:text-secondary-800 dark:hover:text-secondary-200 transition-colors"
                   >
                     <span>Completed Tasks ({completedTasks.length})</span>
                     {showCompletedTasks ? (
-                      <ChevronUp className="h-4 w-4" />
+                      <ChevronUp className="h-3.5 w-3.5" />
                     ) : (
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown className="h-3.5 w-3.5" />
                     )}
                   </button>
 

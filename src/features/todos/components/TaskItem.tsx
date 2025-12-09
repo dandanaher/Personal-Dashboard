@@ -117,7 +117,7 @@ export const TaskItem = memo(function TaskItem({
   // Edit mode rendering
   if (isEditing) {
     return (
-      <div className="bg-white dark:bg-secondary-800 rounded-lg p-4 space-y-3">
+      <div className="bg-white dark:bg-secondary-800 rounded-lg p-3 space-y-2">
         <Input
           type="text"
           value={editTitle}
@@ -125,7 +125,7 @@ export const TaskItem = memo(function TaskItem({
           onKeyDown={handleKeyDown}
           placeholder="Task title"
           autoFocus
-          className="w-full"
+          className="w-full text-sm"
         />
         <textarea
           value={editDescription}
@@ -134,19 +134,19 @@ export const TaskItem = memo(function TaskItem({
           placeholder="Description (optional)"
           rows={2}
           className="
-            w-full px-3 py-2 rounded-lg
+            w-full px-2.5 py-2 rounded-lg
             bg-white dark:bg-secondary-900
             border border-secondary-300 dark:border-secondary-700
             text-secondary-900 dark:text-white
             placeholder-secondary-400 dark:placeholder-secondary-500
             focus:outline-none focus:ring-2 focus:border-transparent
-            resize-none text-sm
+            resize-none text-xs
           "
           style={{ '--tw-ring-color': accentColor } as React.CSSProperties}
         />
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={handleCancelEdit} disabled={isSaving}>
-            <X className="h-4 w-4 mr-1" />
+        <div className="flex justify-end gap-1.5">
+          <Button variant="ghost" size="sm" onClick={handleCancelEdit} disabled={isSaving} className="text-xs">
+            <X className="h-3.5 w-3.5 mr-1" />
             Cancel
           </Button>
           <Button
@@ -154,8 +154,9 @@ export const TaskItem = memo(function TaskItem({
             onClick={handleSaveEdit}
             disabled={!editTitle.trim() || isSaving}
             isLoading={isSaving}
+            className="text-xs"
           >
-            <Save className="h-4 w-4 mr-1" />
+            <Save className="h-3.5 w-3.5 mr-1" />
             Save
           </Button>
         </div>
@@ -166,16 +167,16 @@ export const TaskItem = memo(function TaskItem({
   return (
     <div className="relative overflow-hidden rounded-lg">
       {/* Delete button revealed on swipe */}
-      <div className="absolute inset-y-0 right-0 flex items-center bg-red-500 px-4">
+      <div className="absolute inset-y-0 right-0 flex items-center bg-red-500 px-3">
         <Button
           variant="ghost"
           size="sm"
           onClick={handleDelete}
           disabled={isDeleting}
-          className="text-white hover:text-white hover:bg-red-600 p-2"
+          className="text-white hover:text-white hover:bg-red-600 p-1.5"
           aria-label="Delete task"
         >
-          <Trash2 className="h-5 w-5" />
+          <Trash2 className="h-4 w-4" />
         </Button>
       </div>
 
@@ -192,7 +193,7 @@ export const TaskItem = memo(function TaskItem({
         onTouchEnd={handleTouchEnd}
         onClick={() => showDelete && resetSwipe()}
       >
-        <div className="flex items-start gap-3 p-4">
+        <div className="flex items-start gap-2.5 p-3">
           {/* Checkbox */}
           <button
             onClick={(e) => {
@@ -202,7 +203,7 @@ export const TaskItem = memo(function TaskItem({
               }
             }}
             className={`
-              flex-shrink-0 w-6 h-6 rounded-full border-2
+              flex-shrink-0 w-5 h-5 rounded-full border-2
               flex items-center justify-center
               transition-all duration-200 ease-in-out
               focus:outline-none focus:ring-2 focus:ring-offset-2
@@ -217,14 +218,14 @@ export const TaskItem = memo(function TaskItem({
             }
             aria-label={task.completed ? 'Mark as incomplete' : 'Mark as complete'}
           >
-            {task.completed && <Check className="h-4 w-4" />}
+            {task.completed && <Check className="h-3.5 w-3.5" />}
           </button>
 
           {/* Task text */}
           <div className="flex-1 min-w-0">
             <p
               className={`
-                text-base transition-all duration-200
+                text-sm transition-all duration-200
                 ${
                   task.completed
                     ? 'text-secondary-400 dark:text-secondary-500 line-through'
@@ -237,7 +238,7 @@ export const TaskItem = memo(function TaskItem({
             {task.description && (
               <p
                 className={`
-                  text-sm mt-1 transition-all duration-200
+                  text-xs mt-0.5 transition-all duration-200
                   ${
                     task.completed
                       ? 'text-secondary-400 dark:text-secondary-600 line-through'
@@ -251,7 +252,7 @@ export const TaskItem = memo(function TaskItem({
             {showDate && (
               <p
                 className={`
-                  text-xs mt-1 transition-all duration-200
+                  text-xs mt-0.5 transition-all duration-200
                   ${
                     task.date &&
                     task.date < new Date().toISOString().split('T')[0] &&
@@ -276,10 +277,10 @@ export const TaskItem = memo(function TaskItem({
                   e.stopPropagation();
                   handleStartEdit();
                 }}
-                className="text-secondary-500 hover:text-secondary-700 dark:hover:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-700 p-2"
+                className="text-secondary-500 hover:text-secondary-700 dark:hover:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-700 p-1.5"
                 aria-label="Edit task"
               >
-                <Pencil className="h-4 w-4" />
+                <Pencil className="h-3.5 w-3.5" />
               </Button>
             )}
             <Button
@@ -290,10 +291,10 @@ export const TaskItem = memo(function TaskItem({
                 handleDelete();
               }}
               disabled={isDeleting}
-              className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 p-2"
+              className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 p-1.5"
               aria-label="Delete task"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
