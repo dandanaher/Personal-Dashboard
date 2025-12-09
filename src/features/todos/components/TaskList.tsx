@@ -10,6 +10,7 @@ interface TaskListProps {
   onToggle: (taskId: string) => void;
   onDelete: (taskId: string) => void;
   onEdit?: (taskId: string, updates: TaskUpdate) => Promise<boolean>;
+  onEditClick?: (task: Task) => void;
   onRetry: () => void;
 }
 
@@ -35,6 +36,7 @@ export function TaskList({
   onToggle,
   onDelete,
   onEdit,
+  onEditClick,
   onRetry,
 }: TaskListProps) {
   // Error state
@@ -86,7 +88,7 @@ export function TaskList({
       {/* Incomplete tasks */}
       {incompleteTasks.map((task) => (
         <div key={task.id} className="group">
-          <TaskItem task={task} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
+          <TaskItem task={task} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onEditClick={onEditClick} />
         </div>
       ))}
 
@@ -104,7 +106,7 @@ export function TaskList({
           )}
           {completedTasks.map((task) => (
             <div key={task.id} className="group">
-              <TaskItem task={task} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
+              <TaskItem task={task} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onEditClick={onEditClick} />
             </div>
           ))}
         </>

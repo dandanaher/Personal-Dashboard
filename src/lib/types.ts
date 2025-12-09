@@ -136,6 +136,8 @@ export interface Task {
   date: string | null;
   /** Order index for sorting tasks within a day */
   order_index: number;
+  /** User-defined task type/tag for categorization */
+  task_type: string | null;
   created_at: string;
   updated_at: string;
 }

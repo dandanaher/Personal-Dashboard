@@ -19,7 +19,7 @@ interface UseAllTasksReturn {
   hasPreviousUncompleted: boolean;
   loading: boolean;
   error: string | null;
-  addTask: (title: string, description?: string, date?: string | null) => Promise<boolean>;
+  addTask: (title: string, description?: string, date?: string | null, taskType?: string | null) => Promise<boolean>;
   toggleTask: (taskId: string) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   updateTask: (taskId: string, updates: TaskUpdate) => Promise<boolean>;
@@ -108,7 +108,7 @@ export function useAllTasks(): UseAllTasksReturn {
 
   // Add a new task with optimistic update
   const addTask = useCallback(
-    async (title: string, description?: string, date?: string | null): Promise<boolean> => {
+    async (title: string, description?: string, date?: string | null, taskType?: string | null): Promise<boolean> => {
       if (!user) return false;
 
       // Calculate new order_index
@@ -125,6 +125,7 @@ export function useAllTasks(): UseAllTasksReturn {
         completed: false,
         date: date ?? null,
         order_index: maxOrderIndex + 1,
+        task_type: taskType || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -142,6 +143,7 @@ export function useAllTasks(): UseAllTasksReturn {
             completed: false,
             date: date ?? null,
             order_index: maxOrderIndex + 1,
+            task_type: taskType || null,
           })
           .select()
           .single();

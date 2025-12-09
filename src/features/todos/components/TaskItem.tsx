@@ -10,6 +10,7 @@ interface TaskItemProps {
   onToggle: (taskId: string) => void;
   onDelete: (taskId: string) => void;
   onEdit?: (taskId: string, updates: TaskUpdate) => Promise<boolean>;
+  onEditClick?: (task: Task) => void;
   showDate?: boolean;
 }
 
@@ -18,9 +19,10 @@ export const TaskItem = memo(function TaskItem({
   onToggle,
   onDelete,
   onEdit,
+  onEditClick,
   showDate = false,
 }: TaskItemProps) {
-  const [showDelete, setShowDelete] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [translateX, setTranslateX] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
@@ -46,19 +48,19 @@ export const TaskItem = memo(function TaskItem({
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
       isSwiping.current = true;
       // Only allow left swipe (negative deltaX)
-      const newTranslateX = Math.min(0, Math.max(-80, deltaX));
+      const newTranslateX = Math.min(0, Math.max(-160, deltaX));
       setTranslateX(newTranslateX);
     }
   };
 
   const handleTouchEnd = () => {
-    // Snap to show delete button if swiped more than 40px
+    // Snap to show action buttons if swiped more than 40px
     if (translateX < -40) {
-      setTranslateX(-80);
-      setShowDelete(true);
+      setTranslateX(-160);
+      setShowActions(true);
     } else {
       setTranslateX(0);
-      setShowDelete(false);
+      setShowActions(false);
     }
   };
 
@@ -70,14 +72,21 @@ export const TaskItem = memo(function TaskItem({
 
   const resetSwipe = () => {
     setTranslateX(0);
-    setShowDelete(false);
+    setShowActions(false);
   };
 
   const handleStartEdit = () => {
-    setEditTitle(task.title);
-    setEditDescription(task.description || '');
-    setIsEditing(true);
-    resetSwipe();
+    if (onEditClick) {
+      // Use modal if onEditClick is provided
+      onEditClick(task);
+      resetSwipe();
+    } else if (onEdit) {
+      // Fall back to inline edit
+      setEditTitle(task.title);
+      setEditDescription(task.description || '');
+      setIsEditing(true);
+      resetSwipe();
+    }
   };
 
   const handleCancelEdit = () => {
@@ -166,18 +175,33 @@ export const TaskItem = memo(function TaskItem({
 
   return (
     <div className="relative overflow-hidden rounded-lg">
-      {/* Delete button revealed on swipe */}
-      <div className="absolute inset-y-0 right-0 flex items-center bg-red-500 px-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleDelete}
-          disabled={isDeleting}
-          className="text-white hover:text-white hover:bg-red-600 p-1.5"
-          aria-label="Delete task"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+      {/* Action buttons revealed on swipe */}
+      <div className="absolute inset-y-0 right-0 flex items-center">
+        {(onEditClick || onEdit) && (
+          <div className="h-full flex items-center bg-blue-500 px-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleStartEdit}
+              className="text-white hover:text-white hover:bg-blue-600 p-1.5"
+              aria-label="Edit task"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        <div className="h-full flex items-center bg-red-500 px-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="text-white hover:text-white hover:bg-red-600 p-1.5"
+            aria-label="Delete task"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Task content */}
@@ -185,20 +209,20 @@ export const TaskItem = memo(function TaskItem({
         className={`
           relative bg-white dark:bg-secondary-800
           transition-transform duration-200 ease-out
-          ${showDelete ? '' : 'hover:bg-secondary-50 dark:hover:bg-secondary-700'}
+          ${showActions ? '' : 'hover:bg-secondary-50 dark:hover:bg-secondary-700'}
         `}
         style={{ transform: `translateX(${translateX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onClick={() => showDelete && resetSwipe()}
+        onClick={() => showActions && resetSwipe()}
       >
         <div className="flex items-start gap-2.5 p-3">
           {/* Checkbox */}
           <button
             onClick={(e) => {
               e.stopPropagation();
-              if (!showDelete) {
+              if (!showActions) {
                 onToggle(task.id);
               }
             }}
@@ -269,7 +293,7 @@ export const TaskItem = memo(function TaskItem({
 
           {/* Desktop action buttons (visible on hover) */}
           <div className="hidden md:flex flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity gap-1">
-            {onEdit && (
+            {(onEditClick || onEdit) && (
               <Button
                 variant="ghost"
                 size="sm"
