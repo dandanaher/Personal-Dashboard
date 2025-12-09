@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProfileStats, useProfile, useRankDecay } from '@/features/gamification/hooks';
-import { RankDisplay, SettingsMenu, RankPreviewControls, RankOverview } from '@/features/gamification/components';
+import { RankDisplay, SettingsMenu, RankOverview } from '@/features/gamification/components';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { DayOverview } from '@/components/DayOverview';
 
@@ -10,7 +10,6 @@ function HomePage() {
   const { attributes, loading: statsLoading, error: statsError } = useProfileStats();
   const { profile, loading: profileLoading } = useProfile();
   const { processing: decayProcessing } = useRankDecay();
-  const [previewXP, setPreviewXP] = useState<number | null>(null);
   const [showRankOverview, setShowRankOverview] = useState(false);
 
   // Get username with fallbacks: username -> email prefix -> "Traveler"
@@ -62,15 +61,11 @@ function HomePage() {
           <SettingsMenu />
         </div>
 
-        {/* Dev Tool: Rank Preview Controls */}
-        <RankPreviewControls onPreviewChange={setPreviewXP} currentXP={totalXP} />
-
         {/* Rank Display */}
         <div className="mb-6">
           <RankDisplay
             totalXP={totalXP}
             isLoading={statsLoading || decayProcessing}
-            previewXP={previewXP}
             onViewRanks={() => setShowRankOverview(!showRankOverview)}
             showRanks={showRankOverview}
           />

@@ -6,7 +6,6 @@ import { ProgressBar } from '@/features/goals/components/ProgressBar';
 interface RankDisplayProps {
   totalXP: number;
   isLoading?: boolean;
-  previewXP?: number | null; // Optional XP override for preview mode
   onViewRanks?: () => void; // Optional callback for viewing all ranks
   showRanks?: boolean; // Whether ranks view is currently shown
 }
@@ -44,7 +43,7 @@ function getRankGlow(rankName: string, tier: 'I' | 'II' | 'III'): string {
 /**
  * Display user's current material rank with tier progression
  */
-export function RankDisplay({ totalXP, isLoading = false, previewXP = null, onViewRanks, showRanks = false }: RankDisplayProps) {
+export function RankDisplay({ totalXP, isLoading = false, onViewRanks, showRanks = false }: RankDisplayProps) {
   const { accentColor } = useThemeStore();
   if (isLoading) {
     return (
@@ -56,23 +55,12 @@ export function RankDisplay({ totalXP, isLoading = false, previewXP = null, onVi
     );
   }
 
-  // Use preview XP if provided, otherwise use actual XP
-  const displayXP = previewXP !== null ? previewXP : totalXP;
-  const rankInfo = getRankFromXP(displayXP);
-  const isPreviewMode = previewXP !== null;
+  const rankInfo = getRankFromXP(totalXP);
   const imagePath = getRankImagePath(rankInfo.rankName, rankInfo.tier);
   const glowEffect = getRankGlow(rankInfo.rankName, rankInfo.tier);
 
   return (
     <div className="pb-4">
-      {/* Preview Badge */}
-      {isPreviewMode && (
-        <div className="flex justify-center mb-2">
-          <span className="text-xs bg-yellow-200 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 px-2 py-0.5 rounded font-medium">
-            PREVIEW MODE
-          </span>
-        </div>
-      )}
 
       <div className="flex items-center gap-4">
         {/* Rank Image - Smaller and on the left */}
@@ -112,7 +100,7 @@ export function RankDisplay({ totalXP, isLoading = false, previewXP = null, onVi
             )}
           </div>
           <p className="text-sm text-secondary-600 dark:text-secondary-400 mb-3">
-            Tier {rankInfo.tier} • Level {rankInfo.level} • {displayXP.toLocaleString()} XP
+            Tier {rankInfo.tier} • Level {rankInfo.level} • {totalXP.toLocaleString()} XP
           </p>
 
           {/* Progress Bar */}
