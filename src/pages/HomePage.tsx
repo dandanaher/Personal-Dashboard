@@ -55,7 +55,7 @@ function HomePage() {
 
   return (
     <div className="min-h-full pb-20">
-      <div className="max-w-2xl mx-auto px-3 pt-safe-top pt-3 pb-3">
+      <div className="max-w-2xl mx-auto px-3">
         {/* Header with Settings */}
         <div className="flex items-start justify-between mb-4">
           <div>
