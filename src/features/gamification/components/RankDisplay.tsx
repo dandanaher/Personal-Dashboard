@@ -100,27 +100,37 @@ export function RankDisplay({ totalXP, isLoading = false, onViewRanks, showRanks
             )}
           </div>
           <p className="text-xs text-secondary-600 dark:text-secondary-400 mb-2">
-            Tier {rankInfo.tier} • Level {rankInfo.level} • {totalXP.toLocaleString()} XP
+            Tier {rankInfo.tier}
           </p>
 
           {/* Progress Bar */}
           {rankInfo.level < 30 && (
-            <div>
+            <div className="relative">
               <ProgressBar
                 progress={rankInfo.progressToNextTier}
                 color={rankInfo.color}
                 height="h-1.5"
                 showLabel={false}
               />
-              <p className="text-xs text-secondary-500 dark:text-secondary-400 mt-0.5">
-                {Math.round(rankInfo.progressToNextTier)}% to next tier
-              </p>
+              <div className="flex items-center justify-between mt-0.5">
+                <p className="text-xs text-secondary-500 dark:text-secondary-400">
+                  {Math.round(rankInfo.progressToNextTier)}% to next tier
+                </p>
+                <p className="text-xs text-secondary-600 dark:text-secondary-400 font-medium">
+                  {totalXP.toLocaleString()} XP
+                </p>
+              </div>
             </div>
           )}
           {rankInfo.level === 30 && (
-            <p className="text-xs font-semibold" style={{ color: rankInfo.color }}>
-              MAX RANK ACHIEVED
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold" style={{ color: rankInfo.color }}>
+                MAX RANK ACHIEVED
+              </p>
+              <p className="text-xs text-secondary-600 dark:text-secondary-400 font-medium">
+                {totalXP.toLocaleString()} XP
+              </p>
+            </div>
           )}
         </div>
       </div>

@@ -1,15 +1,32 @@
+import { useThemeStore } from '@/stores/themeStore';
+
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
 function LoadingSpinner({ size = 'md', className = '' }: LoadingSpinnerProps) {
+  const { stylePreset, accentColor } = useThemeStore();
+
   const sizeStyles = {
     sm: 'h-4 w-4',
     md: 'h-8 w-8',
     lg: 'h-12 w-12',
   };
 
+  // Retro Style Rendering - uses square border spinner with accent color
+  if (stylePreset === 'retro') {
+    return (
+      <div className={`flex items-center justify-center ${className}`}>
+        <div
+          className={`${sizeStyles[size]} border-2 border-t-transparent animate-spin`}
+          style={{ borderColor: `${accentColor} transparent transparent transparent` }}
+        />
+      </div>
+    );
+  }
+
+  // Modern (Default) Style Rendering
   return (
     <div className={`flex items-center justify-center ${className}`}>
       <svg

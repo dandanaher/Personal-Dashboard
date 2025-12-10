@@ -206,7 +206,10 @@ export function AddTaskModal({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add details about your task..."
               rows={3}
-              className="w-full px-3 py-2 rounded-lg border border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 text-secondary-900 dark:text-white placeholder-secondary-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+              className="w-full px-3 py-2 rounded-lg border border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 text-secondary-900 dark:text-white placeholder-secondary-400 focus:outline-none focus:ring-2 focus:border-transparent resize-none"
+              style={{
+                '--tw-ring-color': accentColor,
+              } as React.CSSProperties}
             />
           </div>
 
