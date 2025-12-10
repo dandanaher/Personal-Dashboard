@@ -54,7 +54,7 @@ const MODERN_VARS = {
   '--radius-lg': '0.5rem',
   '--radius-xl': '0.75rem',
   '--radius-2xl': '1rem',
-  '--radius-3xl': '1.5rem',
+  '--radius-3xl': '0.75rem',
   '--radius-full': '9999px',
   '--font-sans': 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
   '--color-light-bg': '#FAF8F5',

@@ -42,7 +42,7 @@ export function HabitCard({ habit, onEdit, onDelete, onCompletionChange }: Habit
   return (
     <>
       <Card
-        variant="default"
+        variant="outlined"
         padding="md"
         className="overflow-hidden cursor-pointer hover:bg-secondary-50 dark:hover:bg-secondary-800/50 transition-colors"
         onClick={handleCardClick}

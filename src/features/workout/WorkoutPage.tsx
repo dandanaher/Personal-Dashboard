@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Dumbbell, History, TrendingUp } from 'lucide-react';
+import { Dumbbell, History, TrendingUp, Plus } from 'lucide-react';
 import { useWorkoutTemplates, useWorkoutSessions } from './hooks';
 import type { WorkoutTemplate, Exercise } from '@/lib/types';
 import { useAuthStore } from '@/stores/authStore';
@@ -273,9 +273,12 @@ function WorkoutPageContent() {
       )}
 
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-secondary-900 dark:text-secondary-100">Workouts</h1>
-        <p className="text-secondary-600 dark:text-secondary-400">Track your strength training</p>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">Workouts</h1>
+        <Button size="sm" onClick={() => setShowBuilder(true)} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Add
+        </Button>
       </div>
 
       {/* Tabs */}

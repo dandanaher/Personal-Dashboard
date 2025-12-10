@@ -73,16 +73,6 @@ export default function TemplateList({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-medium text-secondary-500 dark:text-secondary-400 uppercase tracking-wide">
-          {templates.length} {templates.length === 1 ? 'Template' : 'Templates'}
-        </h2>
-        <Button onClick={onAdd} size="sm" variant="outline">
-          <Plus className="h-4 w-4 mr-1" />
-          New
-        </Button>
-      </div>
-
       {templates.map((template) => (
         <TemplateCard
           key={template.id}

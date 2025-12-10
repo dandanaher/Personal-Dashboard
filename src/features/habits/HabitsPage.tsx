@@ -118,8 +118,7 @@ function HabitsPage() {
         <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">Habits</h1>
         <Button size="sm" onClick={handleAddClick} className="gap-2">
           <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Add Habit</span>
-          <span className="sm:hidden">Add</span>
+          Add
         </Button>
       </div>
 

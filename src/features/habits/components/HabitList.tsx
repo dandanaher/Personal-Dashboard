@@ -17,7 +17,7 @@ interface HabitListProps {
 // Loading skeleton for habit card
 function HabitSkeleton() {
   return (
-    <Card variant="default" padding="md">
+    <Card variant="outlined" padding="md">
       <div className="animate-pulse">
         {/* Header skeleton */}
         <div className="flex items-center justify-between mb-4">

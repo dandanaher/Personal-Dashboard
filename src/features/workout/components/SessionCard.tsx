@@ -39,6 +39,7 @@ export default function SessionCard({ session, onView, onDelete }: SessionCardPr
 
   return (
     <Card
+      variant="outlined"
       className="p-4 cursor-pointer hover:bg-secondary-50 dark:hover:bg-secondary-800/50 transition-colors"
       onClick={() => onView(session)}
     >

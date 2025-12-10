@@ -357,7 +357,7 @@ function TasksPageContent() {
         // Day View Mode
         <>
           {/* Date Navigation */}
-          <Card variant="default" padding="sm">
+          <Card variant="outlined" padding="sm">
             <div className="flex items-center">
               {/* Left side - equal width container */}
               <div className="flex-1 flex items-center justify-start gap-1">
@@ -488,7 +488,7 @@ function TasksPageContent() {
                     <AlertCircle className="h-3.5 w-3.5" />
                     Overdue ({filteredTasks.overdue.length})
                   </h2>
-                  <Card variant="default" padding="none">
+                  <Card variant="outlined" padding="none">
                     <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
                       {filteredTasks.overdue.map((task) => (
                         <div key={task.id} className="group">
@@ -515,7 +515,7 @@ function TasksPageContent() {
                       <h2 className="text-xs font-semibold text-secondary-600 dark:text-secondary-400 px-1">
                         {formatDateHeader(date)}
                       </h2>
-                      <Card variant="default" padding="none">
+                      <Card variant="outlined" padding="none">
                         <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
                           {tasks.map((task) => (
                             <div key={task.id} className="group">
@@ -542,7 +542,7 @@ function TasksPageContent() {
                   <h2 className="text-xs font-semibold text-secondary-600 dark:text-secondary-400 px-1">
                     {viewMode === 'all' ? 'General Tasks' : viewMode} ({filteredTasks.dateless.length})
                   </h2>
-                  <Card variant="default" padding="none">
+                  <Card variant="outlined" padding="none">
                     <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
                       {filteredTasks.dateless.map((task) => (
                         <div key={task.id} className="group">
@@ -609,7 +609,7 @@ function TasksPageContent() {
                   </button>
 
                   {showCompletedTasks && (
-                    <Card variant="default" padding="none">
+                    <Card variant="outlined" padding="none">
                       <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
                         {filteredCompletedTasks.map((task) => (
                           <div key={task.id} className="group">

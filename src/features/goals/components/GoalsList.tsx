@@ -81,7 +81,7 @@ export function GoalsList({
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="h-40 bg-secondary-100 dark:bg-secondary-800 rounded-xl animate-pulse"
+            className="h-40 bg-secondary-100 dark:bg-secondary-800 rounded-3xl animate-pulse"
           />
         ))}
       </div>

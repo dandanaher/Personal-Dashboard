@@ -152,7 +152,7 @@ export const GoalCard = memo(function GoalCard({
 
   return (
     <Card
-      variant="default"
+      variant="outlined"
       padding="md"
       className={`transition-all duration-200 ${
         isOverdue

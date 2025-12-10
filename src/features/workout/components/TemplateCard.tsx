@@ -42,7 +42,7 @@ export default function TemplateCard({
     : null;
 
   return (
-    <Card className="p-4">
+    <Card variant="outlined" className="p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-secondary-900 dark:text-secondary-100 truncate">
