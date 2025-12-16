@@ -116,7 +116,7 @@ export function GoalsList({
               {activeGoals.length}
             </span>
           </h2>
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {activeGoals.map((goal) => {
               const hData = goal.linked_habit_id ? habitData.get(goal.linked_habit_id) : undefined;
               return (
@@ -157,7 +157,7 @@ export function GoalsList({
           </button>
 
           {showCompleted && (
-            <div id="completed-goals" className="space-y-3">
+            <div id="completed-goals" className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {completedGoals.map((goal) => {
                 const hData = goal.linked_habit_id
                   ? habitData.get(goal.linked_habit_id)

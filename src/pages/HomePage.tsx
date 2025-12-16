@@ -54,38 +54,28 @@ function HomePage() {
   const totalXP = attributes.reduce((sum, attr) => sum + attr.current_xp, 0);
 
   return (
-    <div className="min-h-full pb-20">
-      <div className="max-w-2xl mx-auto px-3">
-        {/* Header with Settings */}
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">
-              {greeting}
-            </h1>
-            <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-0.5">
-              {userName}
-            </p>
-          </div>
-          <SettingsMenu />
+    <div className="min-h-full">
+      {/* Header with Settings */}
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">{greeting}</h1>
+          <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-0.5">{userName}</p>
         </div>
-
-        {/* Rank Display */}
-        <div className="mb-4">
-          <RankDisplay
-            totalXP={totalXP}
-            isLoading={statsLoading || decayProcessing}
-            onViewRanks={() => setShowRankOverview(!showRankOverview)}
-            showRanks={showRankOverview}
-          />
-        </div>
-
-        {/* Conditional View */}
-        {showRankOverview ? (
-          <RankOverview totalXP={totalXP} />
-        ) : (
-          <DayOverview />
-        )}
+        <SettingsMenu />
       </div>
+
+      {/* Rank Display */}
+      <div className="mb-4">
+        <RankDisplay
+          totalXP={totalXP}
+          isLoading={statsLoading || decayProcessing}
+          onViewRanks={() => setShowRankOverview(!showRankOverview)}
+          showRanks={showRankOverview}
+        />
+      </div>
+
+      {/* Conditional View */}
+      {showRankOverview ? <RankOverview totalXP={totalXP} /> : <DayOverview />}
     </div>
   );
 }

@@ -75,11 +75,12 @@ export function DayOverview({ className = '' }: DayOverviewProps) {
   const habitLogsMap = new Map(habitLogs.map((log) => [log.habit_id, log.completed]));
 
   return (
-    <div className={`space-y-3 ${className}`}>
-      <h2 className="text-base font-bold text-secondary-900 dark:text-white">Day Overview</h2>
+    <div className={className}>
+      <h2 className="text-base font-bold text-secondary-900 dark:text-white mb-3">Day Overview</h2>
 
-      {/* Tasks Section */}
-      <Card padding="none" variant="outlined" className="overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Tasks Section */}
+        <Card padding="none" variant="outlined" className="overflow-hidden">
         <div className="px-3 py-2 border-b border-secondary-200 dark:border-secondary-700 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-secondary-900 dark:text-white">
             Tasks Today ({incompleteTasks.length})
@@ -233,7 +234,8 @@ export function DayOverview({ className = '' }: DayOverviewProps) {
             </ul>
           )}
         </div>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }

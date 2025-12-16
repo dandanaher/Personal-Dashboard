@@ -75,7 +75,7 @@ export function HabitList({
   // Loading state
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <HabitSkeleton />
         <HabitSkeleton />
       </div>
@@ -117,7 +117,7 @@ export function HabitList({
 
   // Render habits
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {habits.map((habit) => (
         <HabitCard
           key={habit.id}

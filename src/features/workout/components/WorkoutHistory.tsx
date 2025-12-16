@@ -42,7 +42,7 @@ export default function WorkoutHistory({
 
   if (loading) {
     return (
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <SessionSkeleton />
         <SessionSkeleton />
         <SessionSkeleton />
@@ -100,7 +100,7 @@ export default function WorkoutHistory({
           <h3 className="text-sm font-medium text-secondary-500 dark:text-secondary-400 uppercase tracking-wide mb-3">
             {date}
           </h3>
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {dateSessions.map((session) => (
               <SessionCard
                 key={session.id}

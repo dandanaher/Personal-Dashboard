@@ -45,7 +45,7 @@ export default function TemplateList({
 }: TemplateListProps) {
   if (loading) {
     return (
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <TemplateSkeleton />
         <TemplateSkeleton />
         <TemplateSkeleton />
@@ -72,7 +72,7 @@ export default function TemplateList({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {templates.map((template) => (
         <TemplateCard
           key={template.id}
