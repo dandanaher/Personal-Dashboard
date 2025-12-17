@@ -1,6 +1,6 @@
 import { memo, useMemo, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { CheckSquare, Target, Grid, Dumbbell, Home, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CheckSquare, Target, Grid, Dumbbell, Home, ChevronLeft, ChevronRight, StickyNote } from 'lucide-react';
 import { useThemeStore } from '@/stores/themeStore';
 import { useWorkoutSessionStore } from '@/stores/workoutSessionStore';
 import { useSidebarStore } from '@/stores/sidebarStore';
@@ -39,6 +39,11 @@ const navItems: NavItem[] = [
     label: 'Workout',
     icon: <Dumbbell className="h-5 w-5 flex-shrink-0" />,
   },
+  {
+    path: '/notes',
+    label: 'Notes',
+    icon: <StickyNote className="h-5 w-5 flex-shrink-0" />,
+  },
 ];
 
 const Sidebar = memo(function Sidebar() {
@@ -63,7 +68,7 @@ const Sidebar = memo(function Sidebar() {
 
   return (
     <aside
-      className={`hidden lg:flex flex-col min-h-screen bg-white/50 dark:bg-secondary-900/50 border-r border-secondary-200 dark:border-secondary-800 transition-all duration-300 ease-in-out ${
+      className={`hidden lg:flex flex-col min-h-screen bg-white dark:bg-secondary-900 border-r border-secondary-200 dark:border-secondary-800 transition-all duration-300 ease-in-out ${
         isCollapsed ? 'w-20' : 'w-64'
       }`}
     >

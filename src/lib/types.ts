@@ -393,3 +393,44 @@ export interface AttributeWithXP extends Attribute {
   level: number;
   progress: number;
 }
+
+// =============================================================================
+// Notes Canvas Types
+// =============================================================================
+
+/**
+ * Note table row.
+ * Represents a markdown note on the infinite canvas.
+ */
+export interface Note {
+  id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  /** X position on canvas */
+  position_x: number;
+  /** Y position on canvas */
+  position_y: number;
+  /** Hex color code for the note card */
+  color: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Note edge table row.
+ * Represents a connection between two notes on the canvas.
+ */
+export interface NoteEdge {
+  id: string;
+  user_id: string;
+  source_note_id: string;
+  target_note_id: string;
+  created_at: string;
+}
+
+// Type aliases for Note operations
+export type NoteInsert = Omit<Note, 'id' | 'created_at' | 'updated_at'>;
+export type NoteUpdate = Partial<Omit<Note, 'id' | 'created_at' | 'user_id'>>;
+export type NoteEdgeInsert = Omit<NoteEdge, 'id' | 'created_at'>;
+export type NoteEdgeUpdate = Partial<Omit<NoteEdge, 'id' | 'created_at' | 'user_id'>>

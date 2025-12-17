@@ -1,0 +1,124 @@
+import { useCallback, useMemo } from 'react';
+import ReactFlow, {
+  Background,
+  MiniMap,
+  Connection,
+  BackgroundVariant,
+  Panel,
+  useReactFlow,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+import { Plus, Crosshair } from 'lucide-react';
+import { useNotesStore } from '@/stores/notesStore';
+import { useThemeStore } from '@/stores/themeStore';
+import NoteNode from './NoteNode';
+
+// Custom node types
+const nodeTypes = {
+  noteNode: NoteNode,
+};
+
+// Canvas controls component (must be inside ReactFlowProvider)
+function CanvasControls() {
+  const { fitView } = useReactFlow();
+  const accentColor = useThemeStore((state) => state.accentColor);
+  const { createNote } = useNotesStore();
+
+  const handleAddNote = useCallback(() => {
+    createNote(Math.random() * 400 + 100, Math.random() * 300 + 100);
+  }, [createNote]);
+
+  const handleRecenter = useCallback(() => {
+    fitView({ padding: 0.2, duration: 200 });
+  }, [fitView]);
+
+  return (
+    <>
+      {/* Add Note Button */}
+      <Panel position="top-right" className="!m-4">
+        <button
+          onClick={handleAddNote}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 shadow-lg hover:bg-secondary-50 dark:hover:bg-secondary-700 transition-colors text-secondary-700 dark:text-secondary-200"
+          style={{ color: accentColor }}
+        >
+          <Plus className="h-5 w-5" />
+          <span className="font-medium">Add Note</span>
+        </button>
+      </Panel>
+
+      {/* Recenter Button */}
+      <Panel position="top-left" className="!m-4">
+        <button
+          onClick={handleRecenter}
+          className="p-2 rounded-xl bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 shadow-lg hover:bg-secondary-50 dark:hover:bg-secondary-700 transition-colors text-secondary-700 dark:text-secondary-200"
+          aria-label="Recenter view"
+        >
+          <Crosshair className="h-5 w-5" />
+        </button>
+      </Panel>
+    </>
+  );
+}
+
+function NotesCanvas() {
+  const accentColor = useThemeStore((state) => state.accentColor);
+  const { nodes, edges, onNodesChange, onEdgesChange, connectNotes } = useNotesStore();
+
+  const handleConnect = useCallback(
+    (connection: Connection) => {
+      connectNotes(connection);
+    },
+    [connectNotes]
+  );
+
+  // Memoize edge options
+  const defaultEdgeOptions = useMemo(
+    () => ({
+      style: { stroke: accentColor, strokeWidth: 2 },
+      animated: true,
+    }),
+    [accentColor]
+  );
+
+  return (
+    <div className="w-full h-full">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={handleConnect}
+        nodeTypes={nodeTypes}
+        defaultEdgeOptions={defaultEdgeOptions}
+        fitView
+        fitViewOptions={{ padding: 0.2 }}
+        minZoom={0.1}
+        maxZoom={2}
+        snapToGrid
+        snapGrid={[16, 16]}
+        deleteKeyCode={['Backspace', 'Delete']}
+        className="bg-secondary-50 dark:bg-secondary-950"
+        proOptions={{ hideAttribution: true }}
+      >
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={24}
+          size={1}
+          className="!bg-secondary-100 dark:!bg-secondary-900"
+          color="currentColor"
+        />
+
+        {/* MiniMap - desktop only */}
+        <MiniMap
+          className="!bg-white dark:!bg-secondary-800 !border-secondary-200 dark:!border-secondary-700 hidden lg:block"
+          nodeColor={(node: { data?: { color?: string } }) => node.data?.color || '#fff'}
+          maskColor="rgba(0, 0, 0, 0.1)"
+        />
+
+        <CanvasControls />
+      </ReactFlow>
+    </div>
+  );
+}
+
+export default NotesCanvas;

@@ -1,6 +1,6 @@
 import { memo, useMemo, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { CheckSquare, Target, Grid, Dumbbell, Home } from 'lucide-react';
+import { CheckSquare, Target, Grid, Dumbbell, Home, StickyNote } from 'lucide-react';
 import { useThemeStore } from '@/stores/themeStore';
 import { useWorkoutSessionStore } from '@/stores/workoutSessionStore';
 import { formatTime } from '@/features/workout/lib/workoutEngine';
@@ -37,6 +37,11 @@ const navItems: NavItem[] = [
     path: '/workout',
     label: 'Workout',
     icon: <Dumbbell className="h-5 w-5" />,
+  },
+  {
+    path: '/notes',
+    label: 'Notes',
+    icon: <StickyNote className="h-5 w-5" />,
   },
 ];
 

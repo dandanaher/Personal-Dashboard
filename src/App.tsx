@@ -17,6 +17,7 @@ const TasksPage = lazy(() => import('@/features/todos/TasksPage'));
 const GoalsPage = lazy(() => import('@/features/goals/GoalsPage'));
 const HabitsPage = lazy(() => import('@/features/habits/HabitsPage'));
 const WorkoutPage = lazy(() => import('@/features/workout/WorkoutPage'));
+const NotesPage = lazy(() => import('@/features/notes/NotesPage'));
 
 // Route preloading map for instant navigation
 const routePreloaders: Record<string, () => void> = {
@@ -25,6 +26,7 @@ const routePreloaders: Record<string, () => void> = {
   '/goals': () => import('@/features/goals/GoalsPage'),
   '/habits': () => import('@/features/habits/HabitsPage'),
   '/workout': () => import('@/features/workout/WorkoutPage'),
+  '/notes': () => import('@/features/notes/NotesPage'),
 };
 
 // Preload route on hover/focus for instant navigation
@@ -146,6 +148,7 @@ function App() {
               <Route path="/goals" element={<GoalsPage />} />
               <Route path="/habits" element={<HabitsPage />} />
               <Route path="/workout" element={<WorkoutPage />} />
+              <Route path="/notes" element={<NotesPage />} />
             </Route>
 
             {/* 404 route */}
