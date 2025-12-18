@@ -79,12 +79,23 @@ interface CanvasViewInnerProps {
 function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
   const accentColor = useThemeStore((state) => state.accentColor);
   const { nodes, edges, onNodesChange, onEdgesChange, connectNotes } = useNotesStore();
+  const { addTab } = useWorkspaceStore();
 
   const handleConnect = useCallback(
     (connection: Connection) => {
       connectNotes(connection);
     },
     [connectNotes]
+  );
+
+  // Handle double clicking a note node
+  const handleNodeDoubleClick = useCallback(
+    (_event: React.MouseEvent, node: any) => {
+      if (node.type === 'noteNode') {
+        addTab('note', node.id, node.data.title || 'Untitled');
+      }
+    },
+    [addTab]
   );
 
   // Memoize edge options
@@ -104,6 +115,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
+        onNodeDoubleClick={handleNodeDoubleClick}
         nodeTypes={nodeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         connectionMode={ConnectionMode.Loose}

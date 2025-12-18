@@ -36,15 +36,9 @@ interface WorkspaceActions {
 
 type WorkspaceStore = WorkspaceState & WorkspaceActions;
 
-const HOME_TAB: WorkspaceTab = {
-  id: 'home',
-  type: 'home',
-  title: 'Dashboard',
-};
-
 const initialState: WorkspaceState = {
-  tabs: [HOME_TAB],
-  activeTabId: 'home',
+  tabs: [],
+  activeTabId: '',
 };
 
 function generateTabId(): string {

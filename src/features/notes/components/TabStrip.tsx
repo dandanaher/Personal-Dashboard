@@ -20,7 +20,7 @@ export function TabStrip() {
   const accentColor = useThemeStore((state) => state.accentColor);
 
   return (
-    <div className="flex items-end gap-0.5 overflow-x-auto bg-secondary-100 dark:bg-secondary-800 px-2 pt-2 min-h-[42px] scrollbar-thin">
+    <div className="h-[60px] flex items-end gap-0.5 overflow-x-auto bg-secondary-100 dark:bg-secondary-900 px-2 border-b border-secondary-200 dark:border-secondary-800 scrollbar-thin">
       {tabs.map((tab) => {
         const isActive = tab.id === activeTabId;
         const isHome = tab.type === 'home';
@@ -31,11 +31,11 @@ export function TabStrip() {
             onClick={() => setActiveTab(tab.id)}
             className={`
               group relative flex items-center gap-2 px-3 py-2 rounded-t-lg text-sm font-medium
-              transition-colors duration-150 min-w-[100px] max-w-[200px]
+              transition-colors duration-150 min-w-[100px] max-w-[200px] border-t border-x
               ${
                 isActive
-                  ? 'bg-white dark:bg-secondary-900 text-secondary-900 dark:text-white border-t border-x border-secondary-200 dark:border-secondary-700'
-                  : 'bg-secondary-50 dark:bg-secondary-700/50 text-secondary-600 dark:text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-700 border-transparent'
+                  ? 'bg-secondary-50 dark:bg-black text-secondary-900 dark:text-white border-secondary-200 dark:border-secondary-800 border-b-secondary-50 dark:border-b-black -mb-[1px] z-10'
+                  : 'bg-transparent text-secondary-600 dark:text-secondary-400 hover:bg-secondary-200 dark:hover:bg-secondary-800 border-transparent'
               }
             `}
             style={
@@ -63,7 +63,7 @@ export function TabStrip() {
                   closeTab(tab.id);
                 }}
                 className={`
-                  ml-1 p-0.5 rounded hover:bg-secondary-200 dark:hover:bg-secondary-600
+                  ml-1 p-0.5 rounded hover:bg-secondary-200 dark:hover:bg-secondary-700
                   ${isActive ? 'opacity-60 hover:opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100'}
                   transition-opacity
                 `}

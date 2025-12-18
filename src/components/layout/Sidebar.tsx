@@ -74,7 +74,7 @@ const Sidebar = memo(function Sidebar() {
     >
       {/* Logo/Brand and Toggle */}
       <div
-        className="border-b border-secondary-200 dark:border-secondary-800 flex items-center transition-all duration-300 py-4"
+        className="h-[60px] border-b border-secondary-200 dark:border-secondary-800 flex items-center transition-all duration-300"
         style={{
           paddingLeft: '14px',
           paddingRight: '16px',

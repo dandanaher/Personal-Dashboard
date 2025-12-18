@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Plus,
   FileText,
@@ -10,7 +10,6 @@ import {
   MoreVertical,
   Trash2,
   Edit2,
-  GripVertical,
 } from 'lucide-react';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useThemeStore } from '@/stores/themeStore';
@@ -22,26 +21,33 @@ import { useFolders } from '../hooks/useFolders';
 import { LoadingSpinner } from '@/components/ui';
 import type { Note, Folder as FolderType, Canvas } from '@/lib/types';
 
-// Helper to organize notes by folder
-function organizeNotesByFolder(notes: Note[], folders: FolderType[]) {
+// Helper to organize notes by folder and canvas
+function organizeLibraryItems(notes: Note[], folders: FolderType[], canvases: Canvas[]) {
   const rootNotes: Note[] = [];
   const notesByFolder: Record<string, Note[]> = {};
+  const notesByCanvas: Record<string, Note[]> = {};
 
-  // Initialize folder buckets
+  // Initialize buckets
   folders.forEach((folder) => {
     notesByFolder[folder.id] = [];
+  });
+  canvases.forEach((canvas) => {
+    notesByCanvas[canvas.id] = [];
   });
 
   // Categorize notes
   notes.forEach((note) => {
-    if (note.folder_id && notesByFolder[note.folder_id]) {
+    // Priority: Canvas > Folder > Root
+    if (note.canvas_id && notesByCanvas[note.canvas_id]) {
+      notesByCanvas[note.canvas_id].push(note);
+    } else if (note.folder_id && notesByFolder[note.folder_id]) {
       notesByFolder[note.folder_id].push(note);
     } else {
       rootNotes.push(note);
     }
   });
 
-  return { rootNotes, notesByFolder };
+  return { rootNotes, notesByFolder, notesByCanvas };
 }
 
 // Folder tree item component
@@ -54,6 +60,8 @@ function FolderItem({
   onDelete,
   onAddNote,
   onNoteDrop,
+  onNoteRename,
+  onNoteDelete,
 }: {
   folder: FolderType;
   notes: Note[];
@@ -63,6 +71,8 @@ function FolderItem({
   onDelete: (folderId: string) => void;
   onAddNote: (folderId: string) => void;
   onNoteDrop: (noteId: string, folderId: string) => void;
+  onNoteRename: (note: Note) => void;
+  onNoteDelete: (noteId: string) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
@@ -197,6 +207,8 @@ function FolderItem({
               note={note}
               level={level + 1}
               onClick={() => onNoteClick(note)}
+              onRename={() => onNoteRename(note)}
+              onDelete={() => onNoteDelete(note.id)}
             />
           ))}
         </div>
@@ -210,11 +222,16 @@ function NoteItem({
   note,
   level = 0,
   onClick,
+  onRename,
+  onDelete,
 }: {
   note: Note;
   level?: number;
   onClick: () => void;
+  onRename: () => void;
+  onDelete: () => void;
 }) {
+  const [showMenu, setShowMenu] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
   const handleDragStart = (e: React.DragEvent) => {
@@ -228,46 +245,23 @@ function NoteItem({
     setIsDragging(false);
   };
 
-  return (
-    <button
-      onClick={onClick}
-      draggable
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 text-secondary-600 dark:text-secondary-400 text-sm transition-colors cursor-move ${
-        isDragging ? 'opacity-50' : ''
-      }`}
-      style={{ paddingLeft: `${level * 16 + 28}px` }}
-    >
-      <FileText className="h-4 w-4 flex-shrink-0" />
-      <span className="truncate flex-1 text-left">{note.title || 'Untitled'}</span>
-    </button>
-  );
-}
-
-// Canvas list item component
-function CanvasItem({
-  canvas,
-  onClick,
-  onRename,
-  onDelete,
-}: {
-  canvas: Canvas;
-  onClick: () => void;
-  onRename: () => void;
-  onDelete: () => void;
-}) {
-  const [showMenu, setShowMenu] = useState(false);
-  const accentColor = useThemeStore((state) => state.accentColor);
+  // Level 0 (root) uses 8px (px-2). Nested levels use indentation.
+  const paddingLeft = level === 0 ? '8px' : `${level * 16 + 8}px`;
 
   return (
     <div className="group relative flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors">
       <button
         onClick={onClick}
-        className="flex items-center gap-2 flex-1 min-w-0 text-secondary-600 dark:text-secondary-400 text-sm"
+        draggable
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        className={`flex items-center gap-2 flex-1 min-w-0 text-secondary-600 dark:text-secondary-400 text-sm cursor-move text-left ${
+          isDragging ? 'opacity-50' : ''
+        }`}
+        style={{ paddingLeft }}
       >
-        <Layout className="h-4 w-4 flex-shrink-0" style={{ color: accentColor }} />
-        <span className="truncate">{canvas.name}</span>
+        <FileText className="h-4 w-4 flex-shrink-0" />
+        <span className="truncate">{note.title || 'Untitled'}</span>
       </button>
 
       {/* Menu button */}
@@ -277,7 +271,7 @@ function CanvasItem({
           setShowMenu(!showMenu);
         }}
         className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-opacity"
-        aria-label="Canvas menu"
+        aria-label="Note menu"
       >
         <MoreVertical className="h-3.5 w-3.5 text-secondary-500" />
       </button>
@@ -322,22 +316,203 @@ function CanvasItem({
   );
 }
 
+// Canvas list item component
+function CanvasItem({
+  canvas,
+  notes,
+  level = 0,
+  onClick,
+  onRename,
+  onDelete,
+  onAddNote,
+  onNoteDrop,
+  onNoteClick,
+  onNoteRename,
+  onNoteDelete,
+}: {
+  canvas: Canvas;
+  notes: Note[];
+  level?: number;
+  onClick: () => void;
+  onRename: () => void;
+  onDelete: () => void;
+  onAddNote: (canvasId: string) => void;
+  onNoteDrop: (noteId: string, canvasId: string) => void;
+  onNoteClick: (note: Note) => void;
+  onNoteRename: (note: Note) => void;
+  onNoteDelete: (noteId: string) => void;
+}) {
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [showMenu, setShowMenu] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const accentColor = useThemeStore((state) => state.accentColor);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const noteId = e.dataTransfer.getData('noteId');
+    if (noteId) {
+      onNoteDrop(noteId, canvas.id);
+    }
+  };
+
+  return (
+    <div className="select-none">
+      {/* Canvas header */}
+      <div
+        className={`group relative flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors ${
+          isDragOver
+            ? 'bg-accent-100 dark:bg-accent-900/20 border-2 border-dashed'
+            : 'hover:bg-secondary-100 dark:hover:bg-secondary-800'
+        }`}
+        style={{
+          paddingLeft: `${level * 16 + 8}px`,
+          borderColor: isDragOver ? accentColor : 'transparent',
+        }}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
+            }}
+            className="text-secondary-400 hover:text-secondary-600 dark:hover:text-secondary-200"
+          >
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4 flex-shrink-0" />
+            ) : (
+              <ChevronRight className="h-4 w-4 flex-shrink-0" />
+            )}
+          </button>
+          
+          <button
+            onClick={onClick}
+            className="flex items-center gap-2 flex-1 min-w-0 text-secondary-600 dark:text-secondary-400 text-sm"
+          >
+            <Layout className="h-4 w-4 flex-shrink-0" style={{ color: accentColor }} />
+            <span className="truncate">{canvas.name}</span>
+          </button>
+        </div>
+
+        <span className="text-xs text-secondary-400">{notes.length}</span>
+
+        {/* Quick add note button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddNote(canvas.id);
+          }}
+          className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-opacity"
+          style={{ color: accentColor }}
+          aria-label="Add note to canvas"
+          title="Add note to canvas"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </button>
+
+        {/* Menu button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMenu(!showMenu);
+          }}
+          className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-opacity"
+          aria-label="Canvas menu"
+        >
+          <MoreVertical className="h-3.5 w-3.5 text-secondary-500" />
+        </button>
+
+        {/* Dropdown menu */}
+        {showMenu && (
+          <>
+            <div
+              className="fixed inset-0 z-10"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(false);
+              }}
+            />
+            <div className="absolute top-8 right-2 z-20 bg-white dark:bg-secondary-800 rounded-lg shadow-lg border border-secondary-200 dark:border-secondary-700 py-1 min-w-[120px]">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMenu(false);
+                  onRename();
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-secondary-700 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-700"
+              >
+                <Edit2 className="h-4 w-4" />
+                Rename
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMenu(false);
+                  onDelete();
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Canvas contents */}
+      {isExpanded && notes.length > 0 && (
+        <div className="mt-0.5">
+          {notes.map((note) => (
+            <NoteItem
+              key={note.id}
+              note={note}
+              level={level + 1}
+              onClick={() => onNoteClick(note)}
+              onRename={() => onNoteRename(note)}
+              onDelete={() => onNoteDelete(note.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function NotesLibrarySidebar() {
-  const { addTab } = useWorkspaceStore();
-  const { libraryNotes, fetchLibraryNotes, createNote } = useNotesStore();
+  const { addTab, findTabByEntity, closeTab } = useWorkspaceStore();
+  const { libraryNotes, fetchLibraryNotes, createNote, updateNoteContent, deleteNote } = useNotesStore();
   const { canvases, loading: canvasesLoading, createCanvas, deleteCanvas, updateCanvas } = useCanvases();
   const { folders, loading: foldersLoading, createFolder, updateFolder, deleteFolder } = useFolders();
   const accentColor = useThemeStore((state) => state.accentColor);
 
   const [renameCanvasId, setRenameCanvasId] = useState<string | null>(null);
   const [renameFolderId, setRenameFolderId] = useState<string | null>(null);
+  const [renameNoteId, setRenameNoteId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
   useEffect(() => {
     fetchLibraryNotes();
   }, [fetchLibraryNotes]);
 
-  const { rootNotes, notesByFolder } = organizeNotesByFolder(libraryNotes, folders);
+  const { rootNotes, notesByFolder, notesByCanvas } = organizeLibraryItems(libraryNotes, folders, canvases);
 
   const handleNoteClick = (note: Note) => {
     addTab('note', note.id, note.title || 'Untitled');
@@ -372,12 +547,36 @@ export function NotesLibrarySidebar() {
 
   const handleDeleteFolder = async (folderId: string) => {
     if (window.confirm('Delete this folder? Notes inside will be moved to root.')) {
+      // Unlink notes first to prevent deletion if DB cascades
+      // Use Supabase directly to ensure unlinking happened before folder deletion
+      const { user } = useAuthStore.getState();
+      if (user) {
+        // We can't batch update easily via hook, so we do it via supabase client
+        // Optimistically we know which notes are in folder
+        const notesInFolder = libraryNotes.filter(n => n.folder_id === folderId);
+        if (notesInFolder.length > 0) {
+            await supabase
+              .from('notes')
+              .update({ folder_id: null })
+              .in('id', notesInFolder.map(n => n.id))
+              .eq('user_id', user.id);
+        }
+      }
+      
       await deleteFolder(folderId);
+      await fetchLibraryNotes();
     }
   };
 
   const handleAddNoteToFolder = async (folderId: string) => {
     const noteId = await createNote({ canvasId: null, folderId, title: 'New Note' });
+    if (noteId) {
+      addTab('note', noteId, 'New Note');
+    }
+  };
+  
+  const handleAddNoteToCanvas = async (canvasId: string) => {
+    const noteId = await createNote({ canvasId, title: 'New Note' });
     if (noteId) {
       addTab('note', noteId, 'New Note');
     }
@@ -393,7 +592,11 @@ export function NotesLibrarySidebar() {
     try {
       const { error } = await supabase
         .from('notes')
-        .update({ folder_id: folderId, updated_at: new Date().toISOString() })
+        .update({ 
+          folder_id: folderId, 
+          canvas_id: null, // Move out of canvas if it was in one
+          updated_at: new Date().toISOString() 
+        })
         .eq('id', noteId)
         .eq('user_id', user.id);
 
@@ -403,16 +606,71 @@ export function NotesLibrarySidebar() {
       console.error('Failed to move note to folder:', error);
     }
   };
+  
+  const handleNoteDropToCanvas = async (noteId: string, canvasId: string) => {
+    const note = libraryNotes.find((n) => n.id === noteId);
+    if (!note) return;
+
+    const { user } = useAuthStore.getState();
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .update({ 
+          canvas_id: canvasId, 
+          folder_id: null, // Move out of folder if it was in one
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', noteId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      await fetchLibraryNotes();
+    } catch (error) {
+      console.error('Failed to move note to canvas:', error);
+    }
+  };
 
   const handleDeleteCanvas = async (id: string) => {
-    if (window.confirm('Delete this canvas? All notes on it will be deleted.')) {
+    if (window.confirm('Delete this canvas? Notes inside will be moved to root.')) {
+        // Unlink notes first
+      const { user } = useAuthStore.getState();
+      if (user) {
+        const notesInCanvas = libraryNotes.filter(n => n.canvas_id === id);
+        if (notesInCanvas.length > 0) {
+            await supabase
+              .from('notes')
+              .update({ canvas_id: null })
+              .in('id', notesInCanvas.map(n => n.id))
+              .eq('user_id', user.id);
+        }
+      }
+
       await deleteCanvas(id);
+      await fetchLibraryNotes();
     }
   };
 
   const handleRenameCanvas = (canvas: Canvas) => {
     setRenameCanvasId(canvas.id);
     setRenameValue(canvas.name);
+  };
+
+  const handleRenameNote = (note: Note) => {
+    setRenameNoteId(note.id);
+    setRenameValue(note.title || 'Untitled');
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (window.confirm('Delete this note?')) {
+      await deleteNote(noteId);
+      // Close tab if open
+      const tab = findTabByEntity('note', noteId);
+      if (tab) {
+        closeTab(tab.id);
+      }
+    }
   };
 
   const handleRenameSubmit = async () => {
@@ -424,10 +682,34 @@ export function NotesLibrarySidebar() {
       await updateFolder(renameFolderId, { name: renameValue.trim() });
       setRenameFolderId(null);
     }
+    if (renameNoteId && renameValue.trim()) {
+      const note = libraryNotes.find(n => n.id === renameNoteId);
+      if (note) {
+        await updateNoteContent(renameNoteId, renameValue.trim(), note.content);
+      }
+      setRenameNoteId(null);
+    }
     setRenameValue('');
   };
 
   const isLoading = canvasesLoading || foldersLoading;
+
+  // Unified sorted list of items
+  const sortedItems = [
+    ...folders
+      .filter((f) => !f.parent_id)
+      .map((f) => ({ type: 'folder' as const, data: f, created_at: f.created_at })),
+    ...rootNotes.map((n) => ({
+      type: 'note' as const,
+      data: n,
+      created_at: n.created_at,
+    })),
+    ...canvases.map((c) => ({
+      type: 'canvas' as const,
+      data: c,
+      created_at: c.created_at,
+    })),
+  ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
   if (isLoading) {
     return (
@@ -439,9 +721,9 @@ export function NotesLibrarySidebar() {
 
   return (
     <>
-      <div className="w-full border-b lg:border-b-0 flex flex-col overflow-hidden bg-white dark:bg-secondary-900 border-r border-secondary-200 dark:border-secondary-800">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-secondary-200 dark:border-secondary-800">
+      <div className="w-full h-full border-b lg:border-b-0 flex flex-col overflow-hidden bg-white dark:bg-secondary-900 border-r border-secondary-200 dark:border-secondary-800">
+        {/* Header - Fixed Height 60px */}
+        <div className="h-[60px] flex items-center justify-between px-4 border-b border-secondary-200 dark:border-secondary-800 flex-shrink-0">
           <h2 className="font-semibold text-secondary-900 dark:text-white">Notes</h2>
           <div className="flex items-center gap-1">
             <button
@@ -475,41 +757,58 @@ export function NotesLibrarySidebar() {
         </div>
 
         {/* List */}
-        <div className="flex-1 overflow-y-auto p-2">
-          {/* Folders */}
-          {folders
-            .filter((f) => !f.parent_id)
-            .map((folder) => (
-              <FolderItem
-                key={folder.id}
-                folder={folder}
-                notes={notesByFolder[folder.id] || []}
-                onNoteClick={handleNoteClick}
-                onRename={handleRenameFolder}
-                onDelete={handleDeleteFolder}
-                onAddNote={handleAddNoteToFolder}
-                onNoteDrop={handleNoteDrop}
-              />
-            ))}
-
-          {/* Root notes (not in any folder) */}
-          {rootNotes.map((note) => (
-            <NoteItem key={note.id} note={note} onClick={() => handleNoteClick(note)} />
-          ))}
-
-          {/* Canvases */}
-          {canvases.map((canvas) => (
-            <CanvasItem
-              key={canvas.id}
-              canvas={canvas}
-              onClick={() => handleCanvasClick(canvas)}
-              onRename={() => handleRenameCanvas(canvas)}
-              onDelete={() => handleDeleteCanvas(canvas.id)}
-            />
-          ))}
+        <div className="flex-1 overflow-y-auto p-2 pb-20">
+          {sortedItems.map((item) => {
+            if (item.type === 'folder') {
+              return (
+                <FolderItem
+                  key={item.data.id}
+                  folder={item.data}
+                  notes={notesByFolder[item.data.id] || []}
+                  onNoteClick={handleNoteClick}
+                  onRename={handleRenameFolder}
+                  onDelete={handleDeleteFolder}
+                  onAddNote={handleAddNoteToFolder}
+                  onNoteDrop={handleNoteDrop}
+                  onNoteRename={handleRenameNote}
+                  onNoteDelete={handleDeleteNote}
+                />
+              );
+            }
+            if (item.type === 'note') {
+              return (
+                <NoteItem
+                  key={item.data.id}
+                  note={item.data}
+                  level={0}
+                  onClick={() => handleNoteClick(item.data)}
+                  onRename={() => handleRenameNote(item.data)}
+                  onDelete={() => handleDeleteNote(item.data.id)}
+                />
+              );
+            }
+            if (item.type === 'canvas') {
+              return (
+                <CanvasItem
+                  key={item.data.id}
+                  canvas={item.data}
+                  notes={notesByCanvas[item.data.id] || []}
+                  onClick={() => handleCanvasClick(item.data)}
+                  onRename={() => handleRenameCanvas(item.data)}
+                  onDelete={() => handleDeleteCanvas(item.data.id)}
+                  onAddNote={handleAddNoteToCanvas}
+                  onNoteDrop={handleNoteDropToCanvas}
+                  onNoteClick={handleNoteClick}
+                  onNoteRename={handleRenameNote}
+                  onNoteDelete={handleDeleteNote}
+                />
+              );
+            }
+            return null;
+          })}
 
           {/* Empty state */}
-          {libraryNotes.length === 0 && canvases.length === 0 && (
+          {sortedItems.length === 0 && (
             <div className="text-center py-8 text-secondary-500 dark:text-secondary-400">
               <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">No notes or canvases yet</p>
@@ -519,11 +818,11 @@ export function NotesLibrarySidebar() {
       </div>
 
       {/* Rename Modal */}
-      {(renameCanvasId || renameFolderId) && (
+      {(renameCanvasId || renameFolderId || renameNoteId) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-secondary-800 rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
             <h3 className="text-lg font-semibold text-secondary-900 dark:text-white mb-4">
-              {renameCanvasId ? 'Rename Canvas' : 'Rename Folder'}
+              {renameCanvasId ? 'Rename Canvas' : renameFolderId ? 'Rename Folder' : 'Rename Note'}
             </h3>
             <input
               type="text"
@@ -534,6 +833,7 @@ export function NotesLibrarySidebar() {
                 if (e.key === 'Escape') {
                   setRenameCanvasId(null);
                   setRenameFolderId(null);
+                  setRenameNoteId(null);
                   setRenameValue('');
                 }
               }}
@@ -546,6 +846,7 @@ export function NotesLibrarySidebar() {
                 onClick={() => {
                   setRenameCanvasId(null);
                   setRenameFolderId(null);
+                  setRenameNoteId(null);
                   setRenameValue('');
                 }}
                 className="px-4 py-2 text-sm font-medium text-secondary-600 dark:text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-lg transition-colors"
