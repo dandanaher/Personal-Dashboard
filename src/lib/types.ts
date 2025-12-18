@@ -438,6 +438,10 @@ export interface Note {
   position_x: number;
   /** Y position on canvas */
   position_y: number;
+  /** Width of the note card */
+  width?: number | null;
+  /** Height of the note card */
+  height?: number | null;
   /** @deprecated Per-note color is no longer used (styling is theme-driven). */
   color?: string;
   /** Optional folder ID for organization */

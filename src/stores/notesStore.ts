@@ -67,6 +67,7 @@ interface NotesActions {
   fetchNote: (noteId: string) => Promise<Note | null>;
   createNote: (options?: CreateNoteOptions) => Promise<string | null>;
   updateNotePosition: (noteId: string, x: number, y: number) => void;
+  updateNoteSize: (noteId: string, width: number, height: number) => void;
   updateNoteContent: (noteId: string, title: string, content: string) => Promise<void>;
   deleteNote: (noteId: string) => Promise<void>;
   connectNotes: (connection: Connection) => Promise<void>;
@@ -89,6 +90,10 @@ function noteToNode(note: Note, onDoubleClick: (noteId: string) => void): Node<N
     id: note.id,
     type: 'noteNode',
     position: { x: note.position_x, y: note.position_y },
+    style: {
+      width: note.width ?? 256,
+      height: note.height ?? undefined,
+    },
     data: {
       id: note.id,
       title: note.title,
@@ -125,6 +130,25 @@ const debouncedPositionUpdate = debounce(
 
     if (error) {
       console.error('Failed to update note position:', error.message);
+    }
+  },
+  300
+);
+
+// Debounced size update function
+const debouncedSizeUpdate = debounce(
+  async (noteId: string, width: number, height: number) => {
+    const user = useAuthStore.getState().user;
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('notes')
+      .update({ width, height, updated_at: new Date().toISOString() })
+      .eq('id', noteId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Failed to update note size:', error.message);
     }
   },
   300
@@ -348,6 +372,20 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
 
     // Debounced database update
     debouncedPositionUpdate(noteId, x, y);
+  },
+
+  updateNoteSize: (noteId: string, width: number, height: number) => {
+    // Optimistically update the node style in state
+    set((state) => ({
+      nodes: state.nodes.map((node) =>
+        node.id === noteId
+          ? { ...node, style: { ...node.style, width, height } }
+          : node
+      ),
+    }));
+
+    // Debounced database update
+    debouncedSizeUpdate(noteId, width, height);
   },
 
   updateNoteContent: async (noteId: string, title: string, content: string) => {
@@ -576,6 +614,8 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       content: node.data.content,
       position_x: node.position.x,
       position_y: node.position.y,
+      width: (node.style?.width as number) || null,
+      height: (node.style?.height as number) || null,
       created_at: '',
       updated_at: '',
     } as Note;
