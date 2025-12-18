@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo, useState, useRef } from 'react';
 import ReactFlow, {
   Background,
   MiniMap,
@@ -7,27 +7,32 @@ import ReactFlow, {
   Panel,
   ConnectionMode,
   useReactFlow,
+  ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Plus, Crosshair } from 'lucide-react';
+import { Plus, Crosshair, Square } from 'lucide-react';
 import { useNotesStore } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useCanvases } from '../hooks/useCanvases';
 import { LoadingSpinner } from '@/components/ui';
 import NoteNode from './NoteNode';
+import GroupNode from './GroupNode';
 
 // Custom node types
 const nodeTypes = {
   noteNode: NoteNode,
+  groupNode: GroupNode,
 };
 
 interface CanvasControlsProps {
   canvasId: string;
+  isGrouping: boolean;
+  setIsGrouping: (isGrouping: boolean) => void;
 }
 
 // Canvas controls component (must be inside ReactFlowProvider)
-function CanvasControls({ canvasId }: CanvasControlsProps) {
+function CanvasControls({ canvasId, isGrouping, setIsGrouping }: CanvasControlsProps) {
   const { fitView } = useReactFlow();
   const accentColor = useThemeStore((state) => state.accentColor);
   const { createNote } = useNotesStore();
@@ -46,8 +51,8 @@ function CanvasControls({ canvasId }: CanvasControlsProps) {
 
   return (
     <>
-      {/* Add Note Button */}
-      <Panel position="top-right" className="!m-4">
+      {/* Top Right Controls */}
+      <Panel position="top-right" className="!m-4 flex flex-col gap-2">
         <button
           onClick={handleAddNote}
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 shadow-lg hover:bg-secondary-50 dark:hover:bg-secondary-700 transition-colors text-secondary-700 dark:text-secondary-200"
@@ -55,6 +60,20 @@ function CanvasControls({ canvasId }: CanvasControlsProps) {
         >
           <Plus className="h-5 w-5" />
           <span className="font-medium">Add Note</span>
+        </button>
+
+         {/* Grouping Toggle */}
+        <button 
+           onClick={() => setIsGrouping(!isGrouping)}
+           className={`p-2 rounded-xl border shadow-lg transition-colors self-end ${
+               isGrouping 
+               ? 'bg-secondary-100 dark:bg-secondary-700 text-accent border-accent' 
+               : 'bg-white dark:bg-secondary-800 border-secondary-200 dark:border-secondary-700 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700'
+           }`}
+           style={isGrouping ? { color: accentColor, borderColor: accentColor } : {}}
+           title="Create Group (Drag to select)"
+        >
+            <Square className="h-5 w-5" />
         </button>
       </Panel>
 
@@ -78,8 +97,13 @@ interface CanvasViewInnerProps {
 
 function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
   const accentColor = useThemeStore((state) => state.accentColor);
-  const { nodes, edges, onNodesChange, onEdgesChange, connectNotes } = useNotesStore();
+  const { nodes, edges, onNodesChange, onEdgesChange, connectNotes, createGroup } = useNotesStore();
   const { addTab } = useWorkspaceStore();
+  const { screenToFlowPosition } = useReactFlow();
+
+  const [isGrouping, setIsGrouping] = useState(false);
+  const [selectionRect, setSelectionRect] = useState<{x: number, y: number, width: number, height: number} | null>(null);
+  const startPosRef = useRef<{x: number, y: number} | null>(null);
 
   const handleConnect = useCallback(
     (connection: Connection) => {
@@ -107,8 +131,66 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     [accentColor]
   );
 
+  // Grouping handlers
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+      if (!isGrouping) return;
+      startPosRef.current = { x: e.clientX, y: e.clientY };
+      setSelectionRect({ x: e.clientX, y: e.clientY, width: 0, height: 0 });
+  }, [isGrouping]);
+
+  const onMouseMove = useCallback((e: React.MouseEvent) => {
+      if (!isGrouping || !startPosRef.current) return;
+      
+      const startX = startPosRef.current.x;
+      const startY = startPosRef.current.y;
+      const currentX = e.clientX;
+      const currentY = e.clientY;
+      
+      setSelectionRect({
+          x: Math.min(startX, currentX),
+          y: Math.min(startY, currentY),
+          width: Math.abs(currentX - startX),
+          height: Math.abs(currentY - startY)
+      });
+  }, [isGrouping]);
+
+  const onMouseUp = useCallback(async (e: React.MouseEvent) => {
+      if (!isGrouping || !startPosRef.current) return;
+      
+      const start = startPosRef.current;
+      const end = { x: e.clientX, y: e.clientY };
+      
+      // Calculate Flow bounds
+      // We must check if screenToFlowPosition is available (it should be if initialized)
+      // If the rect is tiny, ignore
+      if (Math.abs(end.x - start.x) < 10 && Math.abs(end.y - start.y) < 10) {
+           setSelectionRect(null);
+           startPosRef.current = null;
+           return;
+      }
+
+      const startFlow = screenToFlowPosition(start);
+      const endFlow = screenToFlowPosition(end);
+      
+      const flowBounds = {
+          x: Math.min(startFlow.x, endFlow.x),
+          y: Math.min(startFlow.y, endFlow.y),
+          width: Math.abs(endFlow.x - startFlow.x),
+          height: Math.abs(endFlow.y - startFlow.y)
+      };
+      
+      if (flowBounds.width > 50 && flowBounds.height > 50) {
+          await createGroup(flowBounds);
+          setIsGrouping(false);
+      }
+      
+      setSelectionRect(null);
+      startPosRef.current = null;
+  }, [isGrouping, screenToFlowPosition, createGroup]);
+
+
   return (
-    <div className="w-full h-full">
+    <div className={`w-full h-full relative ${isGrouping ? 'cursor-crosshair' : ''}`}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -144,8 +226,32 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
           maskColor="rgba(0, 0, 0, 0.1)"
         />
 
-        <CanvasControls canvasId={canvasId} />
+        <CanvasControls canvasId={canvasId} isGrouping={isGrouping} setIsGrouping={setIsGrouping} />
       </ReactFlow>
+
+      {/* Grouping Overlay */}
+      {isGrouping && (
+          <div 
+             className="absolute inset-0 z-50"
+             onMouseDown={onMouseDown}
+             onMouseMove={onMouseMove}
+             onMouseUp={onMouseUp}
+          >
+              {selectionRect && (
+                  <div 
+                      className="fixed border-2 border-accent bg-accent/10 pointer-events-none"
+                      style={{
+                          left: selectionRect.x,
+                          top: selectionRect.y,
+                          width: selectionRect.width,
+                          height: selectionRect.height,
+                          borderColor: accentColor,
+                          backgroundColor: `${accentColor}1A`
+                      }}
+                  />
+              )}
+          </div>
+      )}
     </div>
   );
 }
@@ -210,7 +316,9 @@ export function CanvasView({ canvasId }: CanvasViewProps) {
 
   return (
     <div className="h-full w-full relative">
-      <CanvasViewInner canvasId={canvasId} />
+       <ReactFlowProvider>
+          <CanvasViewInner canvasId={canvasId} />
+       </ReactFlowProvider>
       {/* Note editor overlay is handled by the parent NotesPage */}
     </div>
   );

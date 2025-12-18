@@ -12,21 +12,30 @@ import {
 } from 'reactflow';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
-import type { Note, NoteEdge } from '@/lib/types';
+import { useThemeStore } from '@/stores/themeStore';
+import type { Note, NoteEdge, CanvasGroup } from '@/lib/types';
 
-// Debounce utility
-function debounce<Args extends unknown[]>(
-  fn: (...args: Args) => void | Promise<void>,
+// Per-key debounce utility
+function debounceMap(
   delay: number
-): (...args: Args) => void {
-  let timeoutId: ReturnType<typeof setTimeout>;
-  return (...args: Args) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => {
-      void fn(...args);
+): (key: string, fn: () => void | Promise<void>) => void {
+  const timeouts = new Map<string, ReturnType<typeof setTimeout>>();
+  return (key: string, fn: () => void | Promise<void>) => {
+    if (timeouts.has(key)) {
+      clearTimeout(timeouts.get(key));
+    }
+    const timeoutId = setTimeout(() => {
+      timeouts.delete(key);
+      void fn();
     }, delay);
+    timeouts.set(key, timeoutId);
   };
 }
+
+const positionUpdateDebouncer = debounceMap(300);
+const sizeUpdateDebouncer = debounceMap(300);
+const groupPositionUpdateDebouncer = debounceMap(300);
+const groupSizeUpdateDebouncer = debounceMap(300);
 
 // Note data stored in ReactFlow node
 export interface NoteNodeData {
@@ -37,8 +46,9 @@ export interface NoteNodeData {
 }
 
 interface NotesState {
-  nodes: Node<NoteNodeData>[];
+  nodes: Node<NoteNodeData | any>[];
   edges: Edge[];
+  groups: CanvasGroup[];
   selectedNoteId: string | null;
   loading: boolean;
   error: string | null;
@@ -80,6 +90,11 @@ interface NotesActions {
   setCurrentCanvasId: (canvasId: string | null) => void;
   /** Clear canvas state when switching away */
   clearCanvasState: () => void;
+  
+  // Group actions
+  createGroup: (bounds: { x: number, y: number, width: number, height: number }) => Promise<void>;
+  updateGroup: (id: string, updates: Partial<CanvasGroup>) => Promise<void>;
+  deleteGroup: (id: string) => Promise<void>;
 }
 
 type NotesStore = NotesState & NotesActions;
@@ -116,48 +131,11 @@ function noteEdgeToEdge(noteEdge: NoteEdge): Edge {
   };
 }
 
-// Debounced position update function
-const debouncedPositionUpdate = debounce(
-  async (noteId: string, x: number, y: number) => {
-    const user = useAuthStore.getState().user;
-    if (!user) return;
-
-    const { error } = await supabase
-      .from('notes')
-      .update({ position_x: x, position_y: y, updated_at: new Date().toISOString() })
-      .eq('id', noteId)
-      .eq('user_id', user.id);
-
-    if (error) {
-      console.error('Failed to update note position:', error.message);
-    }
-  },
-  300
-);
-
-// Debounced size update function
-const debouncedSizeUpdate = debounce(
-  async (noteId: string, width: number, height: number) => {
-    const user = useAuthStore.getState().user;
-    if (!user) return;
-
-    const { error } = await supabase
-      .from('notes')
-      .update({ width, height, updated_at: new Date().toISOString() })
-      .eq('id', noteId)
-      .eq('user_id', user.id);
-
-    if (error) {
-      console.error('Failed to update note size:', error.message);
-    }
-  },
-  300
-);
-
 export const useNotesStore = create<NotesStore>((set, get) => ({
   // State
   nodes: [],
   edges: [],
+  groups: [],
   selectedNoteId: null,
   loading: false,
   error: null,
@@ -170,7 +148,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
   },
 
   clearCanvasState: () => {
-    set({ nodes: [], edges: [], currentCanvasId: null });
+    set({ nodes: [], edges: [], groups: [], currentCanvasId: null });
   },
 
   fetchCanvasNotes: async (canvasId: string) => {
@@ -180,7 +158,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     set({ loading: true, error: null, currentCanvasId: canvasId });
 
     try {
-      // Fetch notes for this canvas
+      // Fetch notes
       const { data: notes, error: notesError } = await supabase
         .from('notes')
         .select('*')
@@ -190,7 +168,16 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
 
       if (notesError) throw notesError;
 
-      // Fetch edges for notes in this canvas
+      // Fetch groups
+      const { data: groups, error: groupsError } = await supabase
+        .from('canvas_groups')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('canvas_id', canvasId);
+        
+      if (groupsError) throw groupsError;
+
+      // Fetch edges
       const noteIds = (notes || []).map((n) => n.id);
       let noteEdges: NoteEdge[] = [];
 
@@ -209,10 +196,38 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
         get().setSelectedNoteId(noteId);
       };
 
-      const nodes = (notes || []).map((note) => noteToNode(note as Note, onDoubleClick));
+      // Process nodes
+      const flowNodes = (notes || []).map((note) => {
+          const node = noteToNode(note as Note, onDoubleClick);
+          node.zIndex = 10; // Ensure notes are above groups
+          
+          if (note.group_id) {
+              const parentGroup = groups?.find(g => g.id === note.group_id);
+              if (parentGroup) {
+                  node.parentNode = note.group_id;
+                  node.extent = 'parent';
+                  // Calculate relative position
+                  node.position = {
+                      x: note.position_x - parentGroup.position_x,
+                      y: note.position_y - parentGroup.position_y
+                  };
+              }
+          }
+          return node;
+      });
+      
+      const groupNodes = (groups || []).map(group => ({
+        id: group.id,
+        type: 'groupNode',
+        position: { x: group.position_x, y: group.position_y },
+        style: { width: group.width, height: group.height },
+        data: { label: group.label, color: group.color },
+        zIndex: 0
+      }));
+
       const edges = noteEdges.map((edge) => noteEdgeToEdge(edge));
 
-      set({ nodes, edges, loading: false });
+      set({ nodes: [...groupNodes, ...flowNodes], edges, groups: (groups || []) as CanvasGroup[], loading: false });
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Failed to fetch canvas notes',
@@ -344,6 +359,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
         };
 
         const newNode = noteToNode(createdNote, onDoubleClick);
+        newNode.zIndex = 10;
         set((state) => ({
           nodes: [...state.nodes, newNode],
         }));
@@ -371,7 +387,36 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     }));
 
     // Debounced database update
-    debouncedPositionUpdate(noteId, x, y);
+    positionUpdateDebouncer(noteId, async () => {
+        const user = useAuthStore.getState().user;
+        if (!user) return;
+        
+        // Re-read state to ensure we have latest parent info
+        const state = useNotesStore.getState();
+        const node = state.nodes.find(n => n.id === noteId);
+        
+        // x and y passed in are relative if parentNode exists (ReactFlow behavior)
+        let absX = x;
+        let absY = y;
+        
+        if (node && node.parentNode) {
+            const parent = state.nodes.find(n => n.id === node.parentNode);
+            if (parent) {
+                absX += parent.position.x;
+                absY += parent.position.y;
+            }
+        }
+    
+        const { error } = await supabase
+          .from('notes')
+          .update({ position_x: absX, position_y: absY, updated_at: new Date().toISOString() })
+          .eq('id', noteId)
+          .eq('user_id', user.id);
+    
+        if (error) {
+          console.error('Failed to update note position:', error.message);
+        }
+    });
   },
 
   updateNoteSize: (noteId: string, width: number, height: number) => {
@@ -385,7 +430,20 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     }));
 
     // Debounced database update
-    debouncedSizeUpdate(noteId, width, height);
+    sizeUpdateDebouncer(noteId, async () => {
+        const user = useAuthStore.getState().user;
+        if (!user) return;
+    
+        const { error } = await supabase
+          .from('notes')
+          .update({ width, height, updated_at: new Date().toISOString() })
+          .eq('id', noteId)
+          .eq('user_id', user.id);
+    
+        if (error) {
+          console.error('Failed to update note size:', error.message);
+        }
+    });
   },
 
   updateNoteContent: async (noteId: string, title: string, content: string) => {
@@ -566,19 +624,306 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       void get().fetchNotes();
     }
   },
+  
+  // Group Actions Implementation
+  
+  createGroup: async (bounds) => {
+    const { currentCanvasId, nodes } = get();
+    const user = useAuthStore.getState().user;
+    const accentColor = useThemeStore.getState().accentColor;
+    if (!user || !currentCanvasId) return;
+
+    // 1. Optimistic Update
+    const tempId = crypto.randomUUID();
+    
+    const newGroup = {
+      id: tempId,
+      user_id: user.id,
+      canvas_id: currentCanvasId,
+      label: 'New Group',
+      position_x: bounds.x,
+      position_y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+      color: accentColor,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    // Find nodes inside bounds
+    const notesInside = nodes.filter(n => 
+        n.type === 'noteNode' && 
+        !n.parentNode && 
+        n.position.x >= bounds.x &&
+        n.position.x + (n.width || 256) <= bounds.x + bounds.width &&
+        n.position.y >= bounds.y &&
+        n.position.y + (n.height || 100) <= bounds.y + bounds.height
+    );
+
+    const notesInsideIds = notesInside.map(n => n.id);
+
+    // Create the group node
+    const newGroupNode: Node = {
+      id: tempId,
+      type: 'groupNode',
+      position: { x: bounds.x, y: bounds.y },
+      style: { width: bounds.width, height: bounds.height },
+      data: { label: 'New Group', color: accentColor },
+      zIndex: 0
+    };
+
+    // Update state immediately
+    set(state => ({
+      groups: [...state.groups, newGroup],
+      nodes: [
+        ...state.nodes.map(n => {
+          if (notesInsideIds.includes(n.id)) {
+            return {
+              ...n,
+              parentNode: tempId,
+              extent: 'parent' as const,
+              position: {
+                x: n.position.x - bounds.x,
+                y: n.position.y - bounds.y
+              }
+            };
+          }
+          return n;
+        }),
+        newGroupNode
+      ]
+    }));
+
+    // 2. DB Operations
+    const { data: dbGroup, error } = await supabase
+        .from('canvas_groups')
+        .insert({
+          user_id: user.id,
+          canvas_id: currentCanvasId,
+          position_x: bounds.x,
+          position_y: bounds.y,
+          width: bounds.width,
+          height: bounds.height,
+          label: 'New Group',
+          color: accentColor
+        })
+        .select()
+        .single();
+
+    if (error || !dbGroup) {
+        console.error('Failed to create group:', error);
+        set({ error: error?.message || 'Failed to create group in database' });
+        
+        // Revert optimistic update
+        set(state => ({
+            groups: state.groups.filter(g => g.id !== tempId),
+            nodes: state.nodes.filter(n => n.id !== tempId).map(n => {
+                if (n.parentNode === tempId) {
+                    // Restore absolute position
+                    return {
+                        ...n,
+                        parentNode: undefined,
+                        extent: undefined,
+                        position: {
+                            x: n.position.x + bounds.x,
+                            y: n.position.y + bounds.y
+                        }
+                    };
+                }
+                return n;
+            })
+        }));
+        return;
+    }
+
+    // 3. Update nodes in DB
+    if (notesInside.length > 0) {
+        const { error: updateError } = await supabase
+        .from('notes')
+        .update({ group_id: dbGroup.id })
+        .in('id', notesInsideIds);
+        
+        if (updateError) {
+             console.error('Failed to update notes group_id:', updateError);
+        }
+    }
+
+    // 4. Reconcile IDs (replace tempId with dbGroup.id in store)
+    set(state => ({
+        groups: state.groups.map(g => g.id === tempId ? dbGroup : g),
+        nodes: state.nodes.map(n => {
+            if (n.id === tempId) {
+                return { ...n, id: dbGroup.id };
+            }
+            if (n.parentNode === tempId) {
+                return { ...n, parentNode: dbGroup.id };
+            }
+            return n;
+        })
+    }));
+  },
+
+  updateGroup: async (id, updates) => {
+     const user = useAuthStore.getState().user;
+     if (!user) return;
+     
+     // Optimistic update
+     set(state => ({
+         groups: state.groups.map(g => g.id === id ? { ...g, ...updates } : g),
+         nodes: state.nodes.map(n => n.id === id ? { ...n, data: { ...n.data, ...updates }, style: { ...n.style, ...(updates.width ? { width: updates.width } : {}), ...(updates.height ? { height: updates.height } : {}) } } : n)
+     }));
+     
+     const { error } = await supabase.from('canvas_groups').update(updates).eq('id', id);
+     if (error) console.error('Failed to update group', error);
+  },
+  
+  deleteGroup: async (id) => {
+     const user = useAuthStore.getState().user;
+     if (!user) return;
+     
+     const state = get();
+     const groupNode = state.nodes.find(n => n.id === id);
+     if (!groupNode) return;
+     
+     const children = state.nodes.filter(n => n.parentNode === id);
+     
+     // Calculate absolute positions for children to update optimistic state correctly
+     const updatedChildren = children.map(child => ({
+         ...child,
+         parentNode: undefined,
+         extent: undefined,
+         position: {
+             x: child.position.x + groupNode.position.x,
+             y: child.position.y + groupNode.position.y
+         },
+         data: { ...child.data }
+     }));
+     
+     set(state => ({
+         groups: state.groups.filter(g => g.id !== id),
+         nodes: state.nodes.filter(n => n.id !== id).map(n => {
+             const updatedChild = updatedChildren.find(c => c.id === n.id);
+             return updatedChild || n;
+         })
+     }));
+     
+     // DB Update
+     const { error } = await supabase.from('canvas_groups').delete().eq('id', id);
+     if (error) console.error('Failed to delete group', error);
+     
+     // DB update for children's positions to match the visual change (they shouldn't jump back)
+     // Since we removed them from group, they need to have their absolute positions stored in DB.
+     // But wait! We've been storing absolute positions in DB all along. 
+     // So when we delete the group, the children still have their absolute positions in DB...
+     // UNLESS the group moved.
+     // If group moved, we updated children's positions in DB? 
+     // In `onNodesChange`, we implemented logic to update children's absolute position when group moves.
+     // So, if that logic works, then the DB already has correct absolute positions for children.
+     // So we don't need to do anything else for children in DB.
+  },
 
   onNodesChange: (changes: NodeChange[]) => {
     const nextNodes = applyNodeChanges(changes, get().nodes);
     set({ nodes: nextNodes });
 
-    // Handle position changes after drag ends
     changes.forEach((change: NodeChange) => {
       if (change.type === 'position' && change.dragging === false) {
         const updatedNode = nextNodes.find((node) => node.id === change.id);
         if (!updatedNode) return;
+        
+        if (updatedNode.type === 'groupNode') {
+            groupPositionUpdateDebouncer(change.id, async () => {
+                const user = useAuthStore.getState().user;
+                if (!user) return;
 
-        // React Flow often omits `change.position` on drag stop. Use the updated state instead.
-        debouncedPositionUpdate(change.id, updatedNode.position.x, updatedNode.position.y);
+                const { error } = await supabase
+                    .from('canvas_groups')
+                    .update({ position_x: updatedNode.position.x, position_y: updatedNode.position.y, updated_at: new Date().toISOString() })
+                    .eq('id', change.id)
+                    .eq('user_id', user.id);
+                    
+                if (error) console.error('Failed to update group position', error);
+            });
+            
+            // Update children in DB to keep them in sync with absolute position
+            const children = nextNodes.filter(n => n.parentNode === change.id);
+            children.forEach(child => {
+                // Pass relative position; the debounced function converts to absolute using parent's current pos
+                // Using the specialized debouncer ensures we don't clobber calls for different children
+                positionUpdateDebouncer(child.id, async () => {
+                    const user = useAuthStore.getState().user;
+                    if (!user) return;
+                    
+                    const state = useNotesStore.getState();
+                    // We need to fetch the parent from state to get the LATEST position
+                    const parent = state.nodes.find(n => n.id === change.id);
+                    // Child x/y is relative
+                    let absX = child.position.x;
+                    let absY = child.position.y;
+                    
+                    if (parent) {
+                        absX += parent.position.x;
+                        absY += parent.position.y;
+                    }
+
+                    const { error } = await supabase
+                      .from('notes')
+                      .update({ position_x: absX, position_y: absY, updated_at: new Date().toISOString() })
+                      .eq('id', child.id)
+                      .eq('user_id', user.id);
+
+                    if (error) console.error('Failed to update note position', error);
+                });
+            });
+        } else {
+            // Normal note - update using relative pos if parent exists, debouncer handles logic
+             positionUpdateDebouncer(change.id, async () => {
+                const user = useAuthStore.getState().user;
+                if (!user) return;
+                
+                const state = useNotesStore.getState();
+                const node = state.nodes.find(n => n.id === change.id);
+                
+                let absX = updatedNode.position.x;
+                let absY = updatedNode.position.y;
+                
+                if (node && node.parentNode) {
+                    const parent = state.nodes.find(n => n.id === node.parentNode);
+                    if (parent) {
+                        absX += parent.position.x;
+                        absY += parent.position.y;
+                    }
+                }
+            
+                const { error } = await supabase
+                  .from('notes')
+                  .update({ position_x: absX, position_y: absY, updated_at: new Date().toISOString() })
+                  .eq('id', change.id)
+                  .eq('user_id', user.id);
+            
+                if (error) {
+                  console.error('Failed to update note position:', error.message);
+                }
+            });
+        }
+      }
+      
+      if (change.type === 'dimensions') {
+          const updatedNode = nextNodes.find((node) => node.id === change.id);
+          if (updatedNode && updatedNode.type === 'groupNode') {
+              groupSizeUpdateDebouncer(change.id, async () => {
+                const user = useAuthStore.getState().user;
+                if (!user) return;
+        
+                const { error } = await supabase
+                    .from('canvas_groups')
+                    .update({ width: updatedNode.width, height: updatedNode.height, updated_at: new Date().toISOString() })
+                    .eq('id', change.id)
+                    .eq('user_id', user.id);
+        
+                if (error) console.error('Failed to update group size', error);
+              });
+          }
       }
     });
   },

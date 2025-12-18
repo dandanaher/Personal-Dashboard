@@ -426,6 +426,24 @@ export interface Folder {
 }
 
 /**
+ * Canvas Group table row.
+ * Represents a group of notes on the canvas.
+ */
+export interface CanvasGroup {
+  id: string;
+  user_id: string;
+  canvas_id: string | null;
+  label: string | null;
+  position_x: number;
+  position_y: number;
+  width: number;
+  height: number;
+  color: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
  * Note table row.
  * Represents a markdown note on the infinite canvas.
  */
@@ -448,6 +466,8 @@ export interface Note {
   folder_id: string | null;
   /** Optional canvas ID - notes on a canvas */
   canvas_id: string | null;
+  /** Optional group ID - notes belonging to a group */
+  group_id: string | null;
   created_at: string;
   updated_at: string;
 }
