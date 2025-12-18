@@ -31,6 +31,12 @@ const NoteNode = memo(function NoteNode({ data }: NodeProps<NoteNodeData>) {
     [isHovered]
   );
 
+  const hiddenHandleClasses = useMemo(
+    () =>
+      '!w-3.5 !h-3.5 !rounded-full !border-2 !bg-white dark:!bg-secondary-900 !border-secondary-200 dark:!border-secondary-700 opacity-0 pointer-events-none',
+    []
+  );
+
   return (
     <div
       className="group w-64 rounded-xl shadow-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]"
@@ -50,6 +56,13 @@ const NoteNode = memo(function NoteNode({ data }: NodeProps<NoteNodeData>) {
         style={{ boxShadow: `0 0 0 2px ${accentColor}40` }}
       />
       <Handle
+        type="target"
+        position={Position.Top}
+        id="top"
+        isConnectable={false}
+        className={hiddenHandleClasses}
+      />
+      <Handle
         type="source"
         position={Position.Right}
         id="right"
@@ -57,6 +70,13 @@ const NoteNode = memo(function NoteNode({ data }: NodeProps<NoteNodeData>) {
         isConnectableEnd={isHovered}
         className={handleClasses}
         style={{ boxShadow: `0 0 0 2px ${accentColor}40` }}
+      />
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="right"
+        isConnectable={false}
+        className={hiddenHandleClasses}
       />
 
       {/* Note content */}
@@ -86,6 +106,13 @@ const NoteNode = memo(function NoteNode({ data }: NodeProps<NoteNodeData>) {
         style={{ boxShadow: `0 0 0 2px ${accentColor}40` }}
       />
       <Handle
+        type="target"
+        position={Position.Bottom}
+        id="bottom"
+        isConnectable={false}
+        className={hiddenHandleClasses}
+      />
+      <Handle
         type="source"
         position={Position.Left}
         id="left"
@@ -93,6 +120,13 @@ const NoteNode = memo(function NoteNode({ data }: NodeProps<NoteNodeData>) {
         isConnectableEnd={isHovered}
         className={handleClasses}
         style={{ boxShadow: `0 0 0 2px ${accentColor}40` }}
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="left"
+        isConnectable={false}
+        className={hiddenHandleClasses}
       />
     </div>
   );

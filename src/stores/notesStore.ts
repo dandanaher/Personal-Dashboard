@@ -374,14 +374,17 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
   },
 
   onNodesChange: (changes: NodeChange[]) => {
-    set((state) => ({
-      nodes: applyNodeChanges(changes, state.nodes),
-    }));
+    const nextNodes = applyNodeChanges(changes, get().nodes);
+    set({ nodes: nextNodes });
 
     // Handle position changes after drag ends
     changes.forEach((change: NodeChange) => {
-      if (change.type === 'position' && change.dragging === false && change.position) {
-        get().updateNotePosition(change.id, change.position.x, change.position.y);
+      if (change.type === 'position' && change.dragging === false) {
+        const updatedNode = nextNodes.find((node) => node.id === change.id);
+        if (!updatedNode) return;
+
+        // React Flow often omits `change.position` on drag stop. Use the updated state instead.
+        debouncedPositionUpdate(change.id, updatedNode.position.x, updatedNode.position.y);
       }
     });
   },

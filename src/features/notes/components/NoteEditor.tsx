@@ -53,12 +53,13 @@ function NoteEditor() {
       const note = getSelectedNote();
       if (note) {
         setTitle(note.title);
-        setContent(note.content);
-        lastSavedContent.current = note.content;
+        const sanitizedContent = note.content.replace(/\u200B/g, '');
+        setContent(sanitizedContent);
+        lastSavedContent.current = sanitizedContent;
 
         // Set contenteditable content
         if (contentEditableRef.current) {
-          contentEditableRef.current.innerHTML = note.content || '';
+          contentEditableRef.current.innerHTML = sanitizedContent || '';
         }
       }
     }
@@ -67,9 +68,10 @@ function NoteEditor() {
   // Auto-save debounced function
   const debouncedSave = useCallback(
     debounce((noteId: string, noteTitle: string, noteContent: string) => {
-      if (noteContent !== lastSavedContent.current) {
-        updateNoteContent(noteId, noteTitle, noteContent);
-        lastSavedContent.current = noteContent;
+      const sanitizedContent = noteContent.replace(/\u200B/g, '');
+      if (sanitizedContent !== lastSavedContent.current) {
+        updateNoteContent(noteId, noteTitle, sanitizedContent);
+        lastSavedContent.current = sanitizedContent;
       }
     }, 1000),
     [updateNoteContent]
@@ -98,6 +100,43 @@ function NoteEditor() {
 
   // Formatting functions
   const applyFormat = useCallback((command: string, value?: string) => {
+    // `document.execCommand('fontSize')` doesn't reliably update `queryCommandValue('fontSize')`
+    // when the selection is collapsed. Insert a `font[size]` wrapper at the caret so the chosen
+    // size applies to subsequently typed text and the toolbar state stays in sync.
+    if (command === 'fontSize' && value) {
+      const editor = contentEditableRef.current;
+      const selection = window.getSelection();
+      const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+
+      if (editor && selection && range) {
+        const commonAncestor = range.commonAncestorContainer;
+        const selectionIsInEditor =
+          editor === commonAncestor ||
+          (commonAncestor instanceof Node && editor.contains(commonAncestor));
+
+        if (selectionIsInEditor && range.collapsed) {
+          const font = document.createElement('font');
+          font.setAttribute('size', value);
+          font.appendChild(document.createTextNode('\u200B'));
+
+          range.insertNode(font);
+
+          const placeholderNode = font.firstChild;
+          if (placeholderNode) {
+            const nextRange = document.createRange();
+            nextRange.setStart(placeholderNode, 1);
+            nextRange.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(nextRange);
+            savedSelectionRef.current = nextRange.cloneRange();
+          }
+
+          editor.focus();
+          return;
+        }
+      }
+    }
+
     document.execCommand(command, false, value);
     contentEditableRef.current?.focus();
   }, []);
@@ -173,7 +212,7 @@ function NoteEditor() {
   const handleClose = useCallback(() => {
     // Save before closing
     if (selectedNoteId && contentEditableRef.current) {
-      const finalContent = contentEditableRef.current.innerHTML;
+      const finalContent = contentEditableRef.current.innerHTML.replace(/\u200B/g, '');
       if (finalContent !== lastSavedContent.current) {
         updateNoteContent(selectedNoteId, title, finalContent);
       }
