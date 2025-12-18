@@ -1,39 +1,51 @@
-import { useState, useEffect, useCallback } from 'react';
-import MDEditor from '@uiw/react-md-editor';
-import { X, Save, Trash2 } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  X,
+  Trash2,
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+} from 'lucide-react';
 import { useNotesStore } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
+import { useSidebarStore } from '@/stores/sidebarStore';
 
-// Predefined color palette
-const colorOptions = [
-  '#ffffff', // White
-  '#fef3c7', // Amber-100
-  '#d1fae5', // Emerald-100
-  '#dbeafe', // Blue-100
-  '#ede9fe', // Violet-100
-  '#fce7f3', // Pink-100
-  '#fecaca', // Red-100
-  '#fed7aa', // Orange-100
-  '#e5e7eb', // Gray-200
-  '#1f2937', // Gray-800 (dark)
-];
+// Debounce utility for auto-save
+function debounce<T extends (...args: Parameters<T>) => void>(
+  fn: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+}
 
 function NoteEditor() {
   const accentColor = useThemeStore((state) => state.accentColor);
+  const { isCollapsed } = useSidebarStore();
   const {
     selectedNoteId,
     getSelectedNote,
     updateNoteContent,
-    updateNoteColor,
     deleteNote,
     setSelectedNoteId,
   } = useNotesStore();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [noteColor, setNoteColor] = useState('#ffffff');
-  const [showColorPicker, setShowColorPicker] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [activeFormats, setActiveFormats] = useState({
+    bold: false,
+    italic: false,
+    fontSize: '3',
+    unorderedList: false,
+    orderedList: false,
+  });
+  const contentEditableRef = useRef<HTMLDivElement>(null);
+  const lastSavedContent = useRef('');
+  const savedSelectionRef = useRef<Range | null>(null);
 
   // Load note data when selectedNoteId changes
   useEffect(() => {
@@ -42,23 +54,132 @@ function NoteEditor() {
       if (note) {
         setTitle(note.title);
         setContent(note.content);
-        setNoteColor(note.color);
+        lastSavedContent.current = note.content;
+
+        // Set contenteditable content
+        if (contentEditableRef.current) {
+          contentEditableRef.current.innerHTML = note.content || '';
+        }
       }
     }
   }, [selectedNoteId, getSelectedNote]);
 
-  const handleSave = useCallback(async () => {
-    if (!selectedNoteId) return;
+  // Auto-save debounced function
+  const debouncedSave = useCallback(
+    debounce((noteId: string, noteTitle: string, noteContent: string) => {
+      if (noteContent !== lastSavedContent.current) {
+        updateNoteContent(noteId, noteTitle, noteContent);
+        lastSavedContent.current = noteContent;
+      }
+    }, 1000),
+    [updateNoteContent]
+  );
 
-    setIsSaving(true);
-    await updateNoteContent(selectedNoteId, title, content);
-    setIsSaving(false);
-    setSelectedNoteId(null);
-  }, [selectedNoteId, title, content, updateNoteContent, setSelectedNoteId]);
+  // Handle content changes
+  const handleContentChange = useCallback(() => {
+    if (!contentEditableRef.current || !selectedNoteId) return;
+
+    const newContent = contentEditableRef.current.innerHTML;
+    setContent(newContent);
+    debouncedSave(selectedNoteId, title, newContent);
+  }, [selectedNoteId, title, debouncedSave]);
+
+  // Handle title changes
+  const handleTitleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newTitle = e.target.value;
+      setTitle(newTitle);
+      if (selectedNoteId) {
+        debouncedSave(selectedNoteId, newTitle, content);
+      }
+    },
+    [selectedNoteId, content, debouncedSave]
+  );
+
+  // Formatting functions
+  const applyFormat = useCallback((command: string, value?: string) => {
+    document.execCommand(command, false, value);
+    contentEditableRef.current?.focus();
+  }, []);
+
+  const saveSelection = useCallback(() => {
+    const editor = contentEditableRef.current;
+    if (!editor) return;
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    const commonAncestor = range.commonAncestorContainer;
+    const selectionIsInEditor =
+      editor === commonAncestor || (commonAncestor instanceof Node && editor.contains(commonAncestor));
+
+    if (!selectionIsInEditor) return;
+    savedSelectionRef.current = range.cloneRange();
+  }, []);
+
+  const restoreSelection = useCallback(() => {
+    const selection = window.getSelection();
+    const range = savedSelectionRef.current;
+    if (!selection || !range) return;
+
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }, []);
+
+  const refreshActiveFormats = useCallback(() => {
+    const editor = contentEditableRef.current;
+    if (!editor) return;
+
+    const selection = window.getSelection();
+    const selectionIsInEditor =
+      !!selection?.anchorNode && (editor === selection.anchorNode || editor.contains(selection.anchorNode));
+
+    if (!selectionIsInEditor) {
+      return;
+    }
+
+    const getFontSizeFromSelection = () => {
+      const anchorNode = selection?.anchorNode;
+      if (!anchorNode) return null;
+
+      let currentElement: HTMLElement | null =
+        anchorNode instanceof HTMLElement ? anchorNode : anchorNode.parentElement;
+
+      while (currentElement && currentElement !== editor) {
+        if (currentElement.tagName === 'FONT') {
+          const size = currentElement.getAttribute('size');
+          if (size) return size;
+        }
+        currentElement = currentElement.parentElement;
+      }
+
+      return null;
+    };
+
+    const rawFontSize =
+      getFontSizeFromSelection() ?? String(document.queryCommandValue('fontSize') || '3');
+    const fontSize = /^[1-7]$/.test(rawFontSize) ? rawFontSize : '3';
+
+    setActiveFormats({
+      bold: document.queryCommandState('bold'),
+      italic: document.queryCommandState('italic'),
+      fontSize: fontSize || '3',
+      unorderedList: document.queryCommandState('insertUnorderedList'),
+      orderedList: document.queryCommandState('insertOrderedList'),
+    });
+  }, []);
 
   const handleClose = useCallback(() => {
+    // Save before closing
+    if (selectedNoteId && contentEditableRef.current) {
+      const finalContent = contentEditableRef.current.innerHTML;
+      if (finalContent !== lastSavedContent.current) {
+        updateNoteContent(selectedNoteId, title, finalContent);
+      }
+    }
     setSelectedNoteId(null);
-  }, [setSelectedNoteId]);
+  }, [selectedNoteId, title, updateNoteContent, setSelectedNoteId]);
 
   const handleDelete = useCallback(async () => {
     if (!selectedNoteId) return;
@@ -68,16 +189,6 @@ function NoteEditor() {
       setSelectedNoteId(null);
     }
   }, [selectedNoteId, deleteNote, setSelectedNoteId]);
-
-  const handleColorChange = useCallback(
-    async (color: string) => {
-      if (!selectedNoteId) return;
-      setNoteColor(color);
-      await updateNoteColor(selectedNoteId, color);
-      setShowColorPicker(false);
-    },
-    [selectedNoteId, updateNoteColor]
-  );
 
   // Handle escape key to close
   useEffect(() => {
@@ -91,17 +202,63 @@ function NoteEditor() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleClose]);
 
+  useEffect(() => {
+    refreshActiveFormats();
+
+    document.addEventListener('selectionchange', refreshActiveFormats);
+    return () => {
+      document.removeEventListener('selectionchange', refreshActiveFormats);
+    };
+  }, [refreshActiveFormats]);
+
   if (!selectedNoteId) return null;
 
+  const editorClasses = `fixed inset-0 bottom-16 lg:bottom-0 ${
+    isCollapsed ? 'lg:left-20' : 'lg:left-64'
+  } transition-all duration-300 z-50 flex flex-col`;
+
+  const rgb = accentColor.replace('#', '');
+  const r = parseInt(rgb.substring(0, 2), 16);
+  const g = parseInt(rgb.substring(2, 4), 16);
+  const b = parseInt(rgb.substring(4, 6), 16);
+  const accentSelectionBg = `rgba(${r}, ${g}, ${b}, 0.35)`;
+
+  const fontSizeOptions = [
+    { label: 'Small', value: '2' },
+    { label: 'Normal', value: '3' },
+    { label: 'Large', value: '4' },
+    { label: 'XL', value: '5' },
+  ];
+
+  const selectedFontSize = (() => {
+    if (fontSizeOptions.some((o) => o.value === activeFormats.fontSize)) {
+      return activeFormats.fontSize;
+    }
+
+    const parsed = Number.parseInt(activeFormats.fontSize, 10);
+    if (!Number.isFinite(parsed)) return '3';
+    if (parsed <= 2) return '2';
+    if (parsed >= 5) return '5';
+    return '3';
+  })();
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-secondary-900">
+    <div
+      className={`${editorClasses} bg-light-bg dark:bg-secondary-900`}
+      data-note-editor
+      style={
+        {
+          '--note-selection-bg': accentSelectionBg,
+        } as React.CSSProperties
+      }
+    >
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-900">
+      <header className="flex items-center justify-between px-4 py-3 lg:py-4 border-b border-secondary-200 dark:border-secondary-800">
         <div className="flex items-center gap-3 flex-1">
           {/* Close button */}
           <button
             onClick={handleClose}
-            className="p-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors text-secondary-500"
+            className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-secondary-700 dark:text-secondary-200 opacity-70 hover:opacity-100"
             aria-label="Close editor"
           >
             <X className="h-5 w-5" />
@@ -111,82 +268,245 @@ function NoteEditor() {
           <input
             type="text"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={handleTitleChange}
             placeholder="Note title..."
-            className="flex-1 text-lg font-semibold bg-transparent border-none outline-none text-secondary-900 dark:text-white placeholder:text-secondary-400"
+            className="flex-1 text-lg font-semibold bg-transparent border-none outline-none text-secondary-900 dark:text-white placeholder:opacity-40"
           />
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Color picker */}
-          <div className="relative">
-            <button
-              onClick={() => setShowColorPicker(!showColorPicker)}
-              className="p-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors"
-              aria-label="Change color"
-            >
-              <div
-                className="w-5 h-5 rounded-full border-2 border-secondary-300"
-                style={{ backgroundColor: noteColor }}
-              />
-            </button>
-
-            {showColorPicker && (
-              <div className="absolute right-0 top-full mt-2 p-2 bg-white dark:bg-secondary-800 rounded-xl shadow-xl border border-secondary-200 dark:border-secondary-700 z-10">
-                <div className="grid grid-cols-5 gap-1">
-                  {colorOptions.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => handleColorChange(color)}
-                      className="w-8 h-8 rounded-lg border-2 transition-transform hover:scale-110"
-                      style={{
-                        backgroundColor: color,
-                        borderColor: color === noteColor ? accentColor : 'transparent',
-                      }}
-                      aria-label={`Set color to ${color}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* Delete button */}
           <button
             onClick={handleDelete}
-            className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-500"
+            className="p-2 rounded-lg hover:bg-red-500/10 transition-colors text-red-500"
             aria-label="Delete note"
           >
             <Trash2 className="h-5 w-5" />
           </button>
-
-          {/* Save button */}
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white transition-colors disabled:opacity-50"
-            style={{ backgroundColor: accentColor }}
-          >
-            <Save className="h-4 w-4" />
-            <span>{isSaving ? 'Saving...' : 'Save & Close'}</span>
-          </button>
         </div>
       </header>
 
-      {/* Editor */}
-      <div className="flex-1 overflow-hidden" data-color-mode="auto">
-        <MDEditor
-          value={content}
-          onChange={(val: string | undefined) => setContent(val || '')}
-          height="100%"
-          preview="live"
-          hideToolbar={false}
-          className="!h-full !border-none"
-          textareaProps={{
-            placeholder: 'Write your note in Markdown...',
+      {/* Formatting Toolbar */}
+      <div
+        className="flex items-center gap-1 px-4 py-2 border-b border-secondary-200 dark:border-secondary-800"
+      >
+        <button
+          onClick={() => {
+            applyFormat('bold');
+            refreshActiveFormats();
           }}
+          onMouseDown={(e) => e.preventDefault()}
+          className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-secondary-700 dark:text-secondary-200 opacity-70 hover:opacity-100"
+          style={
+            activeFormats.bold
+              ? { backgroundColor: `${accentColor}15`, boxShadow: `0 0 0 2px ${accentColor}` }
+              : undefined
+          }
+          aria-pressed={activeFormats.bold}
+          aria-label="Bold"
+          title="Bold"
+        >
+          <Bold className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => {
+            applyFormat('italic');
+            refreshActiveFormats();
+          }}
+          onMouseDown={(e) => e.preventDefault()}
+          className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-secondary-700 dark:text-secondary-200 opacity-70 hover:opacity-100"
+          style={
+            activeFormats.italic
+              ? { backgroundColor: `${accentColor}15`, boxShadow: `0 0 0 2px ${accentColor}` }
+              : undefined
+          }
+          aria-pressed={activeFormats.italic}
+          aria-label="Italic"
+          title="Italic"
+        >
+          <Italic className="h-4 w-4" />
+        </button>
+
+        <div className="w-px h-6 mx-1 bg-secondary-200 dark:bg-secondary-800" />
+
+        <select
+          value={selectedFontSize}
+          onMouseDown={saveSelection}
+          onChange={(e) => {
+            restoreSelection();
+            applyFormat('fontSize', e.target.value);
+            refreshActiveFormats();
+          }}
+          className="mx-1 px-2 py-1.5 rounded-lg border bg-white/70 dark:bg-secondary-800 text-secondary-900 dark:text-secondary-100 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0 border-secondary-200 dark:border-secondary-700"
+          style={
+            {
+              borderColor: selectedFontSize !== '3' ? accentColor : undefined,
+              '--tw-ring-color': accentColor,
+            } as React.CSSProperties
+          }
+          aria-label="Font size"
+          title="Font size"
+        >
+          {fontSizeOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+
+        <div className="w-px h-6 mx-1 bg-secondary-200 dark:bg-secondary-800" />
+
+        <button
+          onClick={() => {
+            applyFormat('insertUnorderedList');
+            refreshActiveFormats();
+          }}
+          onMouseDown={(e) => e.preventDefault()}
+          className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-secondary-700 dark:text-secondary-200 opacity-70 hover:opacity-100"
+          style={
+            activeFormats.unorderedList
+              ? { backgroundColor: `${accentColor}15`, boxShadow: `0 0 0 2px ${accentColor}` }
+              : undefined
+          }
+          aria-pressed={activeFormats.unorderedList}
+          aria-label="Bullet List"
+          title="Bullet List"
+        >
+          <List className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => {
+            applyFormat('insertOrderedList');
+            refreshActiveFormats();
+          }}
+          onMouseDown={(e) => e.preventDefault()}
+          className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-secondary-700 dark:text-secondary-200 opacity-70 hover:opacity-100"
+          style={
+            activeFormats.orderedList
+              ? { backgroundColor: `${accentColor}15`, boxShadow: `0 0 0 2px ${accentColor}` }
+              : undefined
+          }
+          aria-pressed={activeFormats.orderedList}
+          aria-label="Numbered List"
+          title="Numbered List"
+        >
+          <ListOrdered className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Content Editor */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 lg:px-8 lg:py-8">
+        <div
+          ref={contentEditableRef}
+          contentEditable
+          onInput={handleContentChange}
+          onKeyUp={refreshActiveFormats}
+          onMouseUp={refreshActiveFormats}
+          className="outline-none min-h-full text-secondary-900 dark:text-secondary-100 max-w-none"
+          style={{ caretColor: accentColor }}
+          data-placeholder="Start writing..."
         />
       </div>
+
+      <style>{`
+        [data-note-editor] ::selection {
+          background: var(--note-selection-bg);
+          color: inherit;
+        }
+
+        [contenteditable]:empty:before {
+          content: attr(data-placeholder);
+          opacity: 0.4;
+          pointer-events: none;
+        }
+
+        [contenteditable] {
+          font: inherit;
+          line-height: 1.6;
+        }
+
+        [contenteditable] h1 {
+          font-size: 2em;
+          font-weight: 700;
+          margin: 1em 0 0.5em;
+          line-height: 1.2;
+        }
+
+        [contenteditable] h2 {
+          font-size: 1.5em;
+          font-weight: 600;
+          margin: 0.8em 0 0.4em;
+          line-height: 1.3;
+        }
+
+        [contenteditable] h3 {
+          font-size: 1.25em;
+          font-weight: 600;
+          margin: 0.6em 0 0.3em;
+          line-height: 1.4;
+        }
+
+        /* Font size formatting */
+        [contenteditable] font[size="1"] {
+          font-size: 0.75rem;
+        }
+
+        [contenteditable] font[size="2"] {
+          font-size: 0.875rem;
+        }
+
+        [contenteditable] font[size="3"] {
+          font-size: 1rem;
+        }
+
+        [contenteditable] font[size="4"] {
+          font-size: 1.125rem;
+        }
+
+        [contenteditable] font[size="5"] {
+          font-size: 1.25rem;
+        }
+
+        [contenteditable] font[size="6"] {
+          font-size: 1.5rem;
+        }
+
+        [contenteditable] font[size="7"] {
+          font-size: 1.875rem;
+        }
+
+        [contenteditable] ul,
+        [contenteditable] ol {
+          list-style-position: outside;
+          margin: 0.5em 0;
+          padding-left: 1.5em;
+        }
+
+        [contenteditable] ul {
+          list-style-type: disc;
+        }
+
+        [contenteditable] ol {
+          list-style-type: decimal;
+        }
+
+        [contenteditable] li {
+          display: list-item;
+          margin: 0.25em 0;
+        }
+
+        [contenteditable] p {
+          margin: 0.5em 0;
+        }
+
+        [contenteditable] strong {
+          font-weight: 600;
+        }
+
+        [contenteditable] em {
+          font-style: italic;
+        }
+      `}</style>
     </div>
   );
 }

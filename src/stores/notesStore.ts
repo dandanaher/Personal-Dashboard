@@ -15,14 +15,16 @@ import { useAuthStore } from '@/stores/authStore';
 import type { Note, NoteEdge } from '@/lib/types';
 
 // Debounce utility
-function debounce<T extends (...args: Parameters<T>) => void>(
-  fn: T,
+function debounce<Args extends unknown[]>(
+  fn: (...args: Args) => void | Promise<void>,
   delay: number
-): (...args: Parameters<T>) => void {
+): (...args: Args) => void {
   let timeoutId: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<T>) => {
+  return (...args: Args) => {
     clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn(...args), delay);
+    timeoutId = setTimeout(() => {
+      void fn(...args);
+    }, delay);
   };
 }
 
@@ -31,7 +33,6 @@ export interface NoteNodeData {
   id: string;
   title: string;
   content: string;
-  color: string;
   onDoubleClick: (noteId: string) => void;
 }
 
@@ -48,7 +49,6 @@ interface NotesActions {
   createNote: (x?: number, y?: number) => Promise<void>;
   updateNotePosition: (noteId: string, x: number, y: number) => void;
   updateNoteContent: (noteId: string, title: string, content: string) => Promise<void>;
-  updateNoteColor: (noteId: string, color: string) => Promise<void>;
   deleteNote: (noteId: string) => Promise<void>;
   connectNotes: (connection: Connection) => Promise<void>;
   deleteEdge: (edgeId: string) => Promise<void>;
@@ -70,7 +70,6 @@ function noteToNode(note: Note, onDoubleClick: (noteId: string) => void): Node<N
       id: note.id,
       title: note.title,
       content: note.content,
-      color: note.color,
       onDoubleClick,
     },
   };
@@ -82,6 +81,8 @@ function noteEdgeToEdge(noteEdge: NoteEdge): Edge {
     id: noteEdge.id,
     source: noteEdge.source_note_id,
     target: noteEdge.target_note_id,
+    sourceHandle: noteEdge.source_handle || undefined,
+    targetHandle: noteEdge.target_handle || undefined,
     type: 'smoothstep',
     animated: true,
   };
@@ -166,10 +167,18 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
         content: '',
         position_x: x,
         position_y: y,
-        color: '#ffffff',
       };
 
-      const { data, error } = await supabase.from('notes').insert(newNote).select().single();
+      let { data, error } = await supabase.from('notes').insert(newNote).select().single();
+
+      // Backwards-compatible insert for older schemas that require a per-note color column.
+      if (error?.code === '23502' && /column "color"/i.test(error.message)) {
+        ({ data, error } = await supabase
+          .from('notes')
+          .insert({ ...newNote, color: '#ffffff' })
+          .select()
+          .single());
+      }
 
       if (error) throw error;
 
@@ -221,32 +230,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     } catch (error) {
       console.error('Failed to update note content:', error);
       // Refetch to restore correct state
-      get().fetchNotes();
-    }
-  },
-
-  updateNoteColor: async (noteId: string, color: string) => {
-    const user = useAuthStore.getState().user;
-    if (!user) return;
-
-    // Optimistic update
-    set((state) => ({
-      nodes: state.nodes.map((node) =>
-        node.id === noteId ? { ...node, data: { ...node.data, color } } : node
-      ),
-    }));
-
-    try {
-      const { error } = await supabase
-        .from('notes')
-        .update({ color, updated_at: new Date().toISOString() })
-        .eq('id', noteId)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Failed to update note color:', error);
-      get().fetchNotes();
+      void get().fetchNotes();
     }
   },
 
@@ -273,7 +257,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       if (error) throw error;
     } catch (error) {
       console.error('Failed to delete note:', error);
-      get().fetchNotes();
+      void get().fetchNotes();
     }
   },
 
@@ -291,20 +275,73 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
         (edge.source === connection.target && edge.target === connection.source)
     );
 
-    if (existingEdge) return;
+    if (existingEdge) {
+      const sourceHandle =
+        existingEdge.source === connection.source ? connection.sourceHandle : connection.targetHandle;
+      const targetHandle =
+        existingEdge.target === connection.target ? connection.targetHandle : connection.sourceHandle;
+
+      // Optimistically update local edge handles so the edge anchors correctly.
+      set((state) => ({
+        edges: state.edges.map((edge) =>
+          edge.id === existingEdge.id
+            ? {
+                ...edge,
+                sourceHandle: sourceHandle || undefined,
+                targetHandle: targetHandle || undefined,
+              }
+            : edge
+        ),
+      }));
+
+      // Best-effort DB update (only works if columns exist).
+      const { error } = await supabase
+        .from('note_edges')
+        .update({
+          source_handle: sourceHandle ?? null,
+          target_handle: targetHandle ?? null,
+        })
+        .eq('id', existingEdge.id)
+        .eq('user_id', user.id);
+
+      if (error && error.code !== '42703' && !/source_handle|target_handle/i.test(error.message)) {
+        console.error('Failed to update note edge handles:', error.message);
+      }
+
+      return;
+    }
 
     try {
       const newEdge = {
         user_id: user.id,
         source_note_id: connection.source,
         target_note_id: connection.target,
+        source_handle: connection.sourceHandle ?? null,
+        target_handle: connection.targetHandle ?? null,
       };
 
-      const { data, error } = await supabase.from('note_edges').insert(newEdge).select().single();
+      let { data, error } = await supabase.from('note_edges').insert(newEdge).select().single();
+
+      // Backwards-compatible insert for older schemas without handle columns.
+      if (error && (error.code === '42703' || /source_handle|target_handle/i.test(error.message))) {
+        ({ data, error } = await supabase
+          .from('note_edges')
+          .insert({
+            user_id: user.id,
+            source_note_id: connection.source,
+            target_note_id: connection.target,
+          })
+          .select()
+          .single());
+      }
 
       if (error) throw error;
 
-      const edge = noteEdgeToEdge(data as NoteEdge);
+      const edge = {
+        ...noteEdgeToEdge(data as NoteEdge),
+        sourceHandle: connection.sourceHandle || (data as NoteEdge).source_handle || undefined,
+        targetHandle: connection.targetHandle || (data as NoteEdge).target_handle || undefined,
+      };
       set((state) => ({
         edges: [...state.edges, edge],
       }));
@@ -332,7 +369,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       if (error) throw error;
     } catch (error) {
       console.error('Failed to delete edge:', error);
-      get().fetchNotes();
+      void get().fetchNotes();
     }
   },
 
@@ -357,7 +394,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     // Handle edge removals
     changes.forEach((change: EdgeChange) => {
       if (change.type === 'remove') {
-        get().deleteEdge(change.id);
+        void get().deleteEdge(change.id);
       }
     });
   },
@@ -380,7 +417,6 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       content: node.data.content,
       position_x: node.position.x,
       position_y: node.position.y,
-      color: node.data.color,
       created_at: '',
       updated_at: '',
     } as Note;

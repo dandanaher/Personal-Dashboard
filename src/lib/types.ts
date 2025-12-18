@@ -411,8 +411,8 @@ export interface Note {
   position_x: number;
   /** Y position on canvas */
   position_y: number;
-  /** Hex color code for the note card */
-  color: string;
+  /** @deprecated Per-note color is no longer used (styling is theme-driven). */
+  color?: string;
   created_at: string;
   updated_at: string;
 }
@@ -426,6 +426,8 @@ export interface NoteEdge {
   user_id: string;
   source_note_id: string;
   target_note_id: string;
+  source_handle?: string | null;
+  target_handle?: string | null;
   created_at: string;
 }
 

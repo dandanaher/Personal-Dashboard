@@ -1,59 +1,98 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import type { NoteNodeData } from '@/stores/notesStore';
+import { useThemeStore } from '@/stores/themeStore';
 
 const NoteNode = memo(function NoteNode({ data }: NodeProps<NoteNodeData>) {
-  const { id, title, content, color, onDoubleClick } = data;
+  const accentColor = useThemeStore((state) => state.accentColor);
+  const { id, title, content, onDoubleClick } = data;
+  const [isHovered, setIsHovered] = useState(false);
 
   const handleDoubleClick = useCallback(() => {
     onDoubleClick(id);
   }, [id, onDoubleClick]);
 
-  // Truncate content for preview (first 100 characters)
-  const contentPreview = content.length > 100 ? content.slice(0, 100) + '...' : content;
-
-  // Determine if the color is dark to adjust text color
-  const isDarkColor = (hex: string): boolean => {
-    const c = hex.replace('#', '');
-    const r = parseInt(c.substring(0, 2), 16);
-    const g = parseInt(c.substring(2, 4), 16);
-    const b = parseInt(c.substring(4, 6), 16);
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance < 0.5;
+  // Strip HTML tags for preview text
+  const stripHtml = (html: string): string => {
+    const tmp = document.createElement('DIV');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
   };
 
-  const textColor = isDarkColor(color) ? 'text-white' : 'text-secondary-900';
-  const borderColor = isDarkColor(color) ? 'border-white/20' : 'border-secondary-200';
+  // Get plain text and truncate for preview (first 100 characters)
+  const plainText = stripHtml(content);
+  const contentPreview = plainText.length > 100 ? plainText.slice(0, 100) + '...' : plainText;
+
+  const handleClasses = useMemo(
+    () =>
+      `!w-3.5 !h-3.5 !rounded-full !border-2 !bg-white dark:!bg-secondary-900 !border-secondary-200 dark:!border-secondary-700 opacity-0 group-hover:opacity-100 transition-opacity duration-150 ${
+        isHovered ? 'pointer-events-auto' : 'pointer-events-none'
+      }`,
+    [isHovered]
+  );
 
   return (
     <div
-      className={`w-64 rounded-xl shadow-lg border ${borderColor} cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]`}
-      style={{ backgroundColor: color }}
+      className="group w-64 rounded-xl shadow-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]"
       onDoubleClick={handleDoubleClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{ boxShadow: `0 0 0 1px ${accentColor}10, 0 10px 15px -3px rgba(0,0,0,0.1)` }}
     >
-      {/* Target handle (top) */}
+      {/* Connection handles (show on hover) */}
       <Handle
-        type="target"
+        type="source"
         position={Position.Top}
-        className="!w-3 !h-3 !bg-secondary-400 !border-2 !border-white"
+        id="top"
+        isConnectableStart={isHovered}
+        isConnectableEnd={isHovered}
+        className={handleClasses}
+        style={{ boxShadow: `0 0 0 2px ${accentColor}40` }}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right"
+        isConnectableStart={isHovered}
+        isConnectableEnd={isHovered}
+        className={handleClasses}
+        style={{ boxShadow: `0 0 0 2px ${accentColor}40` }}
       />
 
       {/* Note content */}
       <div className="p-4">
-        <h3 className={`font-semibold text-sm truncate mb-2 ${textColor}`}>{title || 'Untitled'}</h3>
+        <h3 className="font-semibold text-sm truncate mb-2 text-secondary-900 dark:text-white">
+          {title || 'Untitled'}
+        </h3>
         {contentPreview && (
-          <p className={`text-xs opacity-75 line-clamp-3 ${textColor}`}>{contentPreview}</p>
+          <p className="text-xs opacity-75 line-clamp-3 text-secondary-700 dark:text-secondary-200">
+            {contentPreview}
+          </p>
         )}
         {!contentPreview && (
-          <p className={`text-xs italic opacity-50 ${textColor}`}>Double-click to edit...</p>
+          <p className="text-xs italic opacity-50 text-secondary-600 dark:text-secondary-400">
+            Double-click to edit...
+          </p>
         )}
       </div>
 
-      {/* Source handle (bottom) */}
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-3 !h-3 !bg-secondary-400 !border-2 !border-white"
+        id="bottom"
+        isConnectableStart={isHovered}
+        isConnectableEnd={isHovered}
+        className={handleClasses}
+        style={{ boxShadow: `0 0 0 2px ${accentColor}40` }}
+      />
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="left"
+        isConnectableStart={isHovered}
+        isConnectableEnd={isHovered}
+        className={handleClasses}
+        style={{ boxShadow: `0 0 0 2px ${accentColor}40` }}
       />
     </div>
   );

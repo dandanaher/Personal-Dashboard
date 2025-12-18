@@ -5,6 +5,7 @@ import ReactFlow, {
   Connection,
   BackgroundVariant,
   Panel,
+  ConnectionMode,
   useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -90,6 +91,7 @@ function NotesCanvas() {
         onConnect={handleConnect}
         nodeTypes={nodeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
+        connectionMode={ConnectionMode.Loose}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.1}
@@ -97,21 +99,21 @@ function NotesCanvas() {
         snapToGrid
         snapGrid={[16, 16]}
         deleteKeyCode={['Backspace', 'Delete']}
-        className="bg-secondary-50 dark:bg-secondary-950"
+        className="bg-light-bg dark:bg-secondary-900"
         proOptions={{ hideAttribution: true }}
       >
         <Background
           variant={BackgroundVariant.Dots}
           gap={24}
           size={1}
-          className="!bg-secondary-100 dark:!bg-secondary-900"
+          className="!bg-light-bg dark:!bg-secondary-900"
           color="currentColor"
         />
 
         {/* MiniMap - desktop only */}
         <MiniMap
           className="!bg-white dark:!bg-secondary-800 !border-secondary-200 dark:!border-secondary-700 hidden lg:block"
-          nodeColor={(node: { data?: { color?: string } }) => node.data?.color || '#fff'}
+          nodeColor={() => accentColor}
           maskColor="rgba(0, 0, 0, 0.1)"
         />
 

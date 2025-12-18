@@ -24,7 +24,7 @@ function NotesPage() {
 
   if (loading) {
     return (
-      <div className={`${canvasClasses} flex items-center justify-center bg-secondary-50 dark:bg-secondary-950`}>
+      <div className={`${canvasClasses} flex items-center justify-center bg-light-bg dark:bg-secondary-900`}>
         <LoadingSpinner />
       </div>
     );
@@ -32,7 +32,7 @@ function NotesPage() {
 
   if (error) {
     return (
-      <div className={`${canvasClasses} flex items-center justify-center bg-secondary-50 dark:bg-secondary-950`}>
+      <div className={`${canvasClasses} flex items-center justify-center bg-light-bg dark:bg-secondary-900`}>
         <div className="text-center">
           <p className="text-red-500 mb-2">Failed to load notes</p>
           <p className="text-secondary-500 text-sm">{error}</p>
