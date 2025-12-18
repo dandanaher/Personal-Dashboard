@@ -74,17 +74,21 @@ const Sidebar = memo(function Sidebar() {
     >
       {/* Logo/Brand and Toggle */}
       <div
-        className={`p-4 border-b border-secondary-200 dark:border-secondary-800 flex items-center transition-all duration-300 ${
-          isCollapsed ? 'justify-center' : 'justify-between'
-        }`}
+        className="border-b border-secondary-200 dark:border-secondary-800 flex items-center transition-all duration-300 py-4"
+        style={{
+          paddingLeft: '14px',
+          paddingRight: '16px',
+          justifyContent: isCollapsed ? 'center' : 'space-between',
+        }}
       >
-        <h1
-          className={`text-xl font-bold text-secondary-900 dark:text-white transition-all duration-300 ${
-            isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
-          }`}
-        >
-          MyDash
-        </h1>
+        {!isCollapsed && (
+          <h1
+            className="text-xl font-bold text-secondary-900 dark:text-white transition-opacity duration-300"
+            style={{ paddingLeft: '14px' }}
+          >
+            MyDash
+          </h1>
+        )}
         <button
           onClick={toggleSidebar}
           className="p-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors text-secondary-600 dark:text-secondary-400 flex-shrink-0"
@@ -110,33 +114,31 @@ const Sidebar = memo(function Sidebar() {
                   onMouseEnter={() => preloadRoute(item.path)}
                   onFocus={() => preloadRoute(item.path)}
                   className={`
-                    flex items-center rounded-xl transition-all py-3
-                    ${isCollapsed ? 'justify-center px-3' : 'px-4'}
+                    flex items-center rounded-xl transition-colors py-3
                     ${
                       isActiveItem
                         ? 'font-medium'
                         : 'text-secondary-600 dark:text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800'
                     }
                   `}
-                  style={
-                    isActiveItem
-                      ? {
-                          backgroundColor: `${accentColor}15`,
-                          color: accentColor,
-                        }
-                      : undefined
-                  }
+                  style={{
+                    paddingLeft: '14px',
+                    paddingRight: '16px',
+                    ...(isActiveItem && {
+                      backgroundColor: `${accentColor}15`,
+                      color: accentColor,
+                    }),
+                  }}
                   title={isCollapsed ? item.label : undefined}
                 >
                   <div className="flex items-center justify-center w-5 flex-shrink-0">
                     {item.icon}
                   </div>
                   <span
-                    className="whitespace-nowrap overflow-hidden transition-all duration-300"
+                    className="whitespace-nowrap overflow-hidden transition-opacity duration-300 ml-3"
                     style={{
                       opacity: isCollapsed ? 0 : 1,
                       width: isCollapsed ? 0 : 'auto',
-                      marginLeft: isCollapsed ? 0 : '0.75rem',
                     }}
                   >
                     {item.label}
