@@ -1,59 +1,68 @@
 import { useEffect } from 'react';
 import { ReactFlowProvider } from 'reactflow';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useNotesStore } from '@/stores/notesStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useSidebarStore } from '@/stores/sidebarStore';
-import { NotesCanvas, NoteEditor } from './components';
-import { LoadingSpinner } from '@/components/ui';
+import {
+  TabStrip,
+  NotesDashboard,
+  CanvasView,
+  StandaloneNoteEditor,
+  NoteEditor,
+} from './components';
 
 function NotesPage() {
   const { user } = useAuthStore();
-  const { loading, error, fetchNotes, selectedNoteId } = useNotesStore();
   const { isCollapsed } = useSidebarStore();
+  const { tabs, activeTabId, addTab } = useWorkspaceStore();
+  const { selectedNoteId } = useNotesStore();
 
-  // Fetch notes on mount
+  // Find the active tab
+  const activeTab = tabs.find((t) => t.id === activeTabId);
+
+  // Ensure there's always a home/dashboard tab
   useEffect(() => {
-    if (user) {
-      fetchNotes();
+    const hasHomeTab = tabs.some((t) => t.type === 'home');
+    if (!hasHomeTab) {
+      addTab('home');
     }
-  }, [user, fetchNotes]);
+  }, [tabs, addTab]);
 
-  const canvasClasses = `fixed inset-0 bottom-16 lg:bottom-0 ${
+  // If no user, don't render anything
+  if (!user) {
+    return null;
+  }
+
+  const pageClasses = `fixed inset-0 bottom-16 lg:bottom-0 ${
     isCollapsed ? 'lg:left-20' : 'lg:left-64'
-  } transition-all duration-300`;
-
-  if (loading) {
-    return (
-      <div className={`${canvasClasses} flex items-center justify-center bg-light-bg dark:bg-secondary-900`}>
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className={`${canvasClasses} flex items-center justify-center bg-light-bg dark:bg-secondary-900`}>
-        <div className="text-center">
-          <p className="text-red-500 mb-2">Failed to load notes</p>
-          <p className="text-secondary-500 text-sm">{error}</p>
-          <button
-            onClick={fetchNotes}
-            className="mt-4 px-4 py-2 bg-secondary-100 dark:bg-secondary-800 rounded-lg hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+  } transition-all duration-300 flex flex-col`;
 
   return (
-    <ReactFlowProvider>
-      <div className={canvasClasses}>
-        <NotesCanvas />
-        {selectedNoteId && <NoteEditor />}
+    <div className={pageClasses}>
+      {/* Tab Bar */}
+      <TabStrip />
+
+      {/* Content Area */}
+      <div className="flex-1 overflow-hidden relative">
+        {/* Home/Dashboard View */}
+        {activeTab?.type === 'home' && <NotesDashboard />}
+
+        {/* Canvas View */}
+        {activeTab?.type === 'canvas' && activeTab.entityId && (
+          <ReactFlowProvider key={activeTab.entityId}>
+            <CanvasView canvasId={activeTab.entityId} />
+            {/* Note editor overlay for canvas notes */}
+            {selectedNoteId && <NoteEditor />}
+          </ReactFlowProvider>
+        )}
+
+        {/* Standalone Note View */}
+        {activeTab?.type === 'note' && activeTab.entityId && (
+          <StandaloneNoteEditor key={activeTab.entityId} noteId={activeTab.entityId} />
+        )}
       </div>
-    </ReactFlowProvider>
+    </div>
   );
 }
 

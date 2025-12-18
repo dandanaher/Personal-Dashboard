@@ -42,11 +42,30 @@ interface NotesState {
   selectedNoteId: string | null;
   loading: boolean;
   error: string | null;
+  /** Currently active canvas ID (null for library view) */
+  currentCanvasId: string | null;
+  /** All notes for library sidebar (notes without canvas_id) */
+  libraryNotes: Note[];
+}
+
+interface CreateNoteOptions {
+  x?: number;
+  y?: number;
+  canvasId?: string | null;
+  folderId?: string | null;
+  title?: string;
 }
 
 interface NotesActions {
+  /** @deprecated Use fetchCanvasNotes or fetchLibraryNotes instead */
   fetchNotes: () => Promise<void>;
-  createNote: (x?: number, y?: number) => Promise<void>;
+  /** Fetch notes for a specific canvas */
+  fetchCanvasNotes: (canvasId: string) => Promise<void>;
+  /** Fetch all notes without a canvas (for library sidebar) */
+  fetchLibraryNotes: () => Promise<void>;
+  /** Fetch a single note by ID */
+  fetchNote: (noteId: string) => Promise<Note | null>;
+  createNote: (options?: CreateNoteOptions) => Promise<string | null>;
   updateNotePosition: (noteId: string, x: number, y: number) => void;
   updateNoteContent: (noteId: string, title: string, content: string) => Promise<void>;
   deleteNote: (noteId: string) => Promise<void>;
@@ -56,6 +75,10 @@ interface NotesActions {
   onEdgesChange: OnEdgesChange;
   setSelectedNoteId: (noteId: string | null) => void;
   getSelectedNote: () => Note | null;
+  /** Set the current canvas context */
+  setCurrentCanvasId: (canvasId: string | null) => void;
+  /** Clear canvas state when switching away */
+  clearCanvasState: () => void;
 }
 
 type NotesStore = NotesState & NotesActions;
@@ -114,8 +137,106 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
   selectedNoteId: null,
   loading: false,
   error: null,
+  currentCanvasId: null,
+  libraryNotes: [],
 
   // Actions
+  setCurrentCanvasId: (canvasId: string | null) => {
+    set({ currentCanvasId: canvasId });
+  },
+
+  clearCanvasState: () => {
+    set({ nodes: [], edges: [], currentCanvasId: null });
+  },
+
+  fetchCanvasNotes: async (canvasId: string) => {
+    const user = useAuthStore.getState().user;
+    if (!user) return;
+
+    set({ loading: true, error: null, currentCanvasId: canvasId });
+
+    try {
+      // Fetch notes for this canvas
+      const { data: notes, error: notesError } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('canvas_id', canvasId)
+        .order('created_at', { ascending: true });
+
+      if (notesError) throw notesError;
+
+      // Fetch edges for notes in this canvas
+      const noteIds = (notes || []).map((n) => n.id);
+      let noteEdges: NoteEdge[] = [];
+
+      if (noteIds.length > 0) {
+        const { data: edgesData, error: edgesError } = await supabase
+          .from('note_edges')
+          .select('*')
+          .eq('user_id', user.id)
+          .in('source_note_id', noteIds);
+
+        if (edgesError) throw edgesError;
+        noteEdges = (edgesData || []) as NoteEdge[];
+      }
+
+      const onDoubleClick = (noteId: string) => {
+        get().setSelectedNoteId(noteId);
+      };
+
+      const nodes = (notes || []).map((note) => noteToNode(note as Note, onDoubleClick));
+      const edges = noteEdges.map((edge) => noteEdgeToEdge(edge));
+
+      set({ nodes, edges, loading: false });
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Failed to fetch canvas notes',
+        loading: false,
+      });
+    }
+  },
+
+  fetchLibraryNotes: async () => {
+    const user = useAuthStore.getState().user;
+    if (!user) return;
+
+    try {
+      // Fetch all notes (for library sidebar display)
+      const { data: notes, error: notesError } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (notesError) throw notesError;
+
+      set({ libraryNotes: (notes || []) as Note[] });
+    } catch (error) {
+      console.error('Failed to fetch library notes:', error);
+    }
+  },
+
+  fetchNote: async (noteId: string) => {
+    const user = useAuthStore.getState().user;
+    if (!user) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('id', noteId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      return data as Note;
+    } catch (error) {
+      console.error('Failed to fetch note:', error);
+      return null;
+    }
+  },
+
   fetchNotes: async () => {
     const user = useAuthStore.getState().user;
     if (!user) return;
@@ -156,17 +277,25 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     }
   },
 
-  createNote: async (x = 100, y = 100) => {
+  createNote: async (options: CreateNoteOptions = {}) => {
     const user = useAuthStore.getState().user;
-    if (!user) return;
+    if (!user) return null;
+
+    const { x = 100, y = 100, canvasId, folderId, title = 'New Note' } = options;
+    const { currentCanvasId } = get();
+
+    // Use provided canvasId or fall back to current canvas context
+    const effectiveCanvasId = canvasId !== undefined ? canvasId : currentCanvasId;
 
     try {
       const newNote = {
         user_id: user.id,
-        title: 'New Note',
+        title,
         content: '',
         position_x: x,
         position_y: y,
+        canvas_id: effectiveCanvasId,
+        folder_id: folderId ?? null,
       };
 
       let { data, error } = await supabase.from('notes').insert(newNote).select().single();
@@ -182,17 +311,30 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
 
       if (error) throw error;
 
-      const onDoubleClick = (noteId: string) => {
-        get().setSelectedNoteId(noteId);
-      };
+      const createdNote = data as Note;
 
-      const newNode = noteToNode(data as Note, onDoubleClick);
+      // If the note is on the current canvas, add it to the ReactFlow nodes
+      if (effectiveCanvasId && effectiveCanvasId === currentCanvasId) {
+        const onDoubleClick = (noteId: string) => {
+          get().setSelectedNoteId(noteId);
+        };
+
+        const newNode = noteToNode(createdNote, onDoubleClick);
+        set((state) => ({
+          nodes: [...state.nodes, newNode],
+        }));
+      }
+
+      // Also add to library notes
       set((state) => ({
-        nodes: [...state.nodes, newNode],
+        libraryNotes: [createdNote, ...state.libraryNotes],
       }));
+
+      return createdNote.id;
     } catch (error) {
       console.error('Failed to create note:', error);
       set({ error: error instanceof Error ? error.message : 'Failed to create note' });
+      return null;
     }
   },
 
@@ -212,17 +354,22 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     const user = useAuthStore.getState().user;
     if (!user) return;
 
-    // Optimistic update
+    const updatedAt = new Date().toISOString();
+
+    // Optimistic update for both nodes and library notes
     set((state) => ({
       nodes: state.nodes.map((node) =>
         node.id === noteId ? { ...node, data: { ...node.data, title, content } } : node
+      ),
+      libraryNotes: state.libraryNotes.map((note) =>
+        note.id === noteId ? { ...note, title, content, updated_at: updatedAt } : note
       ),
     }));
 
     try {
       const { error } = await supabase
         .from('notes')
-        .update({ title, content, updated_at: new Date().toISOString() })
+        .update({ title, content, updated_at: updatedAt })
         .eq('id', noteId)
         .eq('user_id', user.id);
 
@@ -230,7 +377,11 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     } catch (error) {
       console.error('Failed to update note content:', error);
       // Refetch to restore correct state
-      void get().fetchNotes();
+      const { currentCanvasId } = get();
+      if (currentCanvasId) {
+        void get().fetchCanvasNotes(currentCanvasId);
+      }
+      void get().fetchLibraryNotes();
     }
   },
 
@@ -245,6 +396,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
         (edge) => edge.source !== noteId && edge.target !== noteId
       ),
       selectedNoteId: state.selectedNoteId === noteId ? null : state.selectedNoteId,
+      libraryNotes: state.libraryNotes.filter((note) => note.id !== noteId),
     }));
 
     try {
@@ -257,7 +409,11 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       if (error) throw error;
     } catch (error) {
       console.error('Failed to delete note:', error);
-      void get().fetchNotes();
+      const { currentCanvasId } = get();
+      if (currentCanvasId) {
+        void get().fetchCanvasNotes(currentCanvasId);
+      }
+      void get().fetchLibraryNotes();
     }
   },
 

@@ -399,6 +399,33 @@ export interface AttributeWithXP extends Attribute {
 // =============================================================================
 
 /**
+ * Canvas table row.
+ * Represents a workspace canvas that can contain multiple notes.
+ */
+export interface Canvas {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  last_accessed_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Folder table row.
+ * Represents a folder for organizing notes hierarchically.
+ */
+export interface Folder {
+  id: string;
+  user_id: string;
+  name: string;
+  /** Parent folder ID for nesting, null for root folders */
+  parent_id: string | null;
+  created_at: string;
+}
+
+/**
  * Note table row.
  * Represents a markdown note on the infinite canvas.
  */
@@ -413,6 +440,10 @@ export interface Note {
   position_y: number;
   /** @deprecated Per-note color is no longer used (styling is theme-driven). */
   color?: string;
+  /** Optional folder ID for organization */
+  folder_id: string | null;
+  /** Optional canvas ID - notes on a canvas */
+  canvas_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -435,4 +466,12 @@ export interface NoteEdge {
 export type NoteInsert = Omit<Note, 'id' | 'created_at' | 'updated_at'>;
 export type NoteUpdate = Partial<Omit<Note, 'id' | 'created_at' | 'user_id'>>;
 export type NoteEdgeInsert = Omit<NoteEdge, 'id' | 'created_at'>;
-export type NoteEdgeUpdate = Partial<Omit<NoteEdge, 'id' | 'created_at' | 'user_id'>>
+export type NoteEdgeUpdate = Partial<Omit<NoteEdge, 'id' | 'created_at' | 'user_id'>>;
+
+// Type aliases for Canvas operations
+export type CanvasInsert = Omit<Canvas, 'id' | 'created_at' | 'updated_at' | 'last_accessed_at'>;
+export type CanvasUpdate = Partial<Omit<Canvas, 'id' | 'created_at' | 'user_id'>>;
+
+// Type aliases for Folder operations
+export type FolderInsert = Omit<Folder, 'id' | 'created_at'>;
+export type FolderUpdate = Partial<Omit<Folder, 'id' | 'created_at' | 'user_id'>>;

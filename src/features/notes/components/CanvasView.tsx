@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import ReactFlow, {
   Background,
   MiniMap,
@@ -12,6 +12,9 @@ import 'reactflow/dist/style.css';
 import { Plus, Crosshair } from 'lucide-react';
 import { useNotesStore } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { useCanvases } from '../hooks/useCanvases';
+import { LoadingSpinner } from '@/components/ui';
 import NoteNode from './NoteNode';
 
 // Custom node types
@@ -19,8 +22,12 @@ const nodeTypes = {
   noteNode: NoteNode,
 };
 
+interface CanvasControlsProps {
+  canvasId: string;
+}
+
 // Canvas controls component (must be inside ReactFlowProvider)
-function CanvasControls() {
+function CanvasControls({ canvasId }: CanvasControlsProps) {
   const { fitView } = useReactFlow();
   const accentColor = useThemeStore((state) => state.accentColor);
   const { createNote } = useNotesStore();
@@ -29,8 +36,9 @@ function CanvasControls() {
     createNote({
       x: Math.random() * 400 + 100,
       y: Math.random() * 300 + 100,
+      canvasId,
     });
-  }, [createNote]);
+  }, [createNote, canvasId]);
 
   const handleRecenter = useCallback(() => {
     fitView({ padding: 0.2, duration: 200 });
@@ -64,7 +72,11 @@ function CanvasControls() {
   );
 }
 
-function NotesCanvas() {
+interface CanvasViewInnerProps {
+  canvasId: string;
+}
+
+function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
   const accentColor = useThemeStore((state) => state.accentColor);
   const { nodes, edges, onNodesChange, onEdgesChange, connectNotes } = useNotesStore();
 
@@ -120,10 +132,76 @@ function NotesCanvas() {
           maskColor="rgba(0, 0, 0, 0.1)"
         />
 
-        <CanvasControls />
+        <CanvasControls canvasId={canvasId} />
       </ReactFlow>
     </div>
   );
 }
 
-export default NotesCanvas;
+interface CanvasViewProps {
+  canvasId: string;
+}
+
+export function CanvasView({ canvasId }: CanvasViewProps) {
+  const { loading, error, fetchCanvasNotes, clearCanvasState } = useNotesStore();
+  const { updateTabTitle } = useWorkspaceStore();
+  const { canvases, updateLastAccessed } = useCanvases();
+
+  // Find the canvas to get its name
+  const canvas = canvases.find((c) => c.id === canvasId);
+
+  // Fetch notes for this canvas when it mounts or canvasId changes
+  useEffect(() => {
+    fetchCanvasNotes(canvasId);
+    updateLastAccessed(canvasId);
+
+    return () => {
+      // Clear canvas state when unmounting
+      clearCanvasState();
+    };
+  }, [canvasId, fetchCanvasNotes, updateLastAccessed, clearCanvasState]);
+
+  // Update tab title when canvas name changes
+  useEffect(() => {
+    if (canvas) {
+      const tab = useWorkspaceStore.getState().findTabByEntity('canvas', canvasId);
+      if (tab && tab.title !== canvas.name) {
+        updateTabTitle(tab.id, canvas.name);
+      }
+    }
+  }, [canvas, canvasId, updateTabTitle]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full bg-light-bg dark:bg-secondary-900">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full bg-light-bg dark:bg-secondary-900">
+        <div className="text-center">
+          <p className="text-red-500 mb-2">Failed to load canvas</p>
+          <p className="text-secondary-500 text-sm">{error}</p>
+          <button
+            onClick={() => fetchCanvasNotes(canvasId)}
+            className="mt-4 px-4 py-2 bg-secondary-100 dark:bg-secondary-800 rounded-lg hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full w-full relative">
+      <CanvasViewInner canvasId={canvasId} />
+      {/* Note editor overlay is handled by the parent NotesPage */}
+    </div>
+  );
+}
+
+export default CanvasView;
