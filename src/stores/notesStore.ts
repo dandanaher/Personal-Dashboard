@@ -855,6 +855,8 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
                     if (!user) return;
                     
                     const state = useNotesStore.getState();
+                    if (state.nodes.length === 0) return;
+                    
                     // We need to fetch the parent from state to get the LATEST position
                     const parent = state.nodes.find(n => n.id === change.id);
                     // Child x/y is relative
@@ -882,6 +884,8 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
                 if (!user) return;
                 
                 const state = useNotesStore.getState();
+                if (state.nodes.length === 0) return;
+
                 const node = state.nodes.find(n => n.id === change.id);
                 
                 let absX = updatedNode.position.x;
