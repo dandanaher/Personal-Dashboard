@@ -144,8 +144,8 @@ function noteToNode(note: Note, onDoubleClick: (noteId: string) => void): Node<N
 function noteEdgeToEdge(noteEdge: NoteEdge): Edge {
   return {
     id: noteEdge.id,
-    source: noteEdge.source_note_id,
-    target: noteEdge.target_note_id,
+    source: (noteEdge.source_note_id || noteEdge.source_group_id)!,
+    target: (noteEdge.target_note_id || noteEdge.target_group_id)!,
     sourceHandle: noteEdge.source_handle || undefined,
     targetHandle: noteEdge.target_handle || undefined,
     type: 'smoothstep',
@@ -199,20 +199,15 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
         
       if (groupsError) throw groupsError;
 
-      // Fetch edges
-      const noteIds = (notes || []).map((n) => n.id);
-      let noteEdges: NoteEdge[] = [];
+      // Fetch edges - fetch all for user to support group/note connections
+      // We do this to ensure we catch edges between groups and notes even if filtering is complex
+      const { data: edgesData, error: edgesError } = await supabase
+        .from('note_edges')
+        .select('*')
+        .eq('user_id', user.id);
 
-      if (noteIds.length > 0) {
-        const { data: edgesData, error: edgesError } = await supabase
-          .from('note_edges')
-          .select('*')
-          .eq('user_id', user.id)
-          .in('source_note_id', noteIds);
-
-        if (edgesError) throw edgesError;
-        noteEdges = (edgesData || []) as NoteEdge[];
-      }
+      if (edgesError) throw edgesError;
+      const noteEdges = (edgesData || []) as NoteEdge[];
 
       const onDoubleClick = (noteId: string) => {
         get().setSelectedNoteId(noteId);
@@ -585,28 +580,22 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     }
 
     try {
+      const sourceNode = get().nodes.find(n => n.id === connection.source);
+      const targetNode = get().nodes.find(n => n.id === connection.target);
+      const isSourceGroup = sourceNode?.type === 'groupNode';
+      const isTargetGroup = targetNode?.type === 'groupNode';
+
       const newEdge = {
         user_id: user.id,
-        source_note_id: connection.source,
-        target_note_id: connection.target,
+        source_note_id: isSourceGroup ? null : connection.source,
+        target_note_id: isTargetGroup ? null : connection.target,
+        source_group_id: isSourceGroup ? connection.source : null,
+        target_group_id: isTargetGroup ? connection.target : null,
         source_handle: connection.sourceHandle ?? null,
         target_handle: connection.targetHandle ?? null,
       };
 
-      let { data, error } = await supabase.from('note_edges').insert(newEdge).select().single();
-
-      // Backwards-compatible insert for older schemas without handle columns.
-      if (error && (error.code === '42703' || /source_handle|target_handle/i.test(error.message))) {
-        ({ data, error } = await supabase
-          .from('note_edges')
-          .insert({
-            user_id: user.id,
-            source_note_id: connection.source,
-            target_note_id: connection.target,
-          })
-          .select()
-          .single());
-      }
+      const { data, error } = await supabase.from('note_edges').insert(newEdge).select().single();
 
       if (error) throw error;
 
@@ -821,6 +810,8 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
      
      set(state => ({
          groups: state.groups.filter(g => g.id !== id),
+         // Remove edges connected to this group
+         edges: state.edges.filter(edge => edge.source !== id && edge.target !== id),
          nodes: state.nodes.filter(n => n.id !== id).map(n => {
              const updatedChild = updatedChildren.find(c => c.id === n.id);
              return updatedChild || n;

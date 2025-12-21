@@ -479,10 +479,14 @@ export interface Note {
 export interface NoteEdge {
   id: string;
   user_id: string;
-  source_note_id: string;
-  target_note_id: string;
+  source_note_id: string | null;
+  target_note_id: string | null;
+  source_group_id?: string | null;
+  target_group_id?: string | null;
   source_handle?: string | null;
   target_handle?: string | null;
+  label?: string | null;
+  color?: string | null;
   created_at: string;
 }
 

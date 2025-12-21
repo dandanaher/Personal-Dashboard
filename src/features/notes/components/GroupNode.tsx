@@ -1,5 +1,5 @@
-import { memo, useState } from 'react';
-import { NodeProps, NodeResizer } from 'reactflow';
+import { memo, useState, useMemo } from 'react';
+import { NodeProps, NodeResizer, Handle, Position } from 'reactflow';
 import { useNotesStore } from '@/stores/notesStore';
 import { APP_COLORS } from '@/stores/themeStore';
 import { Palette, Trash2, Type } from 'lucide-react';
@@ -19,6 +19,14 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
     updateGroup(id, { color: newColor });
   };
 
+  const handleClasses = useMemo(
+    () =>
+      `!w-3.5 !h-3.5 !rounded-full !border-2 !bg-white dark:!bg-secondary-900 !border-secondary-200 dark:!border-secondary-700 opacity-0 group-hover:opacity-100 transition-opacity duration-150 ${
+        isHovered ? 'pointer-events-auto' : 'pointer-events-none'
+      }`,
+    [isHovered]
+  );
+
   return (
     <div 
       className="group w-full h-full relative rounded-2xl border-2 transition-all duration-200"
@@ -35,6 +43,44 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
         minHeight={100}
         color={color}
         handleStyle={{ width: 8, height: 8, borderRadius: 4 }}
+      />
+      
+      {/* Connection Handles */}
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="top"
+        className={handleClasses}
+        style={{ borderColor: color }}
+        isConnectableStart={isHovered}
+        isConnectableEnd={isHovered}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right"
+        className={handleClasses}
+        style={{ borderColor: color }}
+        isConnectableStart={isHovered}
+        isConnectableEnd={isHovered}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="bottom"
+        className={handleClasses}
+        style={{ borderColor: color }}
+        isConnectableStart={isHovered}
+        isConnectableEnd={isHovered}
+      />
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="left"
+        className={handleClasses}
+        style={{ borderColor: color }}
+        isConnectableStart={isHovered}
+        isConnectableEnd={isHovered}
       />
 
       {/* Header / Controls */}
