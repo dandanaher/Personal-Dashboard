@@ -95,9 +95,31 @@ interface NotesActions {
   createGroup: (bounds: { x: number, y: number, width: number, height: number }) => Promise<void>;
   updateGroup: (id: string, updates: Partial<CanvasGroup>) => Promise<void>;
   deleteGroup: (id: string) => Promise<void>;
+  
+  // Dynamic grouping logic
+  handleNoteDragEnd: (nodeId: string) => Promise<void>;
+  recalculateGroupMembership: (groupId: string) => Promise<void>;
 }
 
 type NotesStore = NotesState & NotesActions;
+
+// Helper to checking if a note is inside a group
+function isNodeInsideGroup(
+  noteRect: { x: number; y: number; width: number; height: number },
+  groupRect: { x: number; y: number; width: number; height: number }
+) {
+  const noteCenter = {
+    x: noteRect.x + noteRect.width / 2,
+    y: noteRect.y + noteRect.height / 2,
+  };
+
+  return (
+    noteCenter.x >= groupRect.x &&
+    noteCenter.x <= groupRect.x + groupRect.width &&
+    noteCenter.y >= groupRect.y &&
+    noteCenter.y <= groupRect.y + groupRect.height
+  );
+}
 
 // Convert database note to ReactFlow node
 function noteToNode(note: Note, onDoubleClick: (noteId: string) => void): Node<NoteNodeData> {
@@ -205,7 +227,6 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
               const parentGroup = groups?.find(g => g.id === note.group_id);
               if (parentGroup) {
                   node.parentNode = note.group_id;
-                  node.extent = 'parent';
                   // Calculate relative position
                   node.position = {
                       x: note.position_x - parentGroup.position_x,
@@ -681,7 +702,6 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
             return {
               ...n,
               parentNode: tempId,
-              extent: 'parent' as const,
               position: {
                 x: n.position.x - bounds.x,
                 y: n.position.y - bounds.y
@@ -822,6 +842,243 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
      // So we don't need to do anything else for children in DB.
   },
 
+  handleNoteDragEnd: async (nodeId: string) => {
+    const state = get();
+    const user = useAuthStore.getState().user;
+    if (!user) return;
+
+    const node = state.nodes.find((n) => n.id === nodeId);
+    if (!node || node.type !== 'noteNode') return;
+
+    // Calculate absolute position of the dragged node
+    let absX = node.position.x;
+    let absY = node.position.y;
+
+    if (node.parentNode) {
+      const parent = state.nodes.find((n) => n.id === node.parentNode);
+      if (parent) {
+        absX += parent.position.x;
+        absY += parent.position.y;
+      }
+    }
+
+    const noteRect = {
+      x: absX,
+      y: absY,
+      width: (node.width ?? node.style?.width ?? 256) as number,
+      height: (node.height ?? node.style?.height ?? 100) as number,
+    };
+
+    // Find a group that contains the note
+    const targetGroup = state.nodes.find(
+      (n) =>
+        n.type === 'groupNode' &&
+        isNodeInsideGroup(noteRect, {
+          x: n.position.x,
+          y: n.position.y,
+          width: (n.width ?? n.style?.width ?? 0) as number,
+          height: (n.height ?? n.style?.height ?? 0) as number,
+        })
+    );
+
+    const currentParentId = node.parentNode;
+    const targetGroupId = targetGroup?.id;
+
+    // Case 1: Moved into a group (from root or another group)
+    if (targetGroupId && targetGroupId !== currentParentId) {
+      const groupNode = targetGroup!;
+      const newRelX = absX - groupNode.position.x;
+      const newRelY = absY - groupNode.position.y;
+
+      // Optimistic update
+      set((state) => ({
+        nodes: state.nodes.map((n) =>
+          n.id === nodeId
+            ? {
+                ...n,
+                parentNode: targetGroupId,
+                position: { x: newRelX, y: newRelY },
+                zIndex: 10,
+              }
+            : n
+        ),
+      }));
+
+      // DB Update
+      const { error } = await supabase
+        .from('notes')
+        .update({
+          group_id: targetGroupId,
+          position_x: absX, // DB stores absolute
+          position_y: absY,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', nodeId)
+        .eq('user_id', user.id);
+
+      if (error) console.error('Failed to update note group (absorb)', error);
+    }
+    // Case 2: Moved out of a group (to root)
+    else if (!targetGroupId && currentParentId) {
+      // Optimistic update
+      set((state) => ({
+        nodes: state.nodes.map((n) =>
+          n.id === nodeId
+            ? {
+                ...n,
+                parentNode: undefined,
+                extent: undefined,
+                position: { x: absX, y: absY },
+                zIndex: 10,
+              }
+            : n
+        ),
+      }));
+
+      // DB Update
+      const { error } = await supabase
+        .from('notes')
+        .update({
+          group_id: null,
+          position_x: absX,
+          position_y: absY,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', nodeId)
+        .eq('user_id', user.id);
+
+      if (error) console.error('Failed to update note group (eject)', error);
+    }
+    // Case 3: Moved within same group or same root (just update pos)
+    else {
+        // Position update is already handled by `onNodesChange` / `updateNotePosition`
+        // But we should ensure DB has absolute coords if it was relative
+        if (targetGroupId) {
+            // It's in a group, verify abs coords in DB
+             const { error } = await supabase
+                .from('notes')
+                .update({
+                  group_id: targetGroupId,
+                  position_x: absX,
+                  position_y: absY,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', nodeId)
+                .eq('user_id', user.id);
+             if (error) console.error('Failed to sync note pos', error);
+        }
+    }
+  },
+
+  recalculateGroupMembership: async (groupId: string) => {
+    const state = get();
+    const user = useAuthStore.getState().user;
+    if (!user) return;
+
+    const groupNode = state.nodes.find((n) => n.id === groupId);
+    if (!groupNode || groupNode.type !== 'groupNode') return;
+
+    const groupRect = {
+      x: groupNode.position.x,
+      y: groupNode.position.y,
+      width: (groupNode.width ?? groupNode.style?.width ?? 0) as number,
+      height: (groupNode.height ?? groupNode.style?.height ?? 0) as number,
+    };
+
+    const notesToUpdate: {
+      id: string;
+      parentNode?: string;
+      position: { x: number; y: number };
+      extent?: 'parent' | undefined;
+      absX: number;
+      absY: number;
+    }[] = [];
+
+    // Check all note nodes
+    state.nodes.forEach((node) => {
+      if (node.type !== 'noteNode') return;
+
+      // Calculate absolute position
+      let absX = node.position.x;
+      let absY = node.position.y;
+      if (node.parentNode) {
+        const parent = state.nodes.find((n) => n.id === node.parentNode);
+        if (parent) {
+          absX += parent.position.x;
+          absY += parent.position.y;
+        }
+      }
+
+      const noteRect = {
+        x: absX,
+        y: absY,
+        width: (node.width ?? node.style?.width ?? 256) as number,
+        height: (node.height ?? node.style?.height ?? 100) as number,
+      };
+
+      const inside = isNodeInsideGroup(noteRect, groupRect);
+      
+      // 1. Absorb: Root node -> Inside Group
+      if (inside && !node.parentNode) {
+        notesToUpdate.push({
+          id: node.id,
+          parentNode: groupId,
+          position: { x: absX - groupRect.x, y: absY - groupRect.y },
+          absX,
+          absY,
+        });
+      }
+      // 2. Eject: Child of this group -> Outside Group
+      else if (!inside && node.parentNode === groupId) {
+        notesToUpdate.push({
+          id: node.id,
+          parentNode: undefined, // undefined to remove key
+          extent: undefined,
+          position: { x: absX, y: absY },
+          absX,
+          absY,
+        });
+      }
+      // 3. Ignore: Child of OTHER group (even if inside this one, don't steal)
+    });
+
+    if (notesToUpdate.length === 0) return;
+
+    // Apply Optimistic Updates
+    set((state) => ({
+      nodes: state.nodes.map((n) => {
+        const update = notesToUpdate.find((u) => u.id === n.id);
+        if (update) {
+          return {
+            ...n,
+            parentNode: update.parentNode,
+            extent: update.extent,
+            position: update.position,
+            zIndex: 10,
+          };
+        }
+        return n;
+      }),
+    }));
+
+    // Apply DB Updates
+    const updates = notesToUpdate.map((u) =>
+      supabase
+        .from('notes')
+        .update({
+          group_id: u.parentNode || null,
+          updated_at: new Date().toISOString(),
+          // Ensure absolute position is preserved/correct in DB
+          position_x: u.absX, 
+          position_y: u.absY
+        })
+        .eq('id', u.id)
+        .eq('user_id', user.id)
+    );
+
+    await Promise.all(updates);
+  },
+
   onNodesChange: (changes: NodeChange[]) => {
     const nextNodes = applyNodeChanges(changes, get().nodes);
     set({ nodes: nextNodes });
@@ -919,6 +1176,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
                 const user = useAuthStore.getState().user;
                 if (!user) return;
         
+                // 1. Update DB size
                 const { error } = await supabase
                     .from('canvas_groups')
                     .update({ width: updatedNode.width, height: updatedNode.height, updated_at: new Date().toISOString() })
@@ -926,6 +1184,9 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
                     .eq('user_id', user.id);
         
                 if (error) console.error('Failed to update group size', error);
+
+                // 2. Recalculate membership (absorb/eject notes)
+                await get().recalculateGroupMembership(change.id);
               });
           }
       }

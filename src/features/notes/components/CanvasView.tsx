@@ -97,7 +97,7 @@ interface CanvasViewInnerProps {
 
 function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
   const accentColor = useThemeStore((state) => state.accentColor);
-  const { nodes, edges, onNodesChange, onEdgesChange, connectNotes, createGroup } = useNotesStore();
+  const { nodes, edges, onNodesChange, onEdgesChange, connectNotes, createGroup, handleNoteDragEnd } = useNotesStore();
   const { addTab } = useWorkspaceStore();
   const { screenToFlowPosition } = useReactFlow();
 
@@ -110,6 +110,15 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
       connectNotes(connection);
     },
     [connectNotes]
+  );
+  
+  const handleNodeDragStop = useCallback(
+      (_event: React.MouseEvent, node: any) => {
+          if (node.type === 'noteNode') {
+              handleNoteDragEnd(node.id);
+          }
+      },
+      [handleNoteDragEnd]
   );
 
   // Handle double clicking a note node
@@ -197,6 +206,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
+        onNodeDragStop={handleNodeDragStop}
         onNodeDoubleClick={handleNodeDoubleClick}
         nodeTypes={nodeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
@@ -222,8 +232,14 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
         {/* MiniMap - desktop only */}
         <MiniMap
           className="!bg-white dark:!bg-secondary-800 !border-secondary-200 dark:!border-secondary-700 hidden lg:block"
-          nodeColor={() => accentColor}
+          nodeColor={(node) => {
+            if (node.type === 'groupNode') {
+              return (node.data.color || accentColor) + '40';
+            }
+            return accentColor;
+          }}
           maskColor="rgba(0, 0, 0, 0.1)"
+          pannable
         />
 
         <CanvasControls canvasId={canvasId} isGrouping={isGrouping} setIsGrouping={setIsGrouping} />
