@@ -18,6 +18,7 @@ import { useCanvases } from '../hooks/useCanvases';
 import { LoadingSpinner } from '@/components/ui';
 import NoteNode from './NoteNode';
 import GroupNode from './GroupNode';
+import FloatingEdge from './FloatingEdge';
 
 // Custom node types
 const nodeTypes = {
@@ -98,7 +99,6 @@ interface CanvasViewInnerProps {
 function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
   const accentColor = useThemeStore((state) => state.accentColor);
   const { nodes, edges, onNodesChange, onEdgesChange, connectNotes, createGroup, handleNoteDragEnd } = useNotesStore();
-  const { addTab } = useWorkspaceStore();
   const { screenToFlowPosition } = useReactFlow();
 
   const [isGrouping, setIsGrouping] = useState(false);
@@ -121,20 +121,14 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
       [handleNoteDragEnd]
   );
 
-  // Handle double clicking a note node
-  const handleNodeDoubleClick = useCallback(
-    (_event: React.MouseEvent, node: any) => {
-      if (node.type === 'noteNode') {
-        addTab('note', node.id, node.data.title || 'Untitled');
-      }
-    },
-    [addTab]
-  );
+  const edgeTypes = useMemo(() => ({
+    floatingEdge: FloatingEdge,
+  }), []);
 
   // Memoize edge options
   const defaultEdgeOptions = useMemo(
     () => ({
-      style: { stroke: accentColor, strokeWidth: 2 },
+      style: { stroke: accentColor, strokeWidth: 3 },
       animated: true,
     }),
     [accentColor]
@@ -207,8 +201,8 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
         onNodeDragStop={handleNodeDragStop}
-        onNodeDoubleClick={handleNodeDoubleClick}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         connectionMode={ConnectionMode.Loose}
         fitView

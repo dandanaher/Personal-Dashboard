@@ -1,18 +1,51 @@
-import { memo, useCallback, useMemo, useState } from 'react';
-import { Handle, Position, NodeProps, NodeResizer } from 'reactflow';
+import { memo, useCallback, useMemo, useState, useEffect } from 'react';
+import { Handle, Position, NodeProps, NodeResizer, NodeToolbar, useReactFlow } from 'reactflow';
 import type { NoteNodeData } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { useNotesStore } from '@/stores/notesStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { FloatingToolbar } from './FloatingToolbar';
 
 const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeData>) {
   const accentColor = useThemeStore((state) => state.accentColor);
-  const { updateNoteSize } = useNotesStore();
-  const { id, title, content, onDoubleClick } = data;
+  const { updateNoteSize, updateNoteColor, deleteNote } = useNotesStore();
+  const { addTab } = useWorkspaceStore();
+  const { fitView } = useReactFlow();
+  
+  const { id, title, content, color } = data;
   const [isHovered, setIsHovered] = useState(false);
+  const [showToolbar, setShowToolbar] = useState(false);
 
-  const handleDoubleClick = useCallback(() => {
-    onDoubleClick(id);
-  }, [id, onDoubleClick]);
+  // Hide toolbar when deselected
+  useEffect(() => {
+    if (!selected) {
+      setShowToolbar(false);
+    }
+  }, [selected]);
+
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowToolbar((prev) => !prev);
+  }, []);
+
+  const handleEdit = useCallback(() => {
+    addTab('note', id, title || 'Untitled');
+    setShowToolbar(false);
+  }, [addTab, id, title]);
+
+  const handleColor = useCallback((newColor: string) => {
+    updateNoteColor(id, newColor);
+  }, [updateNoteColor, id]);
+
+  const handleFocus = useCallback(() => {
+    fitView({ nodes: [{ id }], padding: 0.2, duration: 800 });
+  }, [fitView, id]);
+
+  const handleDelete = useCallback(() => {
+    if (window.confirm('Are you sure you want to delete this note?')) {
+      deleteNote(id);
+    }
+  }, [deleteNote, id]);
 
   const handleClasses = useMemo(
     () =>
@@ -34,6 +67,22 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      <NodeToolbar
+        isVisible={showToolbar}
+        position={Position.Top}
+        offset={10}
+        align="center"
+        className="z-[9999]"
+      >
+        <FloatingToolbar
+          onEdit={handleEdit}
+          onColor={handleColor}
+          onFocus={handleFocus}
+          onDelete={handleDelete}
+          color={color}
+        />
+      </NodeToolbar>
+
       <NodeResizer
         isVisible={isHovered || selected}
         minWidth={256}
@@ -41,16 +90,30 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
         onResizeEnd={(_event, params) => {
           updateNoteSize(id, params.width, params.height);
         }}
-        lineStyle={{ borderColor: accentColor }}
-        handleStyle={{ borderColor: accentColor }}
+        lineStyle={{ borderColor: color || accentColor }}
+        handleStyle={{ borderColor: color || accentColor }}
         lineClassName="opacity-0 group-hover:opacity-100"
         handleClassName="!w-3 !h-3 !bg-white !border !rounded-full opacity-0 group-hover:opacity-100"
       />
+      
       <div
-        className="group w-full h-full min-w-[16rem] min-h-[6rem] rounded-xl shadow-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 cursor-pointer transition-transform hover:scale-[1.01] active:scale-[0.99]"
+        className="group w-full h-full min-w-[16rem] min-h-[6rem] rounded-xl shadow-lg border cursor-pointer transition-transform hover:scale-[1.01] active:scale-[0.99] bg-white dark:bg-secondary-800 relative overflow-hidden"
         onDoubleClick={handleDoubleClick}
-        style={{ boxShadow: `0 0 0 1px ${accentColor}10, 0 10px 15px -3px rgba(0,0,0,0.1)` }}
+        style={{ 
+          borderColor: color || (useThemeStore.getState().darkMode ? '#334155' : '#e2e8f0'),
+          boxShadow: selected 
+            ? `0 0 0 2px ${accentColor}` 
+            : `0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)`
+        }}
       >
+        {/* Color Overlay */}
+        {color && (
+            <div 
+                className="absolute inset-0 pointer-events-none" 
+                style={{ backgroundColor: color, opacity: 0.1 }} 
+            />
+        )}
+
         {/* Connection handles (show on hover) */}
         <Handle
           type="source"
@@ -59,7 +122,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
           isConnectableStart={isHovered}
           isConnectableEnd={isHovered}
           className={handleClasses}
-          style={{ boxShadow: `0 0 0 2px ${accentColor}40` }}
+          style={{ borderColor: color || accentColor }}
         />
         <Handle
           type="target"
@@ -75,7 +138,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
           isConnectableStart={isHovered}
           isConnectableEnd={isHovered}
           className={handleClasses}
-          style={{ boxShadow: `0 0 0 2px ${accentColor}40` }}
+          style={{ borderColor: color || accentColor }}
         />
         <Handle
           type="target"
@@ -86,7 +149,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
         />
 
         {/* Note content */}
-        <div className="p-4 h-full flex flex-col overflow-hidden">
+        <div className="p-4 h-full flex flex-col overflow-hidden relative z-10">
           <h3 className="font-semibold text-sm truncate mb-2 text-secondary-900 dark:text-white shrink-0">
             {title || 'Untitled'}
           </h3>
@@ -109,7 +172,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
           isConnectableStart={isHovered}
           isConnectableEnd={isHovered}
           className={handleClasses}
-          style={{ boxShadow: `0 0 0 2px ${accentColor}40` }}
+          style={{ borderColor: color || accentColor }}
         />
         <Handle
           type="target"
@@ -125,7 +188,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
           isConnectableStart={isHovered}
           isConnectableEnd={isHovered}
           className={handleClasses}
-          style={{ boxShadow: `0 0 0 2px ${accentColor}40` }}
+          style={{ borderColor: color || accentColor }}
         />
         <Handle
           type="target"

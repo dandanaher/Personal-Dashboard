@@ -13,10 +13,13 @@ import { Plus, Crosshair } from 'lucide-react';
 import { useNotesStore } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
 import NoteNode from './NoteNode';
+import GroupNode from './GroupNode';
+import FloatingEdge from './FloatingEdge';
 
 // Custom node types
 const nodeTypes = {
   noteNode: NoteNode,
+  groupNode: GroupNode,
 };
 
 // Canvas controls component (must be inside ReactFlowProvider)
@@ -74,11 +77,15 @@ function NotesCanvas() {
     },
     [connectNotes]
   );
+  
+  const edgeTypes = useMemo(() => ({
+    floatingEdge: FloatingEdge,
+  }), []);
 
   // Memoize edge options
   const defaultEdgeOptions = useMemo(
     () => ({
-      style: { stroke: accentColor, strokeWidth: 2 },
+      style: { stroke: accentColor, strokeWidth: 3 },
       animated: true,
     }),
     [accentColor]
@@ -93,6 +100,7 @@ function NotesCanvas() {
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         connectionMode={ConnectionMode.Loose}
         fitView
@@ -116,7 +124,12 @@ function NotesCanvas() {
         {/* MiniMap - desktop only */}
         <MiniMap
           className="!bg-white dark:!bg-secondary-800 !border-secondary-200 dark:!border-secondary-700 hidden lg:block"
-          nodeColor={() => accentColor}
+          nodeColor={(node) => {
+            if (node.type === 'groupNode') {
+              return (node.data.color || accentColor) + '40';
+            }
+            return accentColor;
+          }}
           maskColor="rgba(0, 0, 0, 0.1)"
         />
 

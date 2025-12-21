@@ -42,6 +42,7 @@ export interface NoteNodeData {
   id: string;
   title: string;
   content: string;
+  color?: string;
   onDoubleClick: (noteId: string) => void;
 }
 
@@ -79,6 +80,8 @@ interface NotesActions {
   updateNotePosition: (noteId: string, x: number, y: number) => void;
   updateNoteSize: (noteId: string, width: number, height: number) => void;
   updateNoteContent: (noteId: string, title: string, content: string) => Promise<void>;
+  updateNoteColor: (noteId: string, color: string) => Promise<void>;
+  updateEdge: (edgeId: string, updates: { label?: string; color?: string }) => Promise<void>;
   deleteNote: (noteId: string) => Promise<void>;
   connectNotes: (connection: Connection) => Promise<void>;
   deleteEdge: (edgeId: string) => Promise<void>;
@@ -135,6 +138,7 @@ function noteToNode(note: Note, onDoubleClick: (noteId: string) => void): Node<N
       id: note.id,
       title: note.title,
       content: note.content,
+      color: note.color,
       onDoubleClick,
     },
   };
@@ -148,8 +152,13 @@ function noteEdgeToEdge(noteEdge: NoteEdge): Edge {
     target: (noteEdge.target_note_id || noteEdge.target_group_id)!,
     sourceHandle: noteEdge.source_handle || undefined,
     targetHandle: noteEdge.target_handle || undefined,
-    type: 'smoothstep',
+    type: 'floatingEdge',
     animated: true,
+    data: {
+      label: noteEdge.label,
+      color: noteEdge.color,
+    },
+    style: noteEdge.color ? { stroke: noteEdge.color, strokeWidth: 3 } : undefined,
   };
 }
 
@@ -494,6 +503,77 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
         void get().fetchCanvasNotes(currentCanvasId);
       }
       void get().fetchLibraryNotes();
+    }
+  },
+
+  updateNoteColor: async (noteId: string, color: string) => {
+    const user = useAuthStore.getState().user;
+    if (!user) return;
+
+    // Optimistic update
+    set((state) => ({
+      nodes: state.nodes.map((node) =>
+        node.id === noteId ? { ...node, data: { ...node.data, color } } : node
+      ),
+    }));
+
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .update({ color, updated_at: new Date().toISOString() })
+        .eq('id', noteId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Failed to update note color:', error);
+      // Revert/Refetch
+      const { currentCanvasId } = get();
+      if (currentCanvasId) {
+        void get().fetchCanvasNotes(currentCanvasId);
+      }
+    }
+  },
+
+  updateEdge: async (edgeId: string, updates: { label?: string; color?: string }) => {
+    const user = useAuthStore.getState().user;
+    if (!user) return;
+
+    // Optimistic update
+    set((state) => ({
+      edges: state.edges.map((edge) =>
+        edge.id === edgeId
+          ? {
+              ...edge,
+              data: { ...edge.data, ...updates },
+              style: { 
+                ...edge.style, 
+                ...(updates.color ? { stroke: updates.color } : {}) 
+              },
+            }
+          : edge
+      ),
+    }));
+
+    try {
+      // Map updates to DB columns
+      const dbUpdates: any = {};
+      if (updates.label !== undefined) dbUpdates.label = updates.label;
+      if (updates.color !== undefined) dbUpdates.color = updates.color;
+
+      const { error } = await supabase
+        .from('note_edges')
+        .update(dbUpdates)
+        .eq('id', edgeId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Failed to update edge:', error);
+      const { currentCanvasId } = get();
+      if (currentCanvasId) {
+        void get().fetchCanvasNotes(currentCanvasId);
+      }
     }
   },
 

@@ -1,13 +1,14 @@
-import { memo, useState, useMemo } from 'react';
-import { NodeProps, NodeResizer, Handle, Position } from 'reactflow';
+import { memo, useState, useMemo, useCallback, useEffect } from 'react';
+import { NodeProps, NodeResizer, Handle, Position, NodeToolbar, useReactFlow } from 'reactflow';
 import { useNotesStore } from '@/stores/notesStore';
-import { APP_COLORS } from '@/stores/themeStore';
-import { Palette, Trash2, Type } from 'lucide-react';
+import { FloatingToolbar } from './FloatingToolbar';
 
 const GroupNode = memo(({ data, selected, id }: NodeProps) => {
   const { updateGroup, deleteGroup } = useNotesStore();
+  const { fitView } = useReactFlow();
   const [isHovered, setIsHovered] = useState(false);
   const [isEditingLabel, setIsEditingLabel] = useState(false);
+  const [showToolbar, setShowToolbar] = useState(false);
   
   // Use the stored color or default
   const color = data.color || '#3b82f6';
@@ -15,9 +16,34 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
   // Generate background with low opacity
   const backgroundColor = `${color}1A`; // 10% opacity (approx hex)
 
-  const handleColorChange = (newColor: string) => {
+  // Hide toolbar when deselected
+  useEffect(() => {
+    if (!selected) {
+      setShowToolbar(false);
+    }
+  }, [selected]);
+
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowToolbar((prev) => !prev);
+  }, []);
+
+  const handleEdit = useCallback(() => {
+    setIsEditingLabel(true);
+    setShowToolbar(false);
+  }, []);
+
+  const handleColor = useCallback((newColor: string) => {
     updateGroup(id, { color: newColor });
-  };
+  }, [updateGroup, id]);
+
+  const handleFocus = useCallback(() => {
+    fitView({ nodes: [{ id }], padding: 0.1, duration: 800 });
+  }, [fitView, id]);
+
+  const handleDelete = useCallback(() => {
+    deleteGroup(id);
+  }, [deleteGroup, id]);
 
   const handleClasses = useMemo(
     () =>
@@ -36,7 +62,23 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onDoubleClick={handleDoubleClick}
     >
+      <NodeToolbar
+        isVisible={showToolbar}
+        position={Position.Top}
+        offset={10}
+        align="center"
+      >
+        <FloatingToolbar
+          onEdit={handleEdit}
+          onColor={handleColor}
+          onFocus={handleFocus}
+          onDelete={handleDelete}
+          color={color}
+        />
+      </NodeToolbar>
+
       <NodeResizer 
         isVisible={selected || isHovered} 
         minWidth={100} 
@@ -105,46 +147,11 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
           <span 
             className="font-bold text-lg px-1 cursor-pointer select-none"
             style={{ color }}
-            onDoubleClick={() => setIsEditingLabel(true)}
+            onDoubleClick={(e) => { e.stopPropagation(); setIsEditingLabel(true); }}
           >
             {data.label || 'Group'}
           </span>
         )}
-      </div>
-
-      {/* Toolbar (visible on hover/select) */}
-      <div className={`absolute -top-10 right-0 flex gap-1 bg-white dark:bg-secondary-800 p-1 rounded-lg shadow border border-secondary-200 dark:border-secondary-700 transition-opacity ${selected || isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        {/* Color Picker */}
-        <div className="group/color relative">
-          <button className="p-1.5 hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-md">
-            <Palette size={14} className="text-secondary-600 dark:text-secondary-300" />
-          </button>
-          <div className="absolute left-0 top-full mt-1 hidden group-hover/color:flex flex-wrap gap-1 p-2 bg-white dark:bg-secondary-800 rounded-lg shadow-xl border border-secondary-200 w-32 z-50">
-            {APP_COLORS.map((c) => (
-              <button
-                key={c.value}
-                className="w-4 h-4 rounded-full border border-black/10"
-                style={{ backgroundColor: c.value }}
-                onClick={() => handleColorChange(c.value)}
-                title={c.name}
-              />
-            ))}
-          </div>
-        </div>
-        
-        <button 
-          onClick={() => setIsEditingLabel(true)}
-          className="p-1.5 hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-md"
-        >
-          <Type size={14} className="text-secondary-600 dark:text-secondary-300" />
-        </button>
-        
-        <button 
-          onClick={() => deleteGroup(id)}
-          className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-md"
-        >
-          <Trash2 size={14} className="text-red-500" />
-        </button>
       </div>
     </div>
   );
