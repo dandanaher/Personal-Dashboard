@@ -32,3 +32,7 @@ dist-ssr
 
 # PWA
 dev-dist
+
+# Private AI Context
+DB_CONTEXT.md
+.ai/
