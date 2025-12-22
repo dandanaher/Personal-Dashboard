@@ -75,10 +75,21 @@ function FolderItem({
   onNoteRename: (note: Note) => void;
   onNoteDelete: (noteId: string) => void;
 }) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const getExpandedState = () => {
+    const saved = localStorage.getItem(`notes-sidebar-folder-${folder.id}`);
+    return saved !== null ? saved === 'true' : false;
+  };
+
+  const [isExpanded, setIsExpanded] = useState(getExpandedState);
   const [showMenu, setShowMenu] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const accentColor = useThemeStore((state) => state.accentColor);
+
+  const toggleExpanded = () => {
+    const newState = !isExpanded;
+    setIsExpanded(newState);
+    localStorage.setItem(`notes-sidebar-folder-${folder.id}`, String(newState));
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -121,7 +132,7 @@ function FolderItem({
         onDrop={handleDrop}
       >
         <button
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={toggleExpanded}
           className="flex items-center gap-2 flex-1 min-w-0 text-secondary-700 dark:text-secondary-300 text-sm"
         >
           {isExpanded ? (
@@ -343,10 +354,21 @@ function CanvasItem({
   onNoteRename: (note: Note) => void;
   onNoteDelete: (noteId: string) => void;
 }) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const getExpandedState = () => {
+    const saved = localStorage.getItem(`notes-sidebar-canvas-${canvas.id}`);
+    return saved !== null ? saved === 'true' : false;
+  };
+
+  const [isExpanded, setIsExpanded] = useState(getExpandedState);
   const [showMenu, setShowMenu] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const accentColor = useThemeStore((state) => state.accentColor);
+
+  const toggleExpanded = () => {
+    const newState = !isExpanded;
+    setIsExpanded(newState);
+    localStorage.setItem(`notes-sidebar-canvas-${canvas.id}`, String(newState));
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -392,7 +414,7 @@ function CanvasItem({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              setIsExpanded(!isExpanded);
+              toggleExpanded();
             }}
             className="text-secondary-400 hover:text-secondary-600 dark:hover:text-secondary-200"
           >
