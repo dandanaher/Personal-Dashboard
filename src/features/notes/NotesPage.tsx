@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ReactFlowProvider } from 'reactflow';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -18,6 +18,7 @@ function NotesPage() {
   // Find the active tab
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const { closeTab } = useWorkspaceStore();
+  const [isLibraryOpen, setIsLibraryOpen] = useState(!activeTab);
 
   // Remove any legacy home/dashboard tabs
   useEffect(() => {
@@ -27,6 +28,14 @@ function NotesPage() {
       }
     });
   }, [tabs, closeTab]);
+
+  useEffect(() => {
+    if (activeTab) {
+      setIsLibraryOpen(false);
+      return;
+    }
+    setIsLibraryOpen(true);
+  }, [activeTab]);
 
   // If no user, don't render anything
   if (!user) {
@@ -40,14 +49,14 @@ function NotesPage() {
   return (
     <div className={pageClasses}>
       {/* Notes Library Sidebar */}
-      <div className="w-72 flex-shrink-0 h-full">
+      <div className="hidden lg:flex w-72 flex-shrink-0 h-full">
         <NotesLibrarySidebar />
       </div>
 
       {/* Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden relative bg-secondary-50 dark:bg-black">
         {/* Tab Bar */}
-        <TabStrip />
+        <TabStrip onOpenLibrary={() => setIsLibraryOpen(true)} />
 
         {/* View Area */}
         <div className="flex-1 overflow-hidden relative">
@@ -71,6 +80,13 @@ function NotesPage() {
           )}
         </div>
       </div>
+
+      {/* Mobile Library Overlay */}
+      {isLibraryOpen && (
+        <div className="fixed inset-0 bottom-16 z-40 bg-secondary-50 dark:bg-black lg:hidden">
+          <NotesLibrarySidebar onClose={() => setIsLibraryOpen(false)} />
+        </div>
+      )}
     </div>
   );
 }

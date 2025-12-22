@@ -7,6 +7,7 @@ import {
   FolderPlus,
   ChevronRight,
   ChevronDown,
+  ChevronLeft,
   MoreVertical,
   Trash2,
   Edit2,
@@ -496,7 +497,11 @@ function CanvasItem({
   );
 }
 
-export function NotesLibrarySidebar() {
+interface NotesLibrarySidebarProps {
+  onClose?: () => void;
+}
+
+export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
   const { addTab, findTabByEntity, closeTab } = useWorkspaceStore();
   const { libraryNotes, fetchLibraryNotes, createNote, updateNoteContent, deleteNote } = useNotesStore();
   const { canvases, loading: canvasesLoading, createCanvas, deleteCanvas, updateCanvas } = useCanvases();
@@ -721,10 +726,21 @@ export function NotesLibrarySidebar() {
 
   return (
     <>
-      <div className="w-full h-full border-b lg:border-b-0 flex flex-col overflow-hidden bg-white dark:bg-secondary-900 border-r border-secondary-200 dark:border-secondary-800">
+      <div className="w-full h-full border-b lg:border-b-0 flex flex-col overflow-hidden bg-white dark:bg-secondary-900 lg:border-r border-secondary-200 dark:border-secondary-800">
         {/* Header - Fixed Height 60px */}
         <div className="h-[60px] flex items-center justify-between px-4 border-b border-secondary-200 dark:border-secondary-800 flex-shrink-0">
-          <h2 className="font-semibold text-secondary-900 dark:text-white">Notes</h2>
+          <div className="flex items-center gap-2">
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="lg:hidden p-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors text-secondary-600 dark:text-secondary-300 min-h-touch min-w-touch"
+                aria-label="Close notes library"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            )}
+            <h2 className="font-semibold text-secondary-900 dark:text-white">Notes</h2>
+          </div>
           <div className="flex items-center gap-1">
             <button
               onClick={handleCreateFolder}
