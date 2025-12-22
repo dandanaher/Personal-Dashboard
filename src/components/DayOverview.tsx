@@ -7,6 +7,8 @@ import { useThemeStore } from '@/stores/themeStore';
 import { useCallback, useEffect, useState } from 'react';
 import supabase from '@/lib/supabase';
 import type { HabitLog } from '@/lib/types';
+import { logger } from '@/lib/logger';
+import { getGoalDisplayProgress } from '@/features/goals/lib/progress';
 import { CheckCircle2, Circle, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import LoadingSpinner from './ui/LoadingSpinner';
@@ -48,7 +50,7 @@ export function DayOverview({ className = '' }: DayOverviewProps) {
       if (error) throw error;
       setHabitLogs(data || []);
     } catch (err) {
-      console.error('Error fetching habit logs:', err);
+      logger.error('Error fetching habit logs:', err);
     } finally {
       setLogsLoading(false);
     }
@@ -71,8 +73,12 @@ export function DayOverview({ className = '' }: DayOverviewProps) {
 
   // Filter data for today
   const incompleteTasks = tasks.filter((task) => !task.completed);
-  const activeGoals = goals.filter((goal) => !goal.completed).slice(0, 3); // Show top 3
+  const activeGoals = goals.filter((goal) => !goal.completed).slice(0, 3);
   const habitLogsMap = new Map(habitLogs.map((log) => [log.habit_id, log.completed]));
+  const completedHabitsCount = habits.reduce(
+    (count, habit) => count + (habitLogsMap.get(habit.id) ? 1 : 0),
+    0
+  );
 
   return (
     <div className={className}>
@@ -124,7 +130,7 @@ export function DayOverview({ className = '' }: DayOverviewProps) {
       <Card padding="none" variant="outlined" className="overflow-hidden">
         <div className="px-3 py-2 border-b border-secondary-200 dark:border-secondary-700 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-secondary-900 dark:text-white">
-            Habits ({habits.filter((h) => habitLogsMap.get(h.id)).length}/{habits.length})
+            Habits ({completedHabitsCount}/{habits.length})
           </h3>
           <Link
             to="/habits"
@@ -204,13 +210,9 @@ export function DayOverview({ className = '' }: DayOverviewProps) {
             <ul className="space-y-2">
               {activeGoals.map((goal) => {
                 // Calculate display progress (same logic as GoalCard)
-                const isHabitLinked = goal.linked_habit_id && goal.target_completions;
                 const hData = goal.linked_habit_id ? habitData.get(goal.linked_habit_id) : undefined;
                 const habitCompletions = hData?.completions || 0;
-
-                const displayProgress = isHabitLinked && goal.target_completions
-                  ? Math.min(100, Math.round((habitCompletions / goal.target_completions) * 100))
-                  : goal.completed ? 100 : goal.progress;
+                const displayProgress = getGoalDisplayProgress(goal, habitCompletions);
 
                 return (
                   <li key={goal.id} className="space-y-0.5">

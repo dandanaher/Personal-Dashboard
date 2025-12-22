@@ -14,6 +14,7 @@ import { parseISO, differenceInDays } from 'date-fns';
 import { Card, Button } from '@/components/ui';
 import { Goal } from '@/lib/types';
 import { ProgressBar, getProgressColor } from './ProgressBar';
+import { getGoalDisplayProgress, isGoalHabitLinked } from '@/features/goals/lib/progress';
 
 interface GoalCardProps {
   goal: Goal;
@@ -52,15 +53,18 @@ export const GoalCard = memo(function GoalCard({
   const isOverdue = daysUntilTarget !== null && daysUntilTarget < 0 && !goal.completed;
 
   // Check if goal is linked to a habit
-  const isHabitLinked = goal.linked_habit_id && goal.target_completions;
+  const isHabitLinked = isGoalHabitLinked(goal);
 
   // Calculate actual progress for habit-linked goals
   const displayProgress = useMemo(() => {
-    if (isHabitLinked && goal.target_completions) {
-      return Math.min(100, Math.round((habitCompletions / goal.target_completions) * 100));
-    }
-    return goal.completed ? 100 : goal.progress;
-  }, [goal.progress, goal.completed, isHabitLinked, habitCompletions, goal.target_completions]);
+    return getGoalDisplayProgress(goal, habitCompletions);
+  }, [
+    goal.completed,
+    goal.linked_habit_id,
+    goal.progress,
+    goal.target_completions,
+    habitCompletions,
+  ]);
 
   // Get progress bar color
   const progressColor = useMemo(() => {

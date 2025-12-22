@@ -1,16 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
+import { logger } from '@/lib/logger';
 
-console.log('Supabase client initializing...');
+const isDev = import.meta.env.DEV;
+
+if (isDev) {
+  logger.log('Supabase client initializing...');
+}
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
-// Log environment variable status
-console.log('Supabase URL:', supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'MISSING');
-console.log(
-  'Supabase Key:',
-  supabaseAnonKey ? supabaseAnonKey.substring(0, 20) + '...' : 'MISSING'
-);
+// Log environment variable status in development only
+if (isDev) {
+  logger.log('Supabase URL:', supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'MISSING');
+  logger.log(
+    'Supabase Key:',
+    supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'MISSING'
+  );
+}
 
 if (!supabaseUrl || !supabaseAnonKey) {
   const errorMsg = `Supabase credentials missing!
@@ -37,7 +44,9 @@ export const supabase = createClient(
   }
 );
 
-console.log('Supabase client created successfully');
+if (isDev) {
+  logger.log('Supabase client created successfully');
+}
 
 export const supabaseAuth = supabase.auth;
 

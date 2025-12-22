@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format, startOfDay } from 'date-fns';
 import supabase from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
+import { logger } from '@/lib/logger';
 import type { Task, TaskUpdate } from '@/lib/types';
 import { incrementXP } from '@/features/gamification/hooks/useProfileStats';
 import { XP_REWARDS } from '@/features/gamification/utils';
@@ -82,26 +83,33 @@ export function useAllTasks(): UseAllTasksReturn {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch tasks';
       setError(errorMessage);
-      console.error('Error fetching all tasks:', err);
+      logger.error('Error fetching all tasks:', err);
     } finally {
       setLoading(false);
     }
   }, [user, sortTasks]);
 
   // Calculate derived task lists
-  const upcomingTasks = allTasks.filter((task) => {
-    if (task.completed) return false;
-    if (!task.date) return false;
-    return task.date >= today;
-  });
+  const { upcomingTasks, datelessTasks, overdueTasks } = useMemo(() => {
+    const upcoming: Task[] = [];
+    const dateless: Task[] = [];
+    const overdue: Task[] = [];
 
-  const datelessTasks = allTasks.filter((task) => !task.date && !task.completed);
+    allTasks.forEach((task) => {
+      if (task.completed) return;
+      if (!task.date) {
+        dateless.push(task);
+        return;
+      }
+      if (task.date >= today) {
+        upcoming.push(task);
+      } else {
+        overdue.push(task);
+      }
+    });
 
-  const overdueTasks = allTasks.filter((task) => {
-    if (task.completed) return false;
-    if (!task.date) return false;
-    return task.date < today;
-  });
+    return { upcomingTasks: upcoming, datelessTasks: dateless, overdueTasks: overdue };
+  }, [allTasks, today]);
 
   // Check if there are uncompleted tasks from previous days
   const hasPreviousUncompleted = overdueTasks.length > 0;
@@ -112,8 +120,13 @@ export function useAllTasks(): UseAllTasksReturn {
       if (!user) return false;
 
       // Calculate new order_index
-      const tasksForDate = allTasks.filter((t) => t.date === date);
-      const maxOrderIndex = tasksForDate.reduce((max, task) => Math.max(max, task.order_index), 0);
+      const targetDate = date ?? null;
+      const maxOrderIndex = allTasks.reduce((max, task) => {
+        if (task.date === targetDate) {
+          return Math.max(max, task.order_index);
+        }
+        return max;
+      }, 0);
 
       // Create temporary task for optimistic update
       const tempId = `temp-${Date.now()}`;
@@ -123,7 +136,7 @@ export function useAllTasks(): UseAllTasksReturn {
         title,
         description: description || null,
         completed: false,
-        date: date ?? null,
+        date: targetDate,
         order_index: maxOrderIndex + 1,
         task_type: taskType || null,
         created_at: new Date().toISOString(),
@@ -141,7 +154,7 @@ export function useAllTasks(): UseAllTasksReturn {
             title,
             description: description || null,
             completed: false,
-            date: date ?? null,
+            date: targetDate,
             order_index: maxOrderIndex + 1,
             task_type: taskType || null,
           })
@@ -161,7 +174,7 @@ export function useAllTasks(): UseAllTasksReturn {
         setAllTasks((prev) => prev.filter((task) => task.id !== tempId));
         const errorMessage = err instanceof Error ? err.message : 'Failed to add task';
         setError(errorMessage);
-        console.error('Error adding task:', err);
+        logger.error('Error adding task:', err);
         return false;
       }
     },
@@ -211,7 +224,7 @@ export function useAllTasks(): UseAllTasksReturn {
         );
         const errorMessage = err instanceof Error ? err.message : 'Failed to update task';
         setError(errorMessage);
-        console.error('Error toggling task:', err);
+        logger.error('Error toggling task:', err);
       }
     },
     [allTasks, sortTasks, user]
@@ -237,7 +250,7 @@ export function useAllTasks(): UseAllTasksReturn {
         setAllTasks((prev) => sortTasks([...prev, task]));
         const errorMessage = err instanceof Error ? err.message : 'Failed to delete task';
         setError(errorMessage);
-        console.error('Error deleting task:', err);
+        logger.error('Error deleting task:', err);
       }
     },
     [allTasks, sortTasks]
@@ -277,7 +290,7 @@ export function useAllTasks(): UseAllTasksReturn {
         setAllTasks((prev) => sortTasks(prev.map((t) => (t.id === taskId ? task : t))));
         const errorMessage = err instanceof Error ? err.message : 'Failed to update task';
         setError(errorMessage);
-        console.error('Error updating task:', err);
+        logger.error('Error updating task:', err);
         return false;
       }
     },
@@ -290,12 +303,12 @@ export function useAllTasks(): UseAllTasksReturn {
     fetchTasks();
   }, [fetchTasks]);
 
-  // Subscribe to real-time changes
+  // Subscribe to real-time changes with targeted updates
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
-      .channel('all-tasks')
+      .channel(`all-tasks-${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -304,8 +317,39 @@ export function useAllTasks(): UseAllTasksReturn {
           table: 'tasks',
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
-          fetchTasks();
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newTask = payload.new as Task;
+            setAllTasks((prev) => {
+              if (prev.some((task) => task.id === newTask.id)) return prev;
+              const tempIndex = prev.findIndex(
+                (task) =>
+                  task.id.startsWith('temp-') &&
+                  task.title === newTask.title &&
+                  task.date === newTask.date &&
+                  task.order_index === newTask.order_index
+              );
+              if (tempIndex !== -1) {
+                const next = [...prev];
+                next[tempIndex] = newTask;
+                return sortTasks(next);
+              }
+              return sortTasks([...prev, newTask]);
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedTask = payload.new as Task;
+            setAllTasks((prev) => {
+              if (!prev.some((task) => task.id === updatedTask.id)) {
+                return sortTasks([...prev, updatedTask]);
+              }
+              return sortTasks(
+                prev.map((task) => (task.id === updatedTask.id ? updatedTask : task))
+              );
+            });
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as { id: string }).id;
+            setAllTasks((prev) => prev.filter((task) => task.id !== deletedId));
+          }
         }
       )
       .subscribe();
@@ -313,7 +357,7 @@ export function useAllTasks(): UseAllTasksReturn {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, fetchTasks]);
+  }, [user, sortTasks]);
 
   return {
     allTasks,

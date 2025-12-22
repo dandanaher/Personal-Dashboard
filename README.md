@@ -232,6 +232,13 @@ The app includes PWA configuration for installable web app experience:
 - App manifest for installation
 - Theme color and icons configured
 
+## Maintenance Updates
+
+- Optimized task real-time handling to avoid full refetches on every change.
+- Memoized derived task lists and day overview counts to reduce repeated filtering.
+- Centralized goal display progress calculations to remove duplicate logic.
+- Limited Supabase initialization logging to development builds.
+
 ## Contributing
 
 1. Fork the repository
