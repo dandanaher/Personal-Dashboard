@@ -158,6 +158,17 @@
   .animate-pulse-slow {
     animation: pulse-slow 3s ease-in-out infinite;
   }
+
+  /* Force crosshair over React Flow while selection tool is active */
+  .canvas-selecting .react-flow__pane,
+  .canvas-selecting .react-flow__pane.selection,
+  .canvas-selecting .react-flow__pane.dragging,
+  .canvas-selecting .react-flow__renderer,
+  .canvas-selecting .react-flow__node,
+  .canvas-selecting .react-flow__edge,
+  .canvas-selecting .react-flow__edge-path {
+    cursor: crosshair;
+  }
 }
 
 /* Custom keyframes */

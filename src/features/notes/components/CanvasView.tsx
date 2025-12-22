@@ -9,17 +9,20 @@ import ReactFlow, {
   useReactFlow,
   useViewport,
   ReactFlowProvider,
+  Node,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Crosshair, Square, FileText } from 'lucide-react';
+import { Crosshair, FileText, MousePointerSquareDashed } from 'lucide-react';
 import { useNotesStore } from '@/stores/notesStore';
+import type { NoteNodeData } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
-import { useCanvases } from '../hooks/useCanvases';
 import { LoadingSpinner } from '@/components/ui';
+import { useCanvases } from '../hooks/useCanvases';
 import NoteNode from './NoteNode';
 import GroupNode from './GroupNode';
 import FloatingEdge from './FloatingEdge';
+import { FloatingToolbar } from './FloatingToolbar';
 
 // Custom node types
 const nodeTypes = {
@@ -27,20 +30,24 @@ const nodeTypes = {
   groupNode: GroupNode,
 };
 
+type CanvasNode = Node<NoteNodeData | { label?: string | null; color?: string | null }>;
+type BoundsRect = { x: number; y: number; width: number; height: number };
+
 const NOTE_DROP_PREVIEW_SIZE = { width: 256, height: 96 };
 const NOTE_DROP_DRAG_THRESHOLD = 6;
+const SELECTION_DRAG_THRESHOLD = 6;
 
 interface CanvasControlsProps {
-  isGrouping: boolean;
-  setIsGrouping: (isGrouping: boolean) => void;
+  isSelecting: boolean;
+  setIsSelecting: (isSelecting: boolean) => void;
   isPlacingNote: boolean;
   onStartNoteDrag: (event: React.PointerEvent<HTMLButtonElement>) => void;
 }
 
 // Canvas controls component (must be inside ReactFlowProvider)
 function CanvasControls({
-  isGrouping,
-  setIsGrouping,
+  isSelecting,
+  setIsSelecting,
   isPlacingNote,
   onStartNoteDrag,
 }: CanvasControlsProps) {
@@ -55,18 +62,18 @@ function CanvasControls({
     <>
       {/* Top Right Controls */}
       <Panel position="top-right" className="!m-4 flex flex-col gap-2">
-         {/* Grouping Toggle */}
+         {/* Selection Toggle */}
         <button 
-           onClick={() => setIsGrouping(!isGrouping)}
+           onClick={() => setIsSelecting(!isSelecting)}
            className={`p-2 rounded-xl border shadow-lg transition-colors self-end ${
-               isGrouping 
+               isSelecting 
                ? 'bg-secondary-100 dark:bg-secondary-700 text-accent border-accent' 
                : 'bg-white dark:bg-secondary-800 border-secondary-200 dark:border-secondary-700 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700'
            }`}
-           style={isGrouping ? { color: accentColor, borderColor: accentColor } : {}}
-           title="Create Group (Drag to select)"
+           style={isSelecting ? { color: accentColor, borderColor: accentColor } : {}}
+           title="Select"
         >
-            <Square className="h-5 w-5" />
+            <MousePointerSquareDashed className="h-5 w-5" />
         </button>
       </Panel>
 
@@ -117,20 +124,36 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     createGroup,
     handleNoteDragEnd,
     createNote,
+    updateNoteColor,
+    updateGroup,
+    deleteNote,
+    deleteGroup,
   } = useNotesStore();
-  const { screenToFlowPosition } = useReactFlow();
-  const { zoom } = useViewport();
+  const { screenToFlowPosition, fitView } = useReactFlow();
+  const { zoom, x: viewportX, y: viewportY } = useViewport();
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
-  const [isGrouping, setIsGrouping] = useState(false);
-  const [selectionRect, setSelectionRect] = useState<{x: number, y: number, width: number, height: number} | null>(null);
-  const startPosRef = useRef<{x: number, y: number} | null>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectionRect, setSelectionRect] = useState<BoundsRect | null>(null);
+  const selectionStartRef = useRef<{ x: number; y: number } | null>(null);
+  const selectionDragRef = useRef(false);
+  const selectionJustFinishedRef = useRef(false);
+  const selectionMoveStartRef = useRef<{ x: number; y: number } | null>(null);
+  const selectionMoveDragRef = useRef(false);
+  const selectionMoveRef = useRef<{
+    startFlow: { x: number; y: number };
+    nodePositions: Record<string, { x: number; y: number }>;
+    nodeIds: string[];
+    noteIds: string[];
+  } | null>(null);
+  const [isDraggingSelection, setIsDraggingSelection] = useState(false);
   const noteDragStartRef = useRef<{ x: number; y: number } | null>(null);
   const [isPlacingNote, setIsPlacingNote] = useState(false);
   const [noteDropPreview, setNoteDropPreview] = useState<{
     localX: number;
     localY: number;
   } | null>(null);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
 
   const handleConnect = useCallback(
     (connection: Connection) => {
@@ -140,7 +163,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
   );
   
   const handleNodeDragStop = useCallback(
-      (_event: React.MouseEvent, node: any) => {
+      (_event: React.MouseEvent, node: CanvasNode) => {
           if (node.type === 'noteNode') {
               handleNoteDragEnd(node.id);
           }
@@ -150,6 +173,87 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
 
   const previewWidth = NOTE_DROP_PREVIEW_SIZE.width * zoom;
   const previewHeight = NOTE_DROP_PREVIEW_SIZE.height * zoom;
+
+  const getNodeSize = useCallback((node: CanvasNode) => {
+    const width = (
+      node.width ??
+      node.style?.width ??
+      (node.type === 'noteNode' ? NOTE_DROP_PREVIEW_SIZE.width : 0)
+    ) as number;
+    const height = (
+      node.height ??
+      node.style?.height ??
+      (node.type === 'noteNode' ? NOTE_DROP_PREVIEW_SIZE.height : 0)
+    ) as number;
+    return { width, height };
+  }, []);
+
+  const getNodeAbsolutePosition = useCallback(
+    (node: CanvasNode): { x: number; y: number } => {
+      if (!node.parentNode) {
+        return { x: node.position.x, y: node.position.y };
+      }
+
+      const parentNode = nodes.find((item) => item.id === node.parentNode) as CanvasNode | undefined;
+      if (!parentNode) {
+        return { x: node.position.x, y: node.position.y };
+      }
+
+      const parentPosition = getNodeAbsolutePosition(parentNode);
+      return {
+        x: node.position.x + parentPosition.x,
+        y: node.position.y + parentPosition.y,
+      };
+    },
+    [nodes]
+  );
+
+  const getNodeBounds = useCallback(
+    (node: CanvasNode) => {
+      const { width, height } = getNodeSize(node);
+      const position = getNodeAbsolutePosition(node);
+      return { x: position.x, y: position.y, width, height };
+    },
+    [getNodeAbsolutePosition, getNodeSize]
+  );
+
+  const selectedNodes = useMemo(
+    () => (nodes.filter((node) => selectedNodeIds.includes(node.id)) as CanvasNode[]),
+    [nodes, selectedNodeIds]
+  );
+
+  const selectionBounds = useMemo(() => {
+    if (selectedNodes.length === 0) return null;
+
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+
+    selectedNodes.forEach((node) => {
+      if (node.type !== 'noteNode' && node.type !== 'groupNode') return;
+      const bounds = getNodeBounds(node);
+      if (!bounds.width || !bounds.height) return;
+      minX = Math.min(minX, bounds.x);
+      minY = Math.min(minY, bounds.y);
+      maxX = Math.max(maxX, bounds.x + bounds.width);
+      maxY = Math.max(maxY, bounds.y + bounds.height);
+    });
+
+    if (!Number.isFinite(minX) || !Number.isFinite(minY)) return null;
+
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+  }, [getNodeBounds, selectedNodes]);
+
+  const selectionScreenBounds = useMemo(() => {
+    if (!selectionBounds) return null;
+    return {
+      left: selectionBounds.x * zoom + viewportX,
+      top: selectionBounds.y * zoom + viewportY,
+      width: selectionBounds.width * zoom,
+      height: selectionBounds.height * zoom,
+    };
+  }, [selectionBounds, viewportX, viewportY, zoom]);
 
   const findGroupAtPosition = useCallback(
     (position: { x: number; y: number }) => {
@@ -280,6 +384,14 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     updateNoteDropPreview,
   ]);
 
+  useEffect(() => {
+    if (!isSelecting) {
+      setSelectionRect(null);
+      selectionStartRef.current = null;
+      selectionDragRef.current = false;
+    }
+  }, [isSelecting]);
+
   const edgeTypes = useMemo(() => ({
     floatingEdge: FloatingEdge,
   }), []);
@@ -293,68 +405,333 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     [accentColor]
   );
 
-  // Grouping handlers
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
-      if (!isGrouping) return;
-      startPosRef.current = { x: e.clientX, y: e.clientY };
-      setSelectionRect({ x: e.clientX, y: e.clientY, width: 0, height: 0 });
-  }, [isGrouping]);
+  const clearSelection = useCallback(() => {
+    setSelectedNodeIds([]);
+  }, []);
 
-  const onMouseMove = useCallback((e: React.MouseEvent) => {
-      if (!isGrouping || !startPosRef.current) return;
-      
-      const startX = startPosRef.current.x;
-      const startY = startPosRef.current.y;
+  const rectContains = useCallback(
+    (outer: BoundsRect, inner: BoundsRect) =>
+      inner.x >= outer.x &&
+      inner.y >= outer.y &&
+      inner.x + inner.width <= outer.x + outer.width &&
+      inner.y + inner.height <= outer.y + outer.height,
+    []
+  );
+
+  const selectNodesInRect = useCallback(
+    (rect: BoundsRect) => {
+      const selected = (nodes as CanvasNode[])
+        .filter((node) => node.type === 'noteNode' || node.type === 'groupNode')
+        .filter((node) => {
+          const bounds = getNodeBounds(node);
+          if (!bounds.width || !bounds.height) return false;
+          return rectContains(rect, bounds);
+        })
+        .map((node) => node.id);
+
+      setSelectedNodeIds(selected);
+    },
+    [getNodeBounds, nodes, rectContains]
+  );
+
+  const handleSelectionColor = useCallback(
+    (color: string) => {
+      selectedNodes.forEach((node) => {
+        if (node.type === 'noteNode') {
+          void updateNoteColor(node.id, color);
+          return;
+        }
+
+        if (node.type === 'groupNode') {
+          void updateGroup(node.id, { color });
+        }
+      });
+    },
+    [selectedNodes, updateGroup, updateNoteColor]
+  );
+
+  const handleSelectionRecenter = useCallback(() => {
+    if (selectedNodeIds.length === 0) return;
+    fitView({
+      nodes: selectedNodeIds.map((id) => ({ id })),
+      padding: 0.2,
+      duration: 400,
+    });
+  }, [fitView, selectedNodeIds]);
+
+  const handleSelectionDelete = useCallback(async () => {
+    const notesToDelete = selectedNodes.filter((node) => node.type === 'noteNode');
+    const groupsToDelete = selectedNodes.filter((node) => node.type === 'groupNode');
+
+    if (notesToDelete.length > 0) {
+      const message =
+        notesToDelete.length === 1
+          ? 'Are you sure you want to delete this note?'
+          : `Are you sure you want to delete these ${notesToDelete.length} notes?`;
+      if (!window.confirm(message)) return;
+    }
+
+    await Promise.all([
+      ...notesToDelete.map((node) => deleteNote(node.id)),
+      ...groupsToDelete.map((node) => deleteGroup(node.id)),
+    ]);
+    clearSelection();
+  }, [clearSelection, deleteGroup, deleteNote, selectedNodes]);
+
+  const handleSelectionGroup = useCallback(async () => {
+    if (!selectionBounds) return;
+    await createGroup(selectionBounds);
+    clearSelection();
+  }, [clearSelection, createGroup, selectionBounds]);
+
+  const isSelectionTrigger = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) return false;
+    if (target.closest('.react-flow__panel')) return false;
+    if (target.closest('[data-selection-toolbar]')) return false;
+    if (target.closest('[data-selection-bounds]')) return false;
+    return true;
+  }, []);
+
+  const getMovableSelectionNodes = useCallback(() => {
+    const selectedGroupIds = new Set(
+      selectedNodes.filter((node) => node.type === 'groupNode').map((node) => node.id)
+    );
+
+    return selectedNodes.filter(
+      (node) => !(node.parentNode && selectedGroupIds.has(node.parentNode))
+    );
+  }, [selectedNodes]);
+
+  const onSelectionBoundsPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (selectedNodeIds.length === 0) return;
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      const movableNodes = getMovableSelectionNodes();
+      if (movableNodes.length === 0) return;
+
+      const startFlow = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      const nodePositions = movableNodes.reduce<Record<string, { x: number; y: number }>>(
+        (acc, node) => {
+          acc[node.id] = { x: node.position.x, y: node.position.y };
+          return acc;
+        },
+        {}
+      );
+
+      selectionMoveRef.current = {
+        startFlow,
+        nodePositions,
+        nodeIds: movableNodes.map((node) => node.id),
+        noteIds: movableNodes.filter((node) => node.type === 'noteNode').map((node) => node.id),
+      };
+      selectionMoveStartRef.current = { x: event.clientX, y: event.clientY };
+      selectionMoveDragRef.current = false;
+      setIsDraggingSelection(true);
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    [getMovableSelectionNodes, screenToFlowPosition, selectedNodeIds.length]
+  );
+
+  const onSelectionBoundsPointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const dragState = selectionMoveRef.current;
+      const startScreen = selectionMoveStartRef.current;
+      if (!dragState || !startScreen) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      const distance = Math.hypot(
+        event.clientX - startScreen.x,
+        event.clientY - startScreen.y
+      );
+      if (!selectionMoveDragRef.current && distance < SELECTION_DRAG_THRESHOLD) {
+        return;
+      }
+
+      selectionMoveDragRef.current = true;
+      const currentFlow = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      const delta = {
+        x: currentFlow.x - dragState.startFlow.x,
+        y: currentFlow.y - dragState.startFlow.y,
+      };
+
+      const changes = dragState.nodeIds.map((id) => ({
+        id,
+        type: 'position' as const,
+        position: {
+          x: dragState.nodePositions[id].x + delta.x,
+          y: dragState.nodePositions[id].y + delta.y,
+        },
+        dragging: true,
+      }));
+
+      onNodesChange(changes);
+    },
+    [onNodesChange, screenToFlowPosition]
+  );
+
+  const onSelectionBoundsPointerUp = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const dragState = selectionMoveRef.current;
+      const startScreen = selectionMoveStartRef.current;
+
+      if (!dragState || !startScreen) {
+        setIsDraggingSelection(false);
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+
+      const distance = Math.hypot(
+        event.clientX - startScreen.x,
+        event.clientY - startScreen.y
+      );
+      const didDrag = selectionMoveDragRef.current || distance >= SELECTION_DRAG_THRESHOLD;
+
+      if (didDrag) {
+        const currentFlow = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+        const delta = {
+          x: currentFlow.x - dragState.startFlow.x,
+          y: currentFlow.y - dragState.startFlow.y,
+        };
+
+        const changes = dragState.nodeIds.map((id) => ({
+          id,
+          type: 'position' as const,
+          position: {
+            x: dragState.nodePositions[id].x + delta.x,
+            y: dragState.nodePositions[id].y + delta.y,
+          },
+          dragging: false,
+        }));
+
+        onNodesChange(changes);
+        dragState.noteIds.forEach((noteId) => {
+          void handleNoteDragEnd(noteId);
+        });
+      }
+
+      selectionMoveRef.current = null;
+      selectionMoveStartRef.current = null;
+      selectionMoveDragRef.current = false;
+      setIsDraggingSelection(false);
+
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    },
+    [handleNoteDragEnd, onNodesChange, screenToFlowPosition]
+  );
+
+  const onSelectionMouseDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isSelecting) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if (!isSelectionTrigger(e)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      selectionStartRef.current = { x: e.clientX, y: e.clientY };
+      selectionDragRef.current = false;
+      setSelectionRect({ x: e.clientX, y: e.clientY, width: 0, height: 0 });
+      clearSelection();
+      e.currentTarget.setPointerCapture(e.pointerId);
+    },
+    [clearSelection, isSelecting, isSelectionTrigger]
+  );
+
+  const onSelectionMouseMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isSelecting || !selectionStartRef.current) return;
+
+      const startX = selectionStartRef.current.x;
+      const startY = selectionStartRef.current.y;
       const currentX = e.clientX;
       const currentY = e.clientY;
-      
-      setSelectionRect({
-          x: Math.min(startX, currentX),
-          y: Math.min(startY, currentY),
-          width: Math.abs(currentX - startX),
-          height: Math.abs(currentY - startY)
-      });
-  }, [isGrouping]);
+      const distance = Math.hypot(currentX - startX, currentY - startY);
 
-  const onMouseUp = useCallback(async (e: React.MouseEvent) => {
-      if (!isGrouping || !startPosRef.current) return;
-      
-      const start = startPosRef.current;
-      const end = { x: e.clientX, y: e.clientY };
-      
-      // Calculate Flow bounds
-      // We must check if screenToFlowPosition is available (it should be if initialized)
-      // If the rect is tiny, ignore
-      if (Math.abs(end.x - start.x) < 10 && Math.abs(end.y - start.y) < 10) {
-           setSelectionRect(null);
-           startPosRef.current = null;
-           return;
+      if (!selectionDragRef.current && distance < SELECTION_DRAG_THRESHOLD) {
+        return;
       }
+
+      selectionDragRef.current = true;
+
+      setSelectionRect({
+        x: Math.min(startX, currentX),
+        y: Math.min(startY, currentY),
+        width: Math.abs(currentX - startX),
+        height: Math.abs(currentY - startY),
+      });
+    },
+    [isSelecting]
+  );
+
+  const onSelectionMouseUp = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isSelecting || !selectionStartRef.current) return;
+
+      const start = selectionStartRef.current;
+      const end = { x: e.clientX, y: e.clientY };
+      const distance = Math.hypot(end.x - start.x, end.y - start.y);
+      const didDrag = selectionDragRef.current || distance >= SELECTION_DRAG_THRESHOLD;
 
       const startFlow = screenToFlowPosition(start);
       const endFlow = screenToFlowPosition(end);
-      
+
       const flowBounds = {
-          x: Math.min(startFlow.x, endFlow.x),
-          y: Math.min(startFlow.y, endFlow.y),
-          width: Math.abs(endFlow.x - startFlow.x),
-          height: Math.abs(endFlow.y - startFlow.y)
+        x: Math.min(startFlow.x, endFlow.x),
+        y: Math.min(startFlow.y, endFlow.y),
+        width: Math.abs(endFlow.x - startFlow.x),
+        height: Math.abs(endFlow.y - startFlow.y),
       };
-      
-      if (flowBounds.width > 50 && flowBounds.height > 50) {
-          await createGroup(flowBounds);
-          setIsGrouping(false);
+
+      if (!didDrag) {
+        setSelectionRect(null);
+        selectionStartRef.current = null;
+        selectionDragRef.current = false;
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        }
+        return;
       }
-      
+
+      selectNodesInRect(flowBounds);
       setSelectionRect(null);
-      startPosRef.current = null;
-  }, [isGrouping, screenToFlowPosition, createGroup]);
+      selectionStartRef.current = null;
+      selectionDragRef.current = false;
+      selectionJustFinishedRef.current = true;
+      window.setTimeout(() => {
+        selectionJustFinishedRef.current = false;
+      }, 0);
+      setIsSelecting(false);
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    },
+    [isSelecting, screenToFlowPosition, selectNodesInRect]
+  );
+
+  const handlePaneClick = useCallback(() => {
+    if (selectionJustFinishedRef.current) {
+      selectionJustFinishedRef.current = false;
+      return;
+    }
+    if (selectedNodeIds.length === 0) return;
+    clearSelection();
+  }, [clearSelection, selectedNodeIds]);
 
 
   return (
     <div
       ref={canvasRef}
-      className={`w-full h-full relative ${isGrouping ? 'cursor-crosshair' : ''}`}
+      className={`w-full h-full relative ${isSelecting ? 'canvas-selecting cursor-crosshair' : ''}`}
+      onPointerDown={onSelectionMouseDown}
+      onPointerMove={onSelectionMouseMove}
+      onPointerUp={onSelectionMouseUp}
+      onPointerCancel={onSelectionMouseUp}
     >
       <ReactFlow
         nodes={nodes}
@@ -363,6 +740,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
         onNodeDragStop={handleNodeDragStop}
+        onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
@@ -371,6 +749,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.1}
         maxZoom={2}
+        panOnDrag={!isSelecting}
         snapToGrid
         snapGrid={[16, 16]}
         deleteKeyCode={['Backspace', 'Delete']}
@@ -399,12 +778,58 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
         />
 
         <CanvasControls
-          isGrouping={isGrouping}
-          setIsGrouping={setIsGrouping}
+          isSelecting={isSelecting}
+          setIsSelecting={setIsSelecting}
           isPlacingNote={isPlacingNote}
           onStartNoteDrag={handleStartNoteDrag}
         />
       </ReactFlow>
+
+      {/* Selection Bounds + Toolbar */}
+      {selectionScreenBounds && selectedNodeIds.length > 0 && (
+        <>
+          <div
+            className={`absolute z-30 pointer-events-auto ${
+              isDraggingSelection ? 'cursor-grabbing' : 'cursor-move'
+            }`}
+            data-selection-bounds
+            onPointerDown={onSelectionBoundsPointerDown}
+            onPointerMove={onSelectionBoundsPointerMove}
+            onPointerUp={onSelectionBoundsPointerUp}
+            onPointerCancel={onSelectionBoundsPointerUp}
+            style={{
+              left: selectionScreenBounds.left,
+              top: selectionScreenBounds.top,
+              width: selectionScreenBounds.width,
+              height: selectionScreenBounds.height,
+            }}
+          >
+            <div className="w-full h-full rounded-xl border-2 border-dashed border-secondary-300/70 dark:border-secondary-500/70 bg-secondary-200/10 dark:bg-secondary-700/10 pointer-events-none" />
+          </div>
+
+          <div
+            className="absolute z-40 pointer-events-none"
+            style={{
+              left: selectionScreenBounds.left + selectionScreenBounds.width / 2,
+              top: selectionScreenBounds.top,
+            }}
+          >
+            <div
+              className="-translate-x-1/2 -translate-y-full mb-2 pointer-events-auto"
+              data-selection-toolbar
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              <FloatingToolbar
+                onColor={handleSelectionColor}
+                onFocus={handleSelectionRecenter}
+                onDelete={handleSelectionDelete}
+                onGroup={handleSelectionGroup}
+                color={selectedNodes[0]?.data?.color ?? undefined}
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Note Drop Preview */}
       {noteDropPreview && (
@@ -419,28 +844,19 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
         </div>
       )}
 
-      {/* Grouping Overlay */}
-      {isGrouping && (
-          <div 
-             className="absolute inset-0 z-50"
-             onMouseDown={onMouseDown}
-             onMouseMove={onMouseMove}
-             onMouseUp={onMouseUp}
-          >
-              {selectionRect && (
-                  <div 
-                      className="fixed border-2 border-accent bg-accent/10 pointer-events-none"
-                      style={{
-                          left: selectionRect.x,
-                          top: selectionRect.y,
-                          width: selectionRect.width,
-                          height: selectionRect.height,
-                          borderColor: accentColor,
-                          backgroundColor: `${accentColor}1A`
-                      }}
-                  />
-              )}
-          </div>
+      {/* Selection Overlay */}
+      {selectionRect && (
+        <div
+          className="fixed z-20 pointer-events-none border-2 border-dashed border-accent bg-accent/5 rounded-lg"
+          style={{
+            left: selectionRect.x,
+            top: selectionRect.y,
+            width: selectionRect.width,
+            height: selectionRect.height,
+            borderColor: accentColor,
+            backgroundColor: `${accentColor}0D`,
+          }}
+        />
       )}
     </div>
   );
