@@ -7,10 +7,11 @@ import ReactFlow, {
   Panel,
   ConnectionMode,
   useReactFlow,
+  useViewport,
   ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Plus, Crosshair, Square } from 'lucide-react';
+import { Crosshair, Square, FileText } from 'lucide-react';
 import { useNotesStore } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -26,25 +27,25 @@ const nodeTypes = {
   groupNode: GroupNode,
 };
 
+const NOTE_DROP_PREVIEW_SIZE = { width: 256, height: 96 };
+const NOTE_DROP_DRAG_THRESHOLD = 6;
+
 interface CanvasControlsProps {
-  canvasId: string;
   isGrouping: boolean;
   setIsGrouping: (isGrouping: boolean) => void;
+  isPlacingNote: boolean;
+  onStartNoteDrag: (event: React.PointerEvent<HTMLButtonElement>) => void;
 }
 
 // Canvas controls component (must be inside ReactFlowProvider)
-function CanvasControls({ canvasId, isGrouping, setIsGrouping }: CanvasControlsProps) {
+function CanvasControls({
+  isGrouping,
+  setIsGrouping,
+  isPlacingNote,
+  onStartNoteDrag,
+}: CanvasControlsProps) {
   const { fitView } = useReactFlow();
   const accentColor = useThemeStore((state) => state.accentColor);
-  const { createNote } = useNotesStore();
-
-  const handleAddNote = useCallback(() => {
-    createNote({
-      x: Math.random() * 400 + 100,
-      y: Math.random() * 300 + 100,
-      canvasId,
-    });
-  }, [createNote, canvasId]);
 
   const handleRecenter = useCallback(() => {
     fitView({ padding: 0.2, duration: 200 });
@@ -54,15 +55,6 @@ function CanvasControls({ canvasId, isGrouping, setIsGrouping }: CanvasControlsP
     <>
       {/* Top Right Controls */}
       <Panel position="top-right" className="!m-4 flex flex-col gap-2">
-        <button
-          onClick={handleAddNote}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 shadow-lg hover:bg-secondary-50 dark:hover:bg-secondary-700 transition-colors text-secondary-700 dark:text-secondary-200"
-          style={{ color: accentColor }}
-        >
-          <Plus className="h-5 w-5" />
-          <span className="font-medium">Add Note</span>
-        </button>
-
          {/* Grouping Toggle */}
         <button 
            onClick={() => setIsGrouping(!isGrouping)}
@@ -75,6 +67,24 @@ function CanvasControls({ canvasId, isGrouping, setIsGrouping }: CanvasControlsP
            title="Create Group (Drag to select)"
         >
             <Square className="h-5 w-5" />
+        </button>
+      </Panel>
+
+      {/* Add Note Button */}
+      <Panel position="bottom-center" className="!m-4">
+        <button
+          type="button"
+          onPointerDown={onStartNoteDrag}
+          className={`flex h-10 w-10 items-center justify-center rounded-lg border shadow-lg transition-colors cursor-grab active:cursor-grabbing ${
+            isPlacingNote
+              ? 'bg-secondary-100 dark:bg-secondary-700 text-accent border-accent'
+              : 'bg-white dark:bg-secondary-800 border-secondary-200 dark:border-secondary-700 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700'
+          }`}
+          style={isPlacingNote ? { color: accentColor, borderColor: accentColor } : {}}
+          aria-label="Drag to add note"
+          title="Drag to add note"
+        >
+          <FileText className="h-4 w-4" />
         </button>
       </Panel>
 
@@ -98,12 +108,29 @@ interface CanvasViewInnerProps {
 
 function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
   const accentColor = useThemeStore((state) => state.accentColor);
-  const { nodes, edges, onNodesChange, onEdgesChange, connectNotes, createGroup, handleNoteDragEnd } = useNotesStore();
+  const {
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    connectNotes,
+    createGroup,
+    handleNoteDragEnd,
+    createNote,
+  } = useNotesStore();
   const { screenToFlowPosition } = useReactFlow();
+  const { zoom } = useViewport();
 
+  const canvasRef = useRef<HTMLDivElement | null>(null);
   const [isGrouping, setIsGrouping] = useState(false);
   const [selectionRect, setSelectionRect] = useState<{x: number, y: number, width: number, height: number} | null>(null);
   const startPosRef = useRef<{x: number, y: number} | null>(null);
+  const noteDragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [isPlacingNote, setIsPlacingNote] = useState(false);
+  const [noteDropPreview, setNoteDropPreview] = useState<{
+    localX: number;
+    localY: number;
+  } | null>(null);
 
   const handleConnect = useCallback(
     (connection: Connection) => {
@@ -120,6 +147,138 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
       },
       [handleNoteDragEnd]
   );
+
+  const previewWidth = NOTE_DROP_PREVIEW_SIZE.width * zoom;
+  const previewHeight = NOTE_DROP_PREVIEW_SIZE.height * zoom;
+
+  const findGroupAtPosition = useCallback(
+    (position: { x: number; y: number }) => {
+      const matchingGroups = nodes.filter((node) => {
+        if (node.type !== 'groupNode') return false;
+        const width = (node.width ?? node.style?.width ?? 0) as number;
+        const height = (node.height ?? node.style?.height ?? 0) as number;
+        if (!width || !height) return false;
+
+        return (
+          position.x >= node.position.x &&
+          position.x <= node.position.x + width &&
+          position.y >= node.position.y &&
+          position.y <= node.position.y + height
+        );
+      });
+
+      if (matchingGroups.length === 0) return null;
+
+      return matchingGroups.reduce((smallest, node) => {
+        const nodeWidth = (node.width ?? node.style?.width ?? 0) as number;
+        const nodeHeight = (node.height ?? node.style?.height ?? 0) as number;
+        const smallestWidth = (smallest.width ?? smallest.style?.width ?? 0) as number;
+        const smallestHeight = (smallest.height ?? smallest.style?.height ?? 0) as number;
+        const nodeArea = nodeWidth * nodeHeight;
+        const smallestArea = smallestWidth * smallestHeight;
+        return nodeArea < smallestArea ? node : smallest;
+      }).id;
+    },
+    [nodes]
+  );
+
+  const updateNoteDropPreview = useCallback(
+    (clientX: number, clientY: number) => {
+      if (!canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
+      const isInside =
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom;
+
+      if (!isInside) {
+        setNoteDropPreview(null);
+        return;
+      }
+
+      setNoteDropPreview({
+        localX: clientX - rect.left,
+        localY: clientY - rect.top,
+      });
+    },
+    []
+  );
+
+  const handleStartNoteDrag = useCallback(
+    (event: React.PointerEvent<HTMLButtonElement>) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      noteDragStartRef.current = { x: event.clientX, y: event.clientY };
+      setIsPlacingNote(true);
+      setNoteDropPreview(null);
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!isPlacingNote) return;
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const start = noteDragStartRef.current;
+      if (!start) return;
+      const distance = Math.hypot(event.clientX - start.x, event.clientY - start.y);
+      if (distance < NOTE_DROP_DRAG_THRESHOLD) return;
+      updateNoteDropPreview(event.clientX, event.clientY);
+    };
+
+    const handlePointerEnd = (event: PointerEvent) => {
+      const start = noteDragStartRef.current;
+      noteDragStartRef.current = null;
+      setIsPlacingNote(false);
+
+      if (!canvasRef.current || !start) {
+        setNoteDropPreview(null);
+        return;
+      }
+
+      const rect = canvasRef.current.getBoundingClientRect();
+      const distance = Math.hypot(event.clientX - start.x, event.clientY - start.y);
+      const isInside =
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom;
+
+      if (distance >= NOTE_DROP_DRAG_THRESHOLD && isInside) {
+        const flowPosition = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+        const groupId = findGroupAtPosition(flowPosition);
+        createNote({
+          x: flowPosition.x - NOTE_DROP_PREVIEW_SIZE.width / 2,
+          y: flowPosition.y - NOTE_DROP_PREVIEW_SIZE.height / 2,
+          canvasId,
+          groupId,
+          width: NOTE_DROP_PREVIEW_SIZE.width,
+          height: NOTE_DROP_PREVIEW_SIZE.height,
+        });
+      }
+
+      setNoteDropPreview(null);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerEnd);
+    window.addEventListener('pointercancel', handlePointerEnd);
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerEnd);
+      window.removeEventListener('pointercancel', handlePointerEnd);
+    };
+  }, [
+    canvasId,
+    createNote,
+    findGroupAtPosition,
+    isPlacingNote,
+    screenToFlowPosition,
+    updateNoteDropPreview,
+  ]);
 
   const edgeTypes = useMemo(() => ({
     floatingEdge: FloatingEdge,
@@ -193,7 +352,10 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
 
 
   return (
-    <div className={`w-full h-full relative ${isGrouping ? 'cursor-crosshair' : ''}`}>
+    <div
+      ref={canvasRef}
+      className={`w-full h-full relative ${isGrouping ? 'cursor-crosshair' : ''}`}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -236,8 +398,26 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
           pannable
         />
 
-        <CanvasControls canvasId={canvasId} isGrouping={isGrouping} setIsGrouping={setIsGrouping} />
+        <CanvasControls
+          isGrouping={isGrouping}
+          setIsGrouping={setIsGrouping}
+          isPlacingNote={isPlacingNote}
+          onStartNoteDrag={handleStartNoteDrag}
+        />
       </ReactFlow>
+
+      {/* Note Drop Preview */}
+      {noteDropPreview && (
+        <div
+          className="absolute z-40 pointer-events-none -translate-x-1/2 -translate-y-1/2"
+          style={{ left: noteDropPreview.localX, top: noteDropPreview.localY }}
+        >
+          <div
+            className="rounded-xl border border-secondary-200/60 dark:border-secondary-600/50 bg-white/40 dark:bg-secondary-700/30 shadow-sm"
+            style={{ width: previewWidth, height: previewHeight }}
+          />
+        </div>
+      )}
 
       {/* Grouping Overlay */}
       {isGrouping && (

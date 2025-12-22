@@ -62,8 +62,11 @@ interface NotesState {
 interface CreateNoteOptions {
   x?: number;
   y?: number;
+  width?: number;
+  height?: number;
   canvasId?: string | null;
   folderId?: string | null;
+  groupId?: string | null;
   title?: string;
 }
 
@@ -345,7 +348,16 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     const user = useAuthStore.getState().user;
     if (!user) return null;
 
-    const { x = 100, y = 100, canvasId, folderId, title = 'New Note' } = options;
+    const {
+      x = 100,
+      y = 100,
+      width,
+      height,
+      canvasId,
+      folderId,
+      groupId,
+      title = 'New Note',
+    } = options;
     const { currentCanvasId } = get();
 
     // Use provided canvasId or fall back to current canvas context
@@ -360,6 +372,9 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
         position_y: y,
         canvas_id: effectiveCanvasId,
         folder_id: folderId ?? null,
+        group_id: groupId ?? null,
+        ...(width !== undefined ? { width } : {}),
+        ...(height !== undefined ? { height } : {}),
       };
 
       let { data, error } = await supabase.from('notes').insert(newNote).select().single();
@@ -385,6 +400,18 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
 
         const newNode = noteToNode(createdNote, onDoubleClick);
         newNode.zIndex = 10;
+        if (createdNote.group_id) {
+          const parentGroup = get().nodes.find(
+            (node) => node.id === createdNote.group_id && node.type === 'groupNode'
+          );
+          if (parentGroup) {
+            newNode.parentNode = createdNote.group_id;
+            newNode.position = {
+              x: createdNote.position_x - parentGroup.position.x,
+              y: createdNote.position_y - parentGroup.position.y,
+            };
+          }
+        }
         set((state) => ({
           nodes: [...state.nodes, newNode],
         }));
