@@ -1,5 +1,14 @@
-import { useState, useRef, useEffect } from 'react';
-import { EdgeProps, getSmoothStepPath, EdgeLabelRenderer, BaseEdge, useReactFlow, useViewport } from 'reactflow';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  EdgeProps,
+  getSmoothStepPath,
+  EdgeLabelRenderer,
+  BaseEdge,
+  useReactFlow,
+  useViewport,
+  useStore,
+} from 'reactflow';
 import { useNotesStore } from '@/stores/notesStore';
 import { FloatingToolbar } from './FloatingToolbar';
 
@@ -16,8 +25,8 @@ export default function FloatingEdge({
   data,
 }: EdgeProps) {
   const { updateEdge, deleteEdge } = useNotesStore();
-  const { zoom } = useViewport();
-  
+  const { zoom, x: viewportX, y: viewportY } = useViewport();
+  const domNode = useStore((state) => state.domNode);
   const [showToolbar, setShowToolbar] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const labelInputRef = useRef<HTMLInputElement>(null);
@@ -31,6 +40,14 @@ export default function FloatingEdge({
     targetY,
     targetPosition,
   });
+
+  const labelScreenPosition = useMemo(
+    () => ({
+      left: labelX * zoom + viewportX,
+      top: labelY * zoom + viewportY,
+    }),
+    [labelX, labelY, viewportX, viewportY, zoom]
+  );
 
   // Close toolbar when clicking outside
   useEffect(() => {
@@ -85,6 +102,77 @@ export default function FloatingEdge({
     setIsEditing(false);
   };
 
+  const labelContent = (
+    <EdgeLabelRenderer>
+      <div
+        style={{
+          position: 'absolute',
+          transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+          pointerEvents: 'all',
+          zIndex: 1000,
+        }}
+        className="nodrag nopan"
+      >
+        {/* Label Display */}
+        {data?.label && !isEditing && (
+          <div
+            className="px-2 py-1 bg-white dark:bg-secondary-800 rounded shadow-md border border-secondary-200 dark:border-secondary-700 text-sm font-semibold text-secondary-700 dark:text-secondary-200 whitespace-nowrap"
+            onDoubleClick={onEdgeDoubleClick}
+            style={data?.color ? { borderColor: data.color, color: data.color } : {}}
+          >
+            {data.label}
+          </div>
+        )}
+
+        {/* Label Editor */}
+        {isEditing && (
+          <form onSubmit={handleLabelSubmit}>
+            <input
+              ref={labelInputRef}
+              autoFocus
+              defaultValue={data?.label || ''}
+              className="px-2 py-1 rounded bg-white dark:bg-secondary-800 border border-accent shadow-lg text-sm font-semibold outline-none min-w-[100px]"
+              onBlur={() => {
+                if (labelInputRef.current) updateEdge(id, { label: labelInputRef.current.value });
+                setIsEditing(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setIsEditing(false);
+              }}
+            />
+          </form>
+        )}
+      </div>
+    </EdgeLabelRenderer>
+  );
+
+  const toolbarContent = showToolbar ? (
+    <div
+      style={{
+        position: 'absolute',
+        left: labelScreenPosition.left,
+        top: labelScreenPosition.top,
+        transform: 'translate(-50%, -50%)',
+        pointerEvents: 'all',
+        zIndex: 1000,
+      }}
+      className="nodrag nopan"
+    >
+      <div
+        ref={toolbarRef}
+        className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-[9999]"
+      >
+        <FloatingToolbar
+          onEdit={handleEdit}
+          onColor={handleColor}
+          onFocus={handleFocusEdge}
+          onDelete={handleDelete}
+          color={data?.color}
+        />
+      </div>
+    </div>
+  ) : null;
+
   return (
     <>
       <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
@@ -93,70 +181,14 @@ export default function FloatingEdge({
         d={edgePath}
         fill="none"
         strokeOpacity={0}
-        strokeWidth={20}
+        strokeWidth={28}
         className="react-flow__edge-interaction"
         onDoubleClick={onEdgeDoubleClick}
         style={{ cursor: 'pointer' }}
       />
-      
-      <EdgeLabelRenderer>
-        <div
-            style={{
-                position: 'absolute',
-                // Counter-scale to maintain fixed screen size for edges as requested
-                transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) scale(${1 / zoom})`,
-                pointerEvents: 'all',
-                zIndex: 1000, 
-            }}
-            className="nodrag nopan"
-        >
-            {/* Toolbar */}
-            {showToolbar && (
-                <div 
-                    ref={toolbarRef}
-                    className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-[9999]"
-                >
-                    <FloatingToolbar 
-                        onEdit={handleEdit}
-                        onColor={handleColor}
-                        onFocus={handleFocusEdge}
-                        onDelete={handleDelete}
-                        color={data?.color}
-                    />
-                </div>
-            )}
 
-            {/* Label Display */}
-            {data?.label && !isEditing && (
-                <div 
-                    className="px-2 py-1 bg-white dark:bg-secondary-800 rounded shadow-md border border-secondary-200 dark:border-secondary-700 text-sm font-semibold text-secondary-700 dark:text-secondary-200 whitespace-nowrap"
-                    onDoubleClick={onEdgeDoubleClick}
-                    style={data?.color ? { borderColor: data.color, color: data.color } : {}}
-                >
-                    {data.label}
-                </div>
-            )}
-
-            {/* Label Editor */}
-            {isEditing && (
-                <form onSubmit={handleLabelSubmit}>
-                    <input
-                        ref={labelInputRef}
-                        autoFocus
-                        defaultValue={data?.label || ''}
-                        className="px-2 py-1 rounded bg-white dark:bg-secondary-800 border border-accent shadow-lg text-sm font-semibold outline-none min-w-[100px]"
-                        onBlur={() => {
-                             if (labelInputRef.current) updateEdge(id, { label: labelInputRef.current.value });
-                             setIsEditing(false);
-                        }}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Escape') setIsEditing(false);
-                        }}
-                    />
-                </form>
-            )}
-        </div>
-      </EdgeLabelRenderer>
+      {labelContent}
+      {domNode && toolbarContent && createPortal(toolbarContent, domNode)}
     </>
   );
 }

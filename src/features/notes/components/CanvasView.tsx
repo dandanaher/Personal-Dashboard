@@ -125,9 +125,11 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     handleNoteDragEnd,
     createNote,
     updateNoteColor,
+    updateEdge,
     updateGroup,
     deleteNote,
     deleteGroup,
+    deleteEdge,
   } = useNotesStore();
   const { screenToFlowPosition, fitView } = useReactFlow();
   const { zoom, x: viewportX, y: viewportY } = useViewport();
@@ -154,6 +156,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     localY: number;
   } | null>(null);
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([]);
 
   const handleConnect = useCallback(
     (connection: Connection) => {
@@ -407,6 +410,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
 
   const clearSelection = useCallback(() => {
     setSelectedNodeIds([]);
+    setSelectedEdgeIds([]);
   }, []);
 
   const rectContains = useCallback(
@@ -420,18 +424,35 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
 
   const selectNodesInRect = useCallback(
     (rect: BoundsRect) => {
-      const selected = (nodes as CanvasNode[])
+      const selectableNodes = (nodes as CanvasNode[])
         .filter((node) => node.type === 'noteNode' || node.type === 'groupNode')
         .filter((node) => {
           const bounds = getNodeBounds(node);
           if (!bounds.width || !bounds.height) return false;
           return rectContains(rect, bounds);
-        })
-        .map((node) => node.id);
+        });
 
-      setSelectedNodeIds(selected);
+      const selectedNodeIdSet = new Set(selectableNodes.map((node) => node.id));
+      const selectedEdges = edges.filter((edge) => {
+        const sourceNode = (nodes as CanvasNode[]).find((node) => node.id === edge.source);
+        const targetNode = (nodes as CanvasNode[]).find((node) => node.id === edge.target);
+        if (!sourceNode || !targetNode) return false;
+
+        if (!selectedNodeIdSet.has(sourceNode.id) || !selectedNodeIdSet.has(targetNode.id)) {
+          return false;
+        }
+
+        const sourceBounds = getNodeBounds(sourceNode);
+        const targetBounds = getNodeBounds(targetNode);
+        if (!sourceBounds.width || !sourceBounds.height) return false;
+        if (!targetBounds.width || !targetBounds.height) return false;
+        return rectContains(rect, sourceBounds) && rectContains(rect, targetBounds);
+      });
+
+      setSelectedNodeIds(selectableNodes.map((node) => node.id));
+      setSelectedEdgeIds(selectedEdges.map((edge) => edge.id));
     },
-    [getNodeBounds, nodes, rectContains]
+    [edges, getNodeBounds, nodes, rectContains]
   );
 
   const handleSelectionColor = useCallback(
@@ -446,8 +467,12 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
           void updateGroup(node.id, { color });
         }
       });
+
+      selectedEdgeIds.forEach((edgeId) => {
+        void updateEdge(edgeId, { color });
+      });
     },
-    [selectedNodes, updateGroup, updateNoteColor]
+    [selectedEdgeIds, selectedNodes, updateEdge, updateGroup, updateNoteColor]
   );
 
   const handleSelectionRecenter = useCallback(() => {
@@ -462,6 +487,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
   const handleSelectionDelete = useCallback(async () => {
     const notesToDelete = selectedNodes.filter((node) => node.type === 'noteNode');
     const groupsToDelete = selectedNodes.filter((node) => node.type === 'groupNode');
+    const edgesToDelete = selectedEdgeIds;
 
     if (notesToDelete.length > 0) {
       const message =
@@ -474,9 +500,10 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     await Promise.all([
       ...notesToDelete.map((node) => deleteNote(node.id)),
       ...groupsToDelete.map((node) => deleteGroup(node.id)),
+      ...edgesToDelete.map((edgeId) => deleteEdge(edgeId)),
     ]);
     clearSelection();
-  }, [clearSelection, deleteGroup, deleteNote, selectedNodes]);
+  }, [clearSelection, deleteEdge, deleteGroup, deleteNote, selectedEdgeIds, selectedNodes]);
 
   const handleSelectionGroup = useCallback(async () => {
     if (!selectionBounds) return;

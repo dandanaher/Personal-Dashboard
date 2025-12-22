@@ -8,6 +8,7 @@ import { FloatingToolbar } from './FloatingToolbar';
 
 const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeData>) {
   const accentColor = useThemeStore((state) => state.accentColor);
+  const darkMode = useThemeStore((state) => state.darkMode);
   const { updateNoteSize, updateNoteColor, deleteNote } = useNotesStore();
   const { addTab } = useWorkspaceStore();
   const { fitView } = useReactFlow();
@@ -15,6 +16,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
   const { id, title, content, color } = data;
   const [isHovered, setIsHovered] = useState(false);
   const [showToolbar, setShowToolbar] = useState(false);
+  const cardBorderColor = color || (darkMode ? '#334155' : '#e2e8f0');
 
   // Hide toolbar when deselected
   useEffect(() => {
@@ -49,7 +51,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
 
   const handleClasses = useMemo(
     () =>
-      `!w-3.5 !h-3.5 !rounded-full !border-2 !bg-white dark:!bg-secondary-900 !border-secondary-200 dark:!border-secondary-700 opacity-0 group-hover:opacity-100 transition-opacity duration-150 ${
+      `!w-4 !h-4 !rounded-full !bg-white dark:!bg-secondary-900 !border !border-solid opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-20 ${
         isHovered ? 'pointer-events-auto' : 'pointer-events-none'
       }`,
     [isHovered]
@@ -57,13 +59,21 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
 
   const hiddenHandleClasses = useMemo(
     () =>
-      '!w-3.5 !h-3.5 !rounded-full !border-2 !bg-white dark:!bg-secondary-900 !border-secondary-200 dark:!border-secondary-700 opacity-0 pointer-events-none',
+      '!w-4 !h-4 !rounded-full !bg-white dark:!bg-secondary-900 !border !border-solid opacity-0 pointer-events-none z-10',
     []
+  );
+
+  const handleStyle = useMemo(
+    () => ({
+      borderColor: cardBorderColor,
+      borderWidth: 3,
+    }),
+    [cardBorderColor]
   );
 
   return (
     <div
-      className="w-full h-full relative"
+      className="group w-full h-full relative"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -90,17 +100,17 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
         onResizeEnd={(_event, params) => {
           updateNoteSize(id, params.width, params.height);
         }}
-        lineStyle={{ borderColor: color || accentColor }}
-        handleStyle={{ borderColor: color || accentColor }}
+        lineStyle={{ borderColor: cardBorderColor }}
+        handleStyle={{ borderColor: cardBorderColor }}
         lineClassName="opacity-0 group-hover:opacity-100"
         handleClassName="!w-3 !h-3 !bg-white !border !rounded-full opacity-0 group-hover:opacity-100"
       />
       
       <div
-        className="group w-full h-full min-w-[16rem] min-h-[6rem] rounded-xl shadow-lg border cursor-pointer transition-transform hover:scale-[1.01] active:scale-[0.99] bg-white dark:bg-secondary-800 relative overflow-hidden"
+        className="w-full h-full min-w-[16rem] min-h-[6rem] rounded-xl shadow-lg border cursor-pointer transition-transform hover:scale-[1.01] active:scale-[0.99] bg-white dark:bg-secondary-800 relative"
         onDoubleClick={handleDoubleClick}
         style={{ 
-          borderColor: color || (useThemeStore.getState().darkMode ? '#334155' : '#e2e8f0'),
+          borderColor: cardBorderColor,
           boxShadow: selected 
             ? `0 0 0 2px ${accentColor}` 
             : `0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)`
@@ -109,44 +119,10 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
         {/* Color Overlay */}
         {color && (
             <div 
-                className="absolute inset-0 pointer-events-none" 
+                className="absolute inset-0 pointer-events-none rounded-xl" 
                 style={{ backgroundColor: color, opacity: 0.1 }} 
             />
         )}
-
-        {/* Connection handles (show on hover) */}
-        <Handle
-          type="source"
-          position={Position.Top}
-          id="top"
-          isConnectableStart={isHovered}
-          isConnectableEnd={isHovered}
-          className={handleClasses}
-          style={{ borderColor: color || accentColor }}
-        />
-        <Handle
-          type="target"
-          position={Position.Top}
-          id="top"
-          isConnectable={false}
-          className={hiddenHandleClasses}
-        />
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="right"
-          isConnectableStart={isHovered}
-          isConnectableEnd={isHovered}
-          className={handleClasses}
-          style={{ borderColor: color || accentColor }}
-        />
-        <Handle
-          type="target"
-          position={Position.Right}
-          id="right"
-          isConnectable={false}
-          className={hiddenHandleClasses}
-        />
 
         {/* Note content */}
         <div className="p-4 h-full flex flex-col overflow-hidden relative z-10">
@@ -164,40 +140,77 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
             </p>
           )}
         </div>
-
-        <Handle
-          type="source"
-          position={Position.Bottom}
-          id="bottom"
-          isConnectableStart={isHovered}
-          isConnectableEnd={isHovered}
-          className={handleClasses}
-          style={{ borderColor: color || accentColor }}
-        />
-        <Handle
-          type="target"
-          position={Position.Bottom}
-          id="bottom"
-          isConnectable={false}
-          className={hiddenHandleClasses}
-        />
-        <Handle
-          type="source"
-          position={Position.Left}
-          id="left"
-          isConnectableStart={isHovered}
-          isConnectableEnd={isHovered}
-          className={handleClasses}
-          style={{ borderColor: color || accentColor }}
-        />
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="left"
-          isConnectable={false}
-          className={hiddenHandleClasses}
-        />
       </div>
+
+      {/* Connection handles (show on hover) */}
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="top"
+        isConnectableStart
+        isConnectableEnd
+        className={handleClasses}
+        style={handleStyle}
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="top"
+        isConnectable={false}
+        className={hiddenHandleClasses}
+        style={handleStyle}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right"
+        isConnectableStart
+        isConnectableEnd
+        className={handleClasses}
+        style={handleStyle}
+      />
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="right"
+        isConnectable={false}
+        className={hiddenHandleClasses}
+        style={handleStyle}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="bottom"
+        isConnectableStart
+        isConnectableEnd
+        className={handleClasses}
+        style={handleStyle}
+      />
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="bottom"
+        isConnectable={false}
+        className={hiddenHandleClasses}
+        style={handleStyle}
+      />
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="left"
+        isConnectableStart
+        isConnectableEnd
+        className={handleClasses}
+        style={handleStyle}
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="left"
+        isConnectable={false}
+        className={hiddenHandleClasses}
+        style={handleStyle}
+      />
 
       <style>{`
         .note-content font[size="1"] { font-size: 0.75rem; }

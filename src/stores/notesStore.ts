@@ -149,7 +149,7 @@ function noteToNode(note: Note, onDoubleClick: (noteId: string) => void): Node<N
 
 // Convert database edge to ReactFlow edge
 function noteEdgeToEdge(noteEdge: NoteEdge): Edge {
-  return {
+  const edge: Edge = {
     id: noteEdge.id,
     source: (noteEdge.source_note_id || noteEdge.source_group_id)!,
     target: (noteEdge.target_note_id || noteEdge.target_group_id)!,
@@ -161,8 +161,13 @@ function noteEdgeToEdge(noteEdge: NoteEdge): Edge {
       label: noteEdge.label,
       color: noteEdge.color,
     },
-    style: noteEdge.color ? { stroke: noteEdge.color, strokeWidth: 3 } : undefined,
   };
+
+  if (noteEdge.color) {
+    edge.style = { stroke: noteEdge.color, strokeWidth: 3 };
+  }
+
+  return edge;
 }
 
 export const useNotesStore = create<NotesStore>((set, get) => ({
@@ -573,10 +578,15 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
           ? {
               ...edge,
               data: { ...edge.data, ...updates },
-              style: { 
-                ...edge.style, 
-                ...(updates.color ? { stroke: updates.color } : {}) 
-              },
+              ...(updates.color
+                ? {
+                    style: {
+                      ...edge.style,
+                      stroke: updates.color,
+                      strokeWidth: (edge.style?.strokeWidth as number | undefined) ?? 3,
+                    },
+                  }
+                : {}),
             }
           : edge
       ),
@@ -691,6 +701,22 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       const targetNode = get().nodes.find(n => n.id === connection.target);
       const isSourceGroup = sourceNode?.type === 'groupNode';
       const isTargetGroup = targetNode?.type === 'groupNode';
+      const { accentColor, darkMode } = useThemeStore.getState();
+
+      const getEdgeColor = (node?: Node) => {
+        if (!node) return null;
+        const nodeColor = (node.data as { color?: string } | undefined)?.color;
+        if (nodeColor) return nodeColor;
+        if (node.type === 'noteNode') {
+          return darkMode ? '#334155' : '#e2e8f0';
+        }
+        if (node.type === 'groupNode') {
+          return accentColor;
+        }
+        return accentColor;
+      };
+
+      const edgeColor = getEdgeColor(sourceNode) ?? getEdgeColor(targetNode) ?? accentColor;
 
       const newEdge = {
         user_id: user.id,
@@ -700,6 +726,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
         target_group_id: isTargetGroup ? connection.target : null,
         source_handle: connection.sourceHandle ?? null,
         target_handle: connection.targetHandle ?? null,
+        color: edgeColor,
       };
 
       const { data, error } = await supabase.from('note_edges').insert(newEdge).select().single();

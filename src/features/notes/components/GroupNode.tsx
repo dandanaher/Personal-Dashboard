@@ -47,10 +47,18 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
 
   const handleClasses = useMemo(
     () =>
-      `!w-3.5 !h-3.5 !rounded-full !border-2 !bg-white dark:!bg-secondary-900 !border-secondary-200 dark:!border-secondary-700 opacity-0 group-hover:opacity-100 transition-opacity duration-150 ${
+      `!w-4 !h-4 !rounded-full !bg-white dark:!bg-secondary-900 !border !border-solid opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-20 ${
         isHovered ? 'pointer-events-auto' : 'pointer-events-none'
       }`,
     [isHovered]
+  );
+
+  const handleStyle = useMemo(
+    () => ({
+      borderColor: color,
+      borderWidth: 3,
+    }),
+    [color]
   );
 
   return (
@@ -93,36 +101,36 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
         position={Position.Top}
         id="top"
         className={handleClasses}
-        style={{ borderColor: color }}
-        isConnectableStart={isHovered}
-        isConnectableEnd={isHovered}
+        style={handleStyle}
+        isConnectableStart
+        isConnectableEnd
       />
       <Handle
         type="source"
         position={Position.Right}
         id="right"
         className={handleClasses}
-        style={{ borderColor: color }}
-        isConnectableStart={isHovered}
-        isConnectableEnd={isHovered}
+        style={handleStyle}
+        isConnectableStart
+        isConnectableEnd
       />
       <Handle
         type="source"
         position={Position.Bottom}
         id="bottom"
         className={handleClasses}
-        style={{ borderColor: color }}
-        isConnectableStart={isHovered}
-        isConnectableEnd={isHovered}
+        style={handleStyle}
+        isConnectableStart
+        isConnectableEnd
       />
       <Handle
         type="source"
         position={Position.Left}
         id="left"
         className={handleClasses}
-        style={{ borderColor: color }}
-        isConnectableStart={isHovered}
-        isConnectableEnd={isHovered}
+        style={handleStyle}
+        isConnectableStart
+        isConnectableEnd
       />
 
       {/* Header / Controls */}
