@@ -11,31 +11,27 @@ import { FloatingToolbar } from './FloatingToolbar';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ReactPlayer = ReactPlayerImport as any;
 
-function getYouTubeId(value: string): string | null {
-  try {
-    const url = new URL(value);
-    const hostname = url.hostname.replace('www.', '');
+function getYouTubeId(url: URL | null): string | null {
+  if (!url) return null;
+  const hostname = url.hostname.replace('www.', '');
 
-    if (hostname === 'youtu.be') {
-      return url.pathname.replace('/', '') || null;
-    }
+  if (hostname === 'youtu.be') {
+    return url.pathname.replace('/', '') || null;
+  }
 
-    if (hostname.endsWith('youtube.com') || hostname.endsWith('youtube-nocookie.com')) {
-      if (url.pathname === '/watch') {
-        return url.searchParams.get('v');
-      }
-      if (url.pathname.startsWith('/embed/')) {
-        return url.pathname.split('/')[2] || null;
-      }
-      if (url.pathname.startsWith('/shorts/')) {
-        return url.pathname.split('/')[2] || null;
-      }
-      if (url.pathname.startsWith('/live/')) {
-        return url.pathname.split('/')[2] || null;
-      }
+  if (hostname.endsWith('youtube.com') || hostname.endsWith('youtube-nocookie.com')) {
+    if (url.pathname === '/watch') {
+      return url.searchParams.get('v');
     }
-  } catch {
-    return null;
+    if (url.pathname.startsWith('/embed/')) {
+      return url.pathname.split('/')[2] || null;
+    }
+    if (url.pathname.startsWith('/shorts/')) {
+      return url.pathname.split('/')[2] || null;
+    }
+    if (url.pathname.startsWith('/live/')) {
+      return url.pathname.split('/')[2] || null;
+    }
   }
 
   return null;
@@ -55,15 +51,25 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
   const [isPlayerActive, setIsPlayerActive] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [isInView, setIsInView] = useState(true);
   const [iframeBlocked, setIframeBlocked] = useState(false);
+  const visibilityRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const cardBorderColor = color || (darkMode ? '#334155' : '#e2e8f0');
 
-  const youtubeId = useMemo(() => getYouTubeId(url), [url]);
+  const parsedUrl = useMemo(() => {
+    try {
+      return new URL(url);
+    } catch {
+      return null;
+    }
+  }, [url]);
+  const youtubeId = useMemo(() => getYouTubeId(parsedUrl), [parsedUrl]);
+  const isValidUrl = Boolean(parsedUrl);
   // Check if react-player can play this URL (fallback to YouTube detection)
   const canPlay = useMemo(
-    () => Boolean(url) && (ReactPlayer.canPlay(url) || Boolean(youtubeId)),
-    [url, youtubeId]
+    () => isValidUrl && (ReactPlayer.canPlay(url) || Boolean(youtubeId)),
+    [isValidUrl, url, youtubeId]
   );
   const videoThumbnail = useMemo(
     () => (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : null),
@@ -72,16 +78,15 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
 
   // Extract display info from URL
   const urlInfo = useMemo(() => {
-    try {
-      const urlObj = new URL(url);
-      return {
-        hostname: urlObj.hostname.replace('www.', ''),
-        fullUrl: url.length > 60 ? url.slice(0, 60) + '...' : url,
-      };
-    } catch {
+    if (!parsedUrl) {
       return { hostname: 'Link', fullUrl: url };
     }
-  }, [url]);
+
+    return {
+      hostname: parsedUrl.hostname.replace('www.', ''),
+      fullUrl: url.length > 60 ? url.slice(0, 60) + '...' : url,
+    };
+  }, [parsedUrl, url]);
 
   // Hide toolbar when deselected
   useEffect(() => {
@@ -96,6 +101,29 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
     setIsPlaying(false);
     setIsResizing(false);
   }, [url]);
+
+  useEffect(() => {
+    const element = visibilityRef.current;
+    if (!element || typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const nextValue = entry?.isIntersecting ?? true;
+        setIsInView((prev) => (prev === nextValue ? prev : nextValue));
+      },
+      { root: null, rootMargin: '200px', threshold: 0.01 }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isInView && isPlayerActive) {
+      setIsPlayerActive(false);
+      setIsPlaying(false);
+    }
+  }, [isInView, isPlayerActive]);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -120,8 +148,9 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
   }, [deleteNote, id]);
 
   const handleOpenLink = useCallback(() => {
+    if (!isValidUrl) return;
     window.open(url, '_blank', 'noopener,noreferrer');
-  }, [url]);
+  }, [isValidUrl, url]);
 
   const handleResizeStart = useCallback(() => {
     setIsResizing(true);
@@ -162,6 +191,10 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
   const embedPointerClass = useMemo(
     () => (isResizing || dragging ? 'pointer-events-none' : 'pointer-events-auto'),
     [isResizing, dragging]
+  );
+  const shouldShowIframe = useMemo(
+    () => isInView && isValidUrl && !iframeBlocked,
+    [isInView, isValidUrl, iframeBlocked]
   );
 
   // Doubled hitbox size for handles (was w-4 h-4 = 16px, now w-8 h-8 = 32px)
@@ -223,6 +256,7 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
       <div
         className="w-full h-full min-w-[17.5rem] rounded-xl shadow-lg border bg-white dark:bg-secondary-800 relative overflow-hidden flex flex-col"
         onDoubleClick={handleDoubleClick}
+        ref={visibilityRef}
         style={{
           borderColor: cardBorderColor,
           boxShadow: selected
@@ -307,6 +341,7 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
                       alt=""
                       className="absolute inset-0 w-full h-full object-cover"
                       loading="lazy"
+                      decoding="async"
                       draggable={false}
                     />
                   ) : (
@@ -320,7 +355,7 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
                 </button>
               )}
             </div>
-          ) : !iframeBlocked ? (
+          ) : shouldShowIframe ? (
             // Try iframe first for webpage preview
             <iframe
               ref={iframeRef}
