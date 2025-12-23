@@ -578,17 +578,22 @@ export const useNotesStore = create<NotesStore>()(
     const user = useAuthStore.getState().user;
     if (!user) return;
 
+    const updatedAt = new Date().toISOString();
+
     // Optimistic update
     set((state) => ({
       nodes: state.nodes.map((node) =>
         node.id === noteId ? { ...node, data: { ...node.data, color } } : node
+      ),
+      libraryNotes: state.libraryNotes.map((note) =>
+        note.id === noteId ? { ...note, color, updated_at: updatedAt } : note
       ),
     }));
 
     try {
       const { error } = await supabase
         .from('notes')
-        .update({ color, updated_at: new Date().toISOString() })
+        .update({ color, updated_at: updatedAt })
         .eq('id', noteId)
         .eq('user_id', user.id);
 
@@ -600,6 +605,7 @@ export const useNotesStore = create<NotesStore>()(
       if (currentCanvasId) {
         void get().fetchCanvasNotes(currentCanvasId);
       }
+      void get().fetchLibraryNotes();
     }
   },
 
@@ -821,6 +827,7 @@ export const useNotesStore = create<NotesStore>()(
 
     // 1. Optimistic Update
     const tempId = crypto.randomUUID();
+    const updatedAt = new Date().toISOString();
     
     const newGroup = {
       id: tempId,
@@ -876,7 +883,14 @@ export const useNotesStore = create<NotesStore>()(
           return n;
         }),
         newGroupNode
-      ]
+      ],
+      libraryNotes: notesInsideIds.length > 0
+        ? state.libraryNotes.map(note =>
+            notesInsideIds.includes(note.id)
+              ? { ...note, group_id: tempId, updated_at: updatedAt }
+              : note
+          )
+        : state.libraryNotes
     }));
 
     // 2. DB Operations
@@ -916,7 +930,14 @@ export const useNotesStore = create<NotesStore>()(
                     };
                 }
                 return n;
-            })
+            }),
+            libraryNotes: notesInsideIds.length > 0
+              ? state.libraryNotes.map(note =>
+                  notesInsideIds.includes(note.id)
+                    ? { ...note, group_id: null, updated_at: new Date().toISOString() }
+                    : note
+                )
+              : state.libraryNotes
         }));
         return;
     }
@@ -934,6 +955,7 @@ export const useNotesStore = create<NotesStore>()(
     }
 
     // 4. Reconcile IDs (replace tempId with dbGroup.id in store)
+    const reconciledAt = new Date().toISOString();
     set(state => ({
         groups: state.groups.map(g => g.id === tempId ? dbGroup : g),
         nodes: state.nodes.map(n => {
@@ -944,7 +966,14 @@ export const useNotesStore = create<NotesStore>()(
                 return { ...n, parentNode: dbGroup.id };
             }
             return n;
-        })
+        }),
+        libraryNotes: notesInsideIds.length > 0
+          ? state.libraryNotes.map(note =>
+              notesInsideIds.includes(note.id)
+                ? { ...note, group_id: dbGroup.id, updated_at: reconciledAt }
+                : note
+            )
+          : state.libraryNotes
     }));
   },
 
@@ -971,6 +1000,8 @@ export const useNotesStore = create<NotesStore>()(
      if (!groupNode) return;
      
      const children = state.nodes.filter(n => n.parentNode === id);
+     const childIds = children.map(child => child.id);
+     const updatedAt = new Date().toISOString();
      
      // Calculate absolute positions for children to update optimistic state correctly
      const updatedChildren = children.map(child => ({
@@ -991,7 +1022,14 @@ export const useNotesStore = create<NotesStore>()(
          nodes: state.nodes.filter(n => n.id !== id).map(n => {
              const updatedChild = updatedChildren.find(c => c.id === n.id);
              return updatedChild || n;
-         })
+         }),
+         libraryNotes: childIds.length > 0
+           ? state.libraryNotes.map(note =>
+               childIds.includes(note.id)
+                 ? { ...note, group_id: null, updated_at: updatedAt }
+                 : note
+             )
+           : state.libraryNotes
      }));
 
      // Clear undo history to prevent undoing deletes
@@ -1059,6 +1097,7 @@ export const useNotesStore = create<NotesStore>()(
       const groupNode = targetGroup!;
       const newRelX = absX - groupNode.position.x;
       const newRelY = absY - groupNode.position.y;
+      const updatedAt = new Date().toISOString();
 
       // Optimistic update
       set((state) => ({
@@ -1072,6 +1111,9 @@ export const useNotesStore = create<NotesStore>()(
               }
             : n
         ),
+        libraryNotes: state.libraryNotes.map((note) =>
+          note.id === nodeId ? { ...note, group_id: targetGroupId, updated_at: updatedAt } : note
+        ),
       }));
 
       // DB Update
@@ -1081,7 +1123,7 @@ export const useNotesStore = create<NotesStore>()(
           group_id: targetGroupId,
           position_x: absX, // DB stores absolute
           position_y: absY,
-          updated_at: new Date().toISOString(),
+          updated_at: updatedAt,
         })
         .eq('id', nodeId)
         .eq('user_id', user.id);
@@ -1090,6 +1132,7 @@ export const useNotesStore = create<NotesStore>()(
     }
     // Case 2: Moved out of a group (to root)
     else if (!targetGroupId && currentParentId) {
+      const updatedAt = new Date().toISOString();
       // Optimistic update
       set((state) => ({
         nodes: state.nodes.map((n) =>
@@ -1103,6 +1146,9 @@ export const useNotesStore = create<NotesStore>()(
               }
             : n
         ),
+        libraryNotes: state.libraryNotes.map((note) =>
+          note.id === nodeId ? { ...note, group_id: null, updated_at: updatedAt } : note
+        ),
       }));
 
       // DB Update
@@ -1112,7 +1158,7 @@ export const useNotesStore = create<NotesStore>()(
           group_id: null,
           position_x: absX,
           position_y: absY,
-          updated_at: new Date().toISOString(),
+          updated_at: updatedAt,
         })
         .eq('id', nodeId)
         .eq('user_id', user.id);
@@ -1215,6 +1261,7 @@ export const useNotesStore = create<NotesStore>()(
     if (notesToUpdate.length === 0) return;
 
     // Apply Optimistic Updates
+    const updatedAt = new Date().toISOString();
     set((state) => ({
       nodes: state.nodes.map((n) => {
         const update = notesToUpdate.find((u) => u.id === n.id);
@@ -1228,6 +1275,15 @@ export const useNotesStore = create<NotesStore>()(
           };
         }
         return n;
+      }),
+      libraryNotes: state.libraryNotes.map((note) => {
+        const update = notesToUpdate.find((u) => u.id === note.id);
+        if (!update) return note;
+        return {
+          ...note,
+          group_id: update.parentNode ?? null,
+          updated_at: updatedAt,
+        };
       }),
     }));
 

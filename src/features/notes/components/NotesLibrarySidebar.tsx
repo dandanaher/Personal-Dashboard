@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Plus,
   FileText,
@@ -8,6 +8,7 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronLeft,
+  Group as GroupIcon,
   MoreVertical,
   Trash2,
   Edit2,
@@ -18,9 +19,10 @@ import { useNotesStore } from '@/stores/notesStore';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
 import { useCanvases } from '../hooks/useCanvases';
+import { useCanvasGroups } from '../hooks/useCanvasGroups';
 import { useFolders } from '../hooks/useFolders';
 import { LoadingSpinner } from '@/components/ui';
-import type { Note, Folder as FolderType, Canvas } from '@/lib/types';
+import type { Note, Folder as FolderType, Canvas, CanvasGroup } from '@/lib/types';
 
 // Helper to organize notes by folder and canvas
 function organizeLibraryItems(notes: Note[], folders: FolderType[], canvases: Canvas[]) {
@@ -229,6 +231,76 @@ function FolderItem({
   );
 }
 
+// Group list item component (canvas group)
+function GroupItem({
+  group,
+  notes,
+  level = 0,
+  onNoteClick,
+  onNoteRename,
+  onNoteDelete,
+}: {
+  group: CanvasGroup;
+  notes: Note[];
+  level?: number;
+  onNoteClick: (note: Note) => void;
+  onNoteRename: (note: Note) => void;
+  onNoteDelete: (noteId: string) => void;
+}) {
+  const getExpandedState = () => {
+    const saved = localStorage.getItem(`notes-sidebar-group-${group.id}`);
+    return saved !== null ? saved === 'true' : true;
+  };
+
+  const [isExpanded, setIsExpanded] = useState(getExpandedState);
+
+  const toggleExpanded = () => {
+    const newState = !isExpanded;
+    setIsExpanded(newState);
+    localStorage.setItem(`notes-sidebar-group-${group.id}`, String(newState));
+  };
+
+  const paddingLeft = `${level * 16 + 8}px`;
+  const label = group.label || 'Group';
+
+  return (
+    <div className="select-none">
+      <div className="group relative flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors">
+        <button
+          onClick={toggleExpanded}
+          className="flex items-center gap-2 flex-1 min-w-0 text-secondary-700 dark:text-secondary-300 text-sm"
+          style={{ paddingLeft }}
+        >
+          {isExpanded ? (
+            <ChevronDown className="h-4 w-4 text-secondary-400 flex-shrink-0" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-secondary-400 flex-shrink-0" />
+          )}
+          <GroupIcon className="h-4 w-4 flex-shrink-0" style={{ color: group.color }} />
+          <span className="truncate font-medium">{label}</span>
+        </button>
+
+        <span className="text-xs text-secondary-400">{notes.length}</span>
+      </div>
+
+      {isExpanded && notes.length > 0 && (
+        <div className="mt-0.5">
+          {notes.map((note) => (
+            <NoteItem
+              key={note.id}
+              note={note}
+              level={level + 1}
+              onClick={() => onNoteClick(note)}
+              onRename={() => onNoteRename(note)}
+              onDelete={() => onNoteDelete(note.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Note list item component
 function NoteItem({
   note,
@@ -259,6 +331,7 @@ function NoteItem({
 
   // Level 0 (root) uses 8px (px-2). Nested levels use indentation.
   const paddingLeft = level === 0 ? '8px' : `${level * 16 + 8}px`;
+  const noteIconStyle = note.color ? { color: note.color } : undefined;
 
   return (
     <div className="group relative flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors">
@@ -272,7 +345,7 @@ function NoteItem({
         }`}
         style={{ paddingLeft }}
       >
-        <FileText className="h-4 w-4 flex-shrink-0" />
+        <FileText className="h-4 w-4 flex-shrink-0" style={noteIconStyle} />
         <span className="truncate">{note.title || 'Untitled'}</span>
       </button>
 
@@ -332,6 +405,7 @@ function NoteItem({
 function CanvasItem({
   canvas,
   notes,
+  groups,
   level = 0,
   onClick,
   onRename,
@@ -344,6 +418,7 @@ function CanvasItem({
 }: {
   canvas: Canvas;
   notes: Note[];
+  groups: CanvasGroup[];
   level?: number;
   onClick: () => void;
   onRename: () => void;
@@ -363,6 +438,32 @@ function CanvasItem({
   const [showMenu, setShowMenu] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const accentColor = useThemeStore((state) => state.accentColor);
+
+  const { groupsWithNotes, notesByGroup, ungroupedNotes } = useMemo(() => {
+    const nextNotesByGroup: Record<string, Note[]> = {};
+    groups.forEach((group) => {
+      nextNotesByGroup[group.id] = [];
+    });
+
+    const nextUngrouped: Note[] = [];
+    notes.forEach((note) => {
+      if (note.group_id && nextNotesByGroup[note.group_id]) {
+        nextNotesByGroup[note.group_id].push(note);
+        return;
+      }
+      nextUngrouped.push(note);
+    });
+
+    const nextGroupsWithNotes = groups.filter(
+      (group) => nextNotesByGroup[group.id]?.length
+    );
+
+    return {
+      groupsWithNotes: nextGroupsWithNotes,
+      notesByGroup: nextNotesByGroup,
+      ungroupedNotes: nextUngrouped,
+    };
+  }, [groups, notes]);
 
   const toggleExpanded = () => {
     const newState = !isExpanded;
@@ -503,7 +604,18 @@ function CanvasItem({
       {/* Canvas contents */}
       {isExpanded && notes.length > 0 && (
         <div className="mt-0.5">
-          {notes.map((note) => (
+          {groupsWithNotes.map((group) => (
+            <GroupItem
+              key={group.id}
+              group={group}
+              notes={notesByGroup[group.id] || []}
+              level={level + 1}
+              onNoteClick={onNoteClick}
+              onNoteRename={onNoteRename}
+              onNoteDelete={onNoteDelete}
+            />
+          ))}
+          {ungroupedNotes.map((note) => (
             <NoteItem
               key={note.id}
               note={note}
@@ -525,8 +637,18 @@ interface NotesLibrarySidebarProps {
 
 export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
   const { addTab, findTabByEntity, closeTab } = useWorkspaceStore();
-  const { libraryNotes, fetchLibraryNotes, createNote, updateNoteContent, deleteNote } = useNotesStore();
+  const {
+    libraryNotes,
+    fetchLibraryNotes,
+    createNote,
+    updateNoteContent,
+    deleteNote,
+    groups: activeCanvasGroups,
+    currentCanvasId,
+    loading: canvasLoading,
+  } = useNotesStore();
   const { canvases, loading: canvasesLoading, createCanvas, deleteCanvas, updateCanvas } = useCanvases();
+  const { groups: canvasGroups, loading: groupsLoading } = useCanvasGroups();
   const { folders, loading: foldersLoading, createFolder, updateFolder, deleteFolder } = useFolders();
   const accentColor = useThemeStore((state) => state.accentColor);
 
@@ -540,6 +662,20 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
   }, [fetchLibraryNotes]);
 
   const { rootNotes, notesByFolder, notesByCanvas } = organizeLibraryItems(libraryNotes, folders, canvases);
+  const groupsByCanvasId = useMemo(() => {
+    const map: Record<string, CanvasGroup[]> = {};
+    canvasGroups.forEach((group) => {
+      if (!group.canvas_id) return;
+      if (!map[group.canvas_id]) {
+        map[group.canvas_id] = [];
+      }
+      map[group.canvas_id].push(group);
+    });
+    if (currentCanvasId && !canvasLoading) {
+      map[currentCanvasId] = activeCanvasGroups;
+    }
+    return map;
+  }, [activeCanvasGroups, canvasGroups, canvasLoading, currentCanvasId]);
 
   const handleNoteClick = (note: Note) => {
     addTab('note', note.id, note.title || 'Untitled');
@@ -719,7 +855,7 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
     setRenameValue('');
   };
 
-  const isLoading = canvasesLoading || foldersLoading;
+  const isLoading = canvasesLoading || foldersLoading || groupsLoading;
 
   // Unified sorted list of items
   const sortedItems = [
@@ -831,6 +967,7 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
                   key={item.data.id}
                   canvas={item.data}
                   notes={notesByCanvas[item.data.id] || []}
+                  groups={groupsByCanvasId[item.data.id] || []}
                   onClick={() => handleCanvasClick(item.data)}
                   onRename={() => handleRenameCanvas(item.data)}
                   onDelete={() => handleDeleteCanvas(item.data.id)}
