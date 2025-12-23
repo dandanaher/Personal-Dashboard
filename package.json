@@ -17,6 +17,7 @@
     "lucide-react": "^0.303.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-player": "^3.4.0",
     "react-router-dom": "^6.21.1",
     "reactflow": "^11.11.4",
     "recharts": "^3.4.1",

@@ -452,6 +452,8 @@ export interface Note {
   user_id: string;
   title: string;
   content: string;
+  /** Type of note - 'text' for regular notes, 'link' for web link embeds */
+  type?: 'text' | 'link';
   /** X position on canvas */
   position_x: number;
   /** Y position on canvas */

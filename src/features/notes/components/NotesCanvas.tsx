@@ -13,12 +13,14 @@ import { Plus, Crosshair } from 'lucide-react';
 import { useNotesStore } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
 import NoteNode from './NoteNode';
+import LinkNode from './LinkNode';
 import GroupNode from './GroupNode';
 import FloatingEdge from './FloatingEdge';
 
 // Custom node types
 const nodeTypes = {
   noteNode: NoteNode,
+  linkNode: LinkNode,
   groupNode: GroupNode,
 };
 

@@ -44,6 +44,7 @@ export interface NoteNodeData {
   title: string;
   content: string;
   color?: string;
+  type?: 'text' | 'link';
   onDoubleClick: (noteId: string) => void;
 }
 
@@ -69,6 +70,8 @@ interface CreateNoteOptions {
   folderId?: string | null;
   groupId?: string | null;
   title?: string;
+  type?: 'text' | 'link';
+  content?: string;
 }
 
 interface NotesActions {
@@ -130,9 +133,10 @@ function isNodeInsideGroup(
 
 // Convert database note to ReactFlow node
 function noteToNode(note: Note, onDoubleClick: (noteId: string) => void): Node<NoteNodeData> {
+  const nodeType = note.type === 'link' ? 'linkNode' : 'noteNode';
   return {
     id: note.id,
-    type: 'noteNode',
+    type: nodeType,
     position: { x: note.position_x, y: note.position_y },
     style: {
       width: note.width ?? 256,
@@ -143,6 +147,7 @@ function noteToNode(note: Note, onDoubleClick: (noteId: string) => void): Node<N
       title: note.title,
       content: note.content,
       color: note.color,
+      type: note.type,
       onDoubleClick,
     },
   };
@@ -376,6 +381,8 @@ export const useNotesStore = create<NotesStore>()(
       folderId,
       groupId,
       title = 'New Note',
+      type = 'text',
+      content = '',
     } = options;
     const { currentCanvasId } = get();
 
@@ -386,7 +393,8 @@ export const useNotesStore = create<NotesStore>()(
       const newNote = {
         user_id: user.id,
         title,
-        content: '',
+        content,
+        type,
         position_x: x,
         position_y: y,
         canvas_id: effectiveCanvasId,
@@ -738,7 +746,7 @@ export const useNotesStore = create<NotesStore>()(
         if (!node) return null;
         const nodeColor = (node.data as { color?: string } | undefined)?.color;
         if (nodeColor) return nodeColor;
-        if (node.type === 'noteNode') {
+        if (node.type === 'noteNode' || node.type === 'linkNode') {
           return darkMode ? '#334155' : '#e2e8f0';
         }
         if (node.type === 'groupNode') {
@@ -830,7 +838,7 @@ export const useNotesStore = create<NotesStore>()(
 
     // Find nodes inside bounds
     const notesInside = nodes.filter(n => 
-        n.type === 'noteNode' && 
+        (n.type === 'noteNode' || n.type === 'linkNode') && 
         !n.parentNode && 
         n.position.x >= bounds.x &&
         n.position.x + (n.width || 256) <= bounds.x + bounds.width &&
@@ -1010,7 +1018,7 @@ export const useNotesStore = create<NotesStore>()(
     if (!user) return;
 
     const node = state.nodes.find((n) => n.id === nodeId);
-    if (!node || node.type !== 'noteNode') return;
+    if (!node || (node.type !== 'noteNode' && node.type !== 'linkNode')) return;
 
     // Calculate absolute position of the dragged node
     let absX = node.position.x;
@@ -1158,7 +1166,7 @@ export const useNotesStore = create<NotesStore>()(
 
     // Check all note nodes
     state.nodes.forEach((node) => {
-      if (node.type !== 'noteNode') return;
+      if (node.type !== 'noteNode' && node.type !== 'linkNode') return;
 
       // Calculate absolute position
       let absX = node.position.x;

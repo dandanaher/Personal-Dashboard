@@ -20,6 +20,7 @@ import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { LoadingSpinner } from '@/components/ui';
 import { useCanvases } from '../hooks/useCanvases';
 import NoteNode from './NoteNode';
+import LinkNode from './LinkNode';
 import GroupNode from './GroupNode';
 import FloatingEdge from './FloatingEdge';
 import { FloatingToolbar } from './FloatingToolbar';
@@ -27,6 +28,7 @@ import { FloatingToolbar } from './FloatingToolbar';
 // Custom node types
 const nodeTypes = {
   noteNode: NoteNode,
+  linkNode: LinkNode,
   groupNode: GroupNode,
 };
 
@@ -176,20 +178,29 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
 
     // Sync nodes (notes)
     for (const node of currentNodes) {
-      if (node.type === 'noteNode') {
+      if (node.type === 'noteNode' || node.type === 'linkNode') {
         // Calculate absolute position
         let absX = node.position.x;
         let absY = node.position.y;
+        let groupId: string | null = null;
         if (node.parentNode) {
           const parent = currentNodes.find(n => n.id === node.parentNode);
           if (parent) {
             absX += parent.position.x;
             absY += parent.position.y;
+            if (parent.type === 'groupNode') {
+              groupId = parent.id;
+            }
           }
         }
         await supabase
           .from('notes')
-          .update({ position_x: absX, position_y: absY, updated_at: new Date().toISOString() })
+          .update({
+            position_x: absX,
+            position_y: absY,
+            group_id: groupId,
+            updated_at: new Date().toISOString(),
+          })
           .eq('id', node.id)
           .eq('user_id', user.id);
       }
@@ -309,8 +320,8 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
   const handleNodeDragStop = useCallback(
       (_event: React.MouseEvent, node: CanvasNode) => {
           resume();
-          if (node.type === 'noteNode') {
-              handleNoteDragEnd(node.id);
+          if (node.type === 'noteNode' || node.type === 'linkNode') {
+            handleNoteDragEnd(node.id);
           }
       },
       [handleNoteDragEnd, resume]
@@ -323,12 +334,16 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     const width = (
       node.width ??
       node.style?.width ??
-      (node.type === 'noteNode' ? NOTE_DROP_PREVIEW_SIZE.width : 0)
+      (node.type === 'noteNode' || node.type === 'linkNode'
+        ? NOTE_DROP_PREVIEW_SIZE.width
+        : 0)
     ) as number;
     const height = (
       node.height ??
       node.style?.height ??
-      (node.type === 'noteNode' ? NOTE_DROP_PREVIEW_SIZE.height : 0)
+      (node.type === 'noteNode' || node.type === 'linkNode'
+        ? NOTE_DROP_PREVIEW_SIZE.height
+        : 0)
     ) as number;
     return { width, height };
   }, []);
@@ -376,7 +391,9 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     let maxY = Number.NEGATIVE_INFINITY;
 
     selectedNodes.forEach((node) => {
-      if (node.type !== 'noteNode' && node.type !== 'groupNode') return;
+      if (node.type !== 'noteNode' && node.type !== 'linkNode' && node.type !== 'groupNode') {
+        return;
+      }
       const bounds = getNodeBounds(node);
       if (!bounds.width || !bounds.height) return;
       minX = Math.min(minX, bounds.x);
@@ -537,6 +554,66 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     }
   }, [isSelecting]);
 
+  // Magic Paste: Listen for paste events and create link nodes for URLs
+  useEffect(() => {
+    const handlePaste = async (event: ClipboardEvent) => {
+      // Guard clause: Ignore if user is in an input or textarea
+      const activeElement = document.activeElement;
+      if (
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement?.getAttribute('contenteditable') === 'true'
+      ) {
+        return;
+      }
+
+      const clipboardText = event.clipboardData?.getData('text')?.trim();
+      if (!clipboardText) return;
+
+      // Check if the clipboard text is a valid URL
+      const isUrl = /^https?:\/\//i.test(clipboardText);
+      if (!isUrl) return;
+
+      // Prevent default paste behavior
+      event.preventDefault();
+
+      // Get viewport center position
+      if (!canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
+      const centerScreen = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+      const flowPosition = screenToFlowPosition(centerScreen);
+
+      // Extract domain for title
+      let title = 'Link';
+      try {
+        const urlObj = new URL(clipboardText);
+        title = urlObj.hostname.replace('www.', '');
+      } catch {
+        // Use default title
+      }
+
+      // Create a link note at the center of the viewport
+      await createNote({
+        type: 'link',
+        content: clipboardText,
+        title,
+        x: flowPosition.x - 140, // Half of 280 width
+        y: flowPosition.y - 110, // Half of 220 height
+        canvasId,
+        width: 280,
+        height: 220, // Taller for video embeds
+      });
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => {
+      document.removeEventListener('paste', handlePaste);
+    };
+  }, [canvasId, createNote, screenToFlowPosition]);
+
   const edgeTypes = useMemo(() => ({
     floatingEdge: FloatingEdge,
   }), []);
@@ -567,7 +644,10 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
   const selectNodesInRect = useCallback(
     (rect: BoundsRect) => {
       const selectableNodes = (nodes as CanvasNode[])
-        .filter((node) => node.type === 'noteNode' || node.type === 'groupNode')
+        .filter(
+          (node) =>
+            node.type === 'noteNode' || node.type === 'linkNode' || node.type === 'groupNode'
+        )
         .filter((node) => {
           const bounds = getNodeBounds(node);
           if (!bounds.width || !bounds.height) return false;
@@ -600,7 +680,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
   const handleSelectionColor = useCallback(
     (color: string) => {
       selectedNodes.forEach((node) => {
-        if (node.type === 'noteNode') {
+        if (node.type === 'noteNode' || node.type === 'linkNode') {
           void updateNoteColor(node.id, color);
           return;
         }
@@ -627,7 +707,9 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
   }, [fitView, selectedNodeIds]);
 
   const handleSelectionDelete = useCallback(async () => {
-    const notesToDelete = selectedNodes.filter((node) => node.type === 'noteNode');
+    const notesToDelete = selectedNodes.filter(
+      (node) => node.type === 'noteNode' || node.type === 'linkNode'
+    );
     const groupsToDelete = selectedNodes.filter((node) => node.type === 'groupNode');
     const edgesToDelete = selectedEdgeIds;
 
@@ -698,7 +780,9 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
         startFlow,
         nodePositions,
         nodeIds: movableNodes.map((node) => node.id),
-        noteIds: movableNodes.filter((node) => node.type === 'noteNode').map((node) => node.id),
+        noteIds: movableNodes
+          .filter((node) => node.type === 'noteNode' || node.type === 'linkNode')
+          .map((node) => node.id),
       };
       selectionMoveStartRef.current = { x: event.clientX, y: event.clientY };
       selectionMoveDragRef.current = false;

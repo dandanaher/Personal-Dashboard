@@ -51,7 +51,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
 
   const handleClasses = useMemo(
     () =>
-      `!w-4 !h-4 !rounded-full !bg-white dark:!bg-secondary-900 !border !border-solid opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-20 ${
+      `!w-8 !h-8 !rounded-full !bg-white dark:!bg-secondary-900 !border !border-solid opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-20 ${
         isHovered ? 'pointer-events-auto' : 'pointer-events-none'
       }`,
     [isHovered]
@@ -59,7 +59,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
 
   const hiddenHandleClasses = useMemo(
     () =>
-      '!w-4 !h-4 !rounded-full !bg-white dark:!bg-secondary-900 !border !border-solid opacity-0 pointer-events-none z-10',
+      '!w-8 !h-8 !rounded-full !bg-white dark:!bg-secondary-900 !border !border-solid opacity-0 pointer-events-none z-10',
     []
   );
 
@@ -103,11 +103,11 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
         lineStyle={{ borderColor: cardBorderColor }}
         handleStyle={{ borderColor: cardBorderColor }}
         lineClassName="opacity-0 group-hover:opacity-100"
-        handleClassName="!w-3 !h-3 !bg-white !border !rounded-full opacity-0 group-hover:opacity-100"
+        handleClassName="!w-6 !h-6 !bg-white !border !rounded-full opacity-0 group-hover:opacity-100"
       />
       
       <div
-        className="w-full h-full min-w-[16rem] min-h-[6rem] rounded-xl shadow-lg border cursor-pointer transition-transform hover:scale-[1.01] active:scale-[0.99] bg-white dark:bg-secondary-800 relative"
+        className="w-full h-full min-w-[16rem] min-h-[6rem] rounded-xl shadow-lg border cursor-pointer bg-white dark:bg-secondary-800 relative"
         onDoubleClick={handleDoubleClick}
         style={{ 
           borderColor: cardBorderColor,

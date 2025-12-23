@@ -47,7 +47,7 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
 
   const handleClasses = useMemo(
     () =>
-      `!w-4 !h-4 !rounded-full !bg-white dark:!bg-secondary-900 !border !border-solid opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-20 ${
+      `!w-8 !h-8 !rounded-full !bg-white dark:!bg-secondary-900 !border !border-solid opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-20 ${
         isHovered ? 'pointer-events-auto' : 'pointer-events-none'
       }`,
     [isHovered]
@@ -92,7 +92,7 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
         minWidth={100} 
         minHeight={100}
         color={color}
-        handleStyle={{ width: 8, height: 8, borderRadius: 4 }}
+        handleStyle={{ width: 16, height: 16, borderRadius: 8 }}
       />
       
       {/* Connection Handles */}
