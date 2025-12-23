@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { temporal } from 'zundo';
 import {
   Node,
   Edge,
@@ -170,7 +171,9 @@ function noteEdgeToEdge(noteEdge: NoteEdge): Edge {
   return edge;
 }
 
-export const useNotesStore = create<NotesStore>((set, get) => ({
+export const useNotesStore = create<NotesStore>()(
+  temporal(
+    (set, get) => ({
   // State
   nodes: [],
   edges: [],
@@ -193,6 +196,9 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
   fetchCanvasNotes: async (canvasId: string) => {
     const user = useAuthStore.getState().user;
     if (!user) return;
+
+    // Pause history tracking during data load to prevent false history entries
+    useNotesStore.temporal.getState().pause();
 
     set({ loading: true, error: null, currentCanvasId: canvasId });
 
@@ -261,11 +267,16 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       const edges = noteEdges.map((edge) => noteEdgeToEdge(edge));
 
       set({ nodes: [...groupNodes, ...flowNodes], edges, groups: (groups || []) as CanvasGroup[], loading: false });
+
+      // Clear any stale history - resume will happen in CanvasViewInner after mount
+      useNotesStore.temporal.getState().clear();
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Failed to fetch canvas notes',
         loading: false,
       });
+      // Clear history on error - resume will happen in CanvasViewInner
+      useNotesStore.temporal.getState().clear();
     }
   },
 
@@ -353,6 +364,9 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     const user = useAuthStore.getState().user;
     if (!user) return null;
 
+    // Pause history tracking during note creation
+    useNotesStore.temporal.getState().pause();
+
     const {
       x = 100,
       y = 100,
@@ -427,10 +441,24 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
         libraryNotes: [createdNote, ...state.libraryNotes],
       }));
 
+      // Clear undo history since adding notes cannot be undone (like deletion)
+      // Use delayed resume to allow ReactFlow's node rendering to complete
+      useNotesStore.temporal.getState().clear();
+      setTimeout(() => {
+        useNotesStore.temporal.getState().clear();
+        useNotesStore.temporal.getState().resume();
+      }, 100);
+
       return createdNote.id;
     } catch (error) {
       console.error('Failed to create note:', error);
       set({ error: error instanceof Error ? error.message : 'Failed to create note' });
+      // Resume tracking even on error with delay
+      useNotesStore.temporal.getState().clear();
+      setTimeout(() => {
+        useNotesStore.temporal.getState().clear();
+        useNotesStore.temporal.getState().resume();
+      }, 100);
       return null;
     }
   },
@@ -628,6 +656,9 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       libraryNotes: state.libraryNotes.filter((note) => note.id !== noteId),
     }));
 
+    // Clear undo history to prevent undoing deletes (would create ghost nodes)
+    useNotesStore.temporal.getState().clear();
+
     try {
       const { error } = await supabase
         .from('notes')
@@ -754,6 +785,9 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     set((state) => ({
       edges: state.edges.filter((edge) => edge.id !== edgeId),
     }));
+
+    // Clear undo history to prevent undoing deletes
+    useNotesStore.temporal.getState().clear();
 
     try {
       const { error } = await supabase
@@ -951,7 +985,10 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
              return updatedChild || n;
          })
      }));
-     
+
+     // Clear undo history to prevent undoing deletes
+     useNotesStore.temporal.getState().clear();
+
      // DB Update
      const { error } = await supabase.from('canvas_groups').delete().eq('id', id);
      if (error) console.error('Failed to delete group', error);
@@ -1355,6 +1392,21 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       updated_at: '',
     } as Note;
   },
-}));
+    }),
+    {
+      limit: 50,
+      // Only create history entries when nodes, edges, or groups change
+      equality: (pastState, currentState) => {
+        // Handle edge cases where state might be undefined
+        if (!pastState || !currentState) return pastState === currentState;
+        return (
+          pastState.nodes === currentState.nodes &&
+          pastState.edges === currentState.edges &&
+          pastState.groups === currentState.groups
+        );
+      },
+    }
+  )
+);
 
 export default useNotesStore;

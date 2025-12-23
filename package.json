@@ -20,6 +20,7 @@
     "react-router-dom": "^6.21.1",
     "reactflow": "^11.11.4",
     "recharts": "^3.4.1",
+    "zundo": "^2.3.0",
     "zustand": "^4.4.7"
   },
   "devDependencies": {

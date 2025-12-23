@@ -12,7 +12,7 @@ import ReactFlow, {
   Node,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Crosshair, FileText, MousePointerSquareDashed } from 'lucide-react';
+import { Crosshair, FileText, MousePointerSquareDashed, Undo2, Redo2 } from 'lucide-react';
 import { useNotesStore } from '@/stores/notesStore';
 import type { NoteNodeData } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
@@ -42,6 +42,10 @@ interface CanvasControlsProps {
   setIsSelecting: (isSelecting: boolean) => void;
   isPlacingNote: boolean;
   onStartNoteDrag: (event: React.PointerEvent<HTMLButtonElement>) => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
 }
 
 // Canvas controls component (must be inside ReactFlowProvider)
@@ -50,6 +54,10 @@ function CanvasControls({
   setIsSelecting,
   isPlacingNote,
   onStartNoteDrag,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
 }: CanvasControlsProps) {
   const { fitView } = useReactFlow();
   const accentColor = useThemeStore((state) => state.accentColor);
@@ -63,11 +71,11 @@ function CanvasControls({
       {/* Top Right Controls */}
       <Panel position="top-right" className="!m-4 flex flex-col gap-2">
          {/* Selection Toggle */}
-        <button 
+        <button
            onClick={() => setIsSelecting(!isSelecting)}
            className={`p-2 rounded-xl border shadow-lg transition-colors self-end ${
-               isSelecting 
-               ? 'bg-secondary-100 dark:bg-secondary-700 text-accent border-accent' 
+               isSelecting
+               ? 'bg-secondary-100 dark:bg-secondary-700 text-accent border-accent'
                : 'bg-white dark:bg-secondary-800 border-secondary-200 dark:border-secondary-700 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700'
            }`}
            style={isSelecting ? { color: accentColor, borderColor: accentColor } : {}}
@@ -75,6 +83,26 @@ function CanvasControls({
         >
             <MousePointerSquareDashed className="h-5 w-5" />
         </button>
+
+        {/* Undo/Redo Controls */}
+        <div className="flex flex-col gap-1 self-end">
+          <button
+            onClick={onUndo}
+            disabled={!canUndo}
+            className="p-2 rounded-xl border shadow-lg transition-colors bg-white dark:bg-secondary-800 border-secondary-200 dark:border-secondary-700 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-secondary-800"
+            title="Undo"
+          >
+            <Undo2 className="h-5 w-5" />
+          </button>
+          <button
+            onClick={onRedo}
+            disabled={!canRedo}
+            className="p-2 rounded-xl border shadow-lg transition-colors bg-white dark:bg-secondary-800 border-secondary-200 dark:border-secondary-700 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-secondary-800"
+            title="Redo"
+          >
+            <Redo2 className="h-5 w-5" />
+          </button>
+        </div>
       </Panel>
 
       {/* Add Note Button */}
@@ -131,6 +159,114 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     deleteGroup,
     deleteEdge,
   } = useNotesStore();
+
+  // Temporal (undo/redo) state - get functions only (they're stable)
+  const temporalStore = useNotesStore.temporal;
+  // Initialize to false, let subscription sync actual state
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  // Sync all node/edge positions to database after undo/redo
+  const syncToDatabase = useCallback(async () => {
+    const { nodes: currentNodes } = useNotesStore.getState();
+    const user = (await import('@/stores/authStore')).useAuthStore.getState().user;
+    if (!user) return;
+
+    const { supabase } = await import('@/lib/supabase');
+
+    // Sync nodes (notes)
+    for (const node of currentNodes) {
+      if (node.type === 'noteNode') {
+        // Calculate absolute position
+        let absX = node.position.x;
+        let absY = node.position.y;
+        if (node.parentNode) {
+          const parent = currentNodes.find(n => n.id === node.parentNode);
+          if (parent) {
+            absX += parent.position.x;
+            absY += parent.position.y;
+          }
+        }
+        await supabase
+          .from('notes')
+          .update({ position_x: absX, position_y: absY, updated_at: new Date().toISOString() })
+          .eq('id', node.id)
+          .eq('user_id', user.id);
+      }
+    }
+
+    // Sync groups
+    for (const node of currentNodes) {
+      if (node.type === 'groupNode') {
+        await supabase
+          .from('canvas_groups')
+          .update({
+            position_x: node.position.x,
+            position_y: node.position.y,
+            width: node.width ?? node.style?.width,
+            height: node.height ?? node.style?.height,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', node.id)
+          .eq('user_id', user.id);
+      }
+    }
+  }, []);
+
+  // Safe undo/redo wrappers that also sync to database
+  const handleUndo = useCallback(() => {
+    const state = temporalStore.getState();
+    if (state.pastStates.length > 0) {
+      state.undo();
+      // Sync changes to database after undo
+      void syncToDatabase();
+    }
+  }, [temporalStore, syncToDatabase]);
+
+  const handleRedo = useCallback(() => {
+    const state = temporalStore.getState();
+    if (state.futureStates.length > 0) {
+      state.redo();
+      // Sync changes to database after redo
+      void syncToDatabase();
+    }
+  }, [temporalStore, syncToDatabase]);
+
+  const pause = useCallback(() => {
+    temporalStore.getState().pause();
+  }, [temporalStore]);
+
+  const resume = useCallback(() => {
+    temporalStore.getState().resume();
+  }, [temporalStore]);
+
+  // Subscribe to temporal state changes
+  useEffect(() => {
+    // Clear any stale history and ensure we start fresh
+    temporalStore.getState().clear();
+    setCanUndo(false);
+    setCanRedo(false);
+
+    // Delay resuming tracking to allow ReactFlow's initial render to complete
+    // This prevents spurious history entries from initial node positioning
+    const resumeTimer = setTimeout(() => {
+      temporalStore.getState().clear(); // Clear again in case anything was recorded
+      temporalStore.getState().resume();
+    }, 100);
+
+    // Subscribe to changes
+    const unsubscribe = temporalStore.subscribe((state) => {
+      setCanUndo(state.pastStates.length > 0);
+      setCanRedo(state.futureStates.length > 0);
+    });
+
+    return () => {
+      clearTimeout(resumeTimer);
+      temporalStore.getState().pause();
+      unsubscribe();
+    };
+  }, [temporalStore]);
+
   const { screenToFlowPosition, fitView } = useReactFlow();
   const { zoom, x: viewportX, y: viewportY } = useViewport();
 
@@ -164,14 +300,20 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     },
     [connectNotes]
   );
-  
+
+  // Pause history tracking during node drag
+  const handleNodeDragStart = useCallback(() => {
+    pause();
+  }, [pause]);
+
   const handleNodeDragStop = useCallback(
       (_event: React.MouseEvent, node: CanvasNode) => {
+          resume();
           if (node.type === 'noteNode') {
               handleNoteDragEnd(node.id);
           }
       },
-      [handleNoteDragEnd]
+      [handleNoteDragEnd, resume]
   );
 
   const previewWidth = NOTE_DROP_PREVIEW_SIZE.width * zoom;
@@ -492,8 +634,8 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     if (notesToDelete.length > 0) {
       const message =
         notesToDelete.length === 1
-          ? 'Are you sure you want to delete this note?'
-          : `Are you sure you want to delete these ${notesToDelete.length} notes?`;
+          ? 'Are you sure you want to delete this note? This cannot be undone.'
+          : `Are you sure you want to delete these ${notesToDelete.length} notes? This cannot be undone.`;
       if (!window.confirm(message)) return;
     }
 
@@ -540,6 +682,9 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
       const movableNodes = getMovableSelectionNodes();
       if (movableNodes.length === 0) return;
 
+      // Pause history tracking during selection drag
+      pause();
+
       const startFlow = screenToFlowPosition({ x: event.clientX, y: event.clientY });
       const nodePositions = movableNodes.reduce<Record<string, { x: number; y: number }>>(
         (acc, node) => {
@@ -560,7 +705,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
       setIsDraggingSelection(true);
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [getMovableSelectionNodes, screenToFlowPosition, selectedNodeIds.length]
+    [getMovableSelectionNodes, pause, screenToFlowPosition, selectedNodeIds.length]
   );
 
   const onSelectionBoundsPointerMove = useCallback(
@@ -605,6 +750,9 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     (event: React.PointerEvent<HTMLDivElement>) => {
       const dragState = selectionMoveRef.current;
       const startScreen = selectionMoveStartRef.current;
+
+      // Resume history tracking
+      resume();
 
       if (!dragState || !startScreen) {
         setIsDraggingSelection(false);
@@ -651,7 +799,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
         event.currentTarget.releasePointerCapture(event.pointerId);
       }
     },
-    [handleNoteDragEnd, onNodesChange, screenToFlowPosition]
+    [handleNoteDragEnd, onNodesChange, resume, screenToFlowPosition]
   );
 
   const onSelectionMouseDown = useCallback(
@@ -766,6 +914,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
+        onNodeDragStart={handleNodeDragStart}
         onNodeDragStop={handleNodeDragStop}
         onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes}
@@ -809,6 +958,10 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
           setIsSelecting={setIsSelecting}
           isPlacingNote={isPlacingNote}
           onStartNoteDrag={handleStartNoteDrag}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
         />
       </ReactFlow>
 

@@ -690,7 +690,7 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
   };
 
   const handleDeleteNote = async (noteId: string) => {
-    if (window.confirm('Delete this note?')) {
+    if (window.confirm('Delete this note? This cannot be undone.')) {
       await deleteNote(noteId);
       // Close tab if open
       const tab = findTabByEntity('note', noteId);

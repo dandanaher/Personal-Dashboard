@@ -44,7 +44,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
   }, [fitView, id]);
 
   const handleDelete = useCallback(() => {
-    if (window.confirm('Are you sure you want to delete this note?')) {
+    if (window.confirm('Are you sure you want to delete this note? This cannot be undone.')) {
       deleteNote(id);
     }
   }, [deleteNote, id]);

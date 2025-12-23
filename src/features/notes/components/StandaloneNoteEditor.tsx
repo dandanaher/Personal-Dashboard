@@ -213,7 +213,7 @@ export function StandaloneNoteEditor({ noteId }: StandaloneNoteEditorProps) {
   const handleDelete = useCallback(async () => {
     if (!note) return;
 
-    if (window.confirm('Are you sure you want to delete this note?')) {
+    if (window.confirm('Are you sure you want to delete this note? This cannot be undone.')) {
       await deleteNote(noteId);
       const tab = findTabByEntity('note', noteId);
       if (tab) {
