@@ -70,6 +70,15 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
     }),
     [cardBorderColor]
   );
+  const handleOffsetStyles = useMemo(
+    () => ({
+      top: { transform: 'translate(-50%, -50%)' },
+      right: { transform: 'translate(50%, -50%)' },
+      bottom: { transform: 'translate(-50%, 50%)' },
+      left: { transform: 'translate(-50%, -50%)' },
+    }),
+    []
+  );
 
   return (
     <div
@@ -150,7 +159,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
         isConnectableStart
         isConnectableEnd
         className={handleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.top }}
       />
       <Handle
         type="target"
@@ -158,7 +167,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
         id="top"
         isConnectable={false}
         className={hiddenHandleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.top }}
       />
       <Handle
         type="source"
@@ -167,7 +176,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
         isConnectableStart
         isConnectableEnd
         className={handleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.right }}
       />
       <Handle
         type="target"
@@ -175,7 +184,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
         id="right"
         isConnectable={false}
         className={hiddenHandleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.right }}
       />
       <Handle
         type="source"
@@ -184,7 +193,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
         isConnectableStart
         isConnectableEnd
         className={handleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.bottom }}
       />
       <Handle
         type="target"
@@ -192,7 +201,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
         id="bottom"
         isConnectable={false}
         className={hiddenHandleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.bottom }}
       />
       <Handle
         type="source"
@@ -201,7 +210,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
         isConnectableStart
         isConnectableEnd
         className={handleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.left }}
       />
       <Handle
         type="target"
@@ -209,7 +218,7 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
         id="left"
         isConnectable={false}
         className={hiddenHandleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.left }}
       />
 
       <style>{`

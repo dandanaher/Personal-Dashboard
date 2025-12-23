@@ -60,6 +60,15 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
     }),
     [color]
   );
+  const handleOffsetStyles = useMemo(
+    () => ({
+      top: { transform: 'translate(-50%, -50%)' },
+      right: { transform: 'translate(50%, -50%)' },
+      bottom: { transform: 'translate(-50%, 50%)' },
+      left: { transform: 'translate(-50%, -50%)' },
+    }),
+    []
+  );
 
   return (
     <div 
@@ -101,7 +110,7 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
         position={Position.Top}
         id="top"
         className={handleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.top }}
         isConnectableStart
         isConnectableEnd
       />
@@ -110,7 +119,7 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
         position={Position.Right}
         id="right"
         className={handleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.right }}
         isConnectableStart
         isConnectableEnd
       />
@@ -119,7 +128,7 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
         position={Position.Bottom}
         id="bottom"
         className={handleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.bottom }}
         isConnectableStart
         isConnectableEnd
       />
@@ -128,7 +137,7 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
         position={Position.Left}
         id="left"
         className={handleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.left }}
         isConnectableStart
         isConnectableEnd
       />

@@ -219,6 +219,15 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
     }),
     [cardBorderColor]
   );
+  const handleOffsetStyles = useMemo(
+    () => ({
+      top: { transform: 'translate(-50%, -50%)' },
+      right: { transform: 'translate(50%, -50%)' },
+      bottom: { transform: 'translate(-50%, 50%)' },
+      left: { transform: 'translate(-50%, -50%)' },
+    }),
+    []
+  );
 
   return (
     <div
@@ -397,7 +406,7 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
         isConnectableStart
         isConnectableEnd
         className={handleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.top }}
       />
       <Handle
         type="target"
@@ -405,7 +414,7 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
         id="top"
         isConnectable={false}
         className={hiddenHandleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.top }}
       />
       <Handle
         type="source"
@@ -414,7 +423,7 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
         isConnectableStart
         isConnectableEnd
         className={handleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.right }}
       />
       <Handle
         type="target"
@@ -422,7 +431,7 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
         id="right"
         isConnectable={false}
         className={hiddenHandleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.right }}
       />
       <Handle
         type="source"
@@ -431,7 +440,7 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
         isConnectableStart
         isConnectableEnd
         className={handleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.bottom }}
       />
       <Handle
         type="target"
@@ -439,7 +448,7 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
         id="bottom"
         isConnectable={false}
         className={hiddenHandleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.bottom }}
       />
       <Handle
         type="source"
@@ -448,7 +457,7 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
         isConnectableStart
         isConnectableEnd
         className={handleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.left }}
       />
       <Handle
         type="target"
@@ -456,7 +465,7 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
         id="left"
         isConnectable={false}
         className={hiddenHandleClasses}
-        style={handleStyle}
+        style={{ ...handleStyle, ...handleOffsetStyles.left }}
       />
     </div>
   );
