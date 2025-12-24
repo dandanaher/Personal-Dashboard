@@ -11,6 +11,7 @@ import {
   NodeChange,
   EdgeChange,
 } from 'reactflow';
+import imageCompression from 'browser-image-compression';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
@@ -44,7 +45,7 @@ export interface NoteNodeData {
   title: string;
   content: string;
   color?: string;
-  type?: 'text' | 'link';
+  type?: 'text' | 'link' | 'image';
   onDoubleClick: (noteId: string) => void;
 }
 
@@ -70,7 +71,7 @@ interface CreateNoteOptions {
   folderId?: string | null;
   groupId?: string | null;
   title?: string;
-  type?: 'text' | 'link';
+  type?: 'text' | 'link' | 'image';
   content?: string;
 }
 
@@ -109,6 +110,9 @@ interface NotesActions {
   // Dynamic grouping logic
   handleNoteDragEnd: (nodeId: string) => Promise<void>;
   recalculateGroupMembership: (groupId: string) => Promise<void>;
+
+  // Image upload
+  uploadImage: (file: File) => Promise<string>;
 }
 
 type NotesStore = NotesState & NotesActions;
@@ -133,7 +137,14 @@ function isNodeInsideGroup(
 
 // Convert database note to ReactFlow node
 function noteToNode(note: Note, onDoubleClick: (noteId: string) => void): Node<NoteNodeData> {
-  const nodeType = note.type === 'link' ? 'linkNode' : 'noteNode';
+  let nodeType: string;
+  if (note.type === 'link') {
+    nodeType = 'linkNode';
+  } else if (note.type === 'image') {
+    nodeType = 'imageNode';
+  } else {
+    nodeType = 'noteNode';
+  }
   return {
     id: note.id,
     type: nodeType,
@@ -513,11 +524,15 @@ export const useNotesStore = create<NotesStore>()(
       },
 
       updateNoteSize: (noteId: string, width: number, height: number) => {
+        // Round to integers (database columns are integers)
+        const roundedWidth = Math.round(width);
+        const roundedHeight = Math.round(height);
+
         // Optimistically update the node style in state
         set((state) => ({
           nodes: state.nodes.map((node) =>
             node.id === noteId
-              ? { ...node, style: { ...node.style, width, height } }
+              ? { ...node, style: { ...node.style, width: roundedWidth, height: roundedHeight } }
               : node
           ),
         }));
@@ -529,7 +544,7 @@ export const useNotesStore = create<NotesStore>()(
 
           const { error } = await supabase
             .from('notes')
-            .update({ width, height, updated_at: new Date().toISOString() })
+            .update({ width: roundedWidth, height: roundedHeight, updated_at: new Date().toISOString() })
             .eq('id', noteId)
             .eq('user_id', user.id);
 
@@ -660,6 +675,11 @@ export const useNotesStore = create<NotesStore>()(
         const user = useAuthStore.getState().user;
         if (!user) return;
 
+        // Get the note before deleting to check if it's an image (for storage cleanup)
+        const noteToDelete = get().nodes.find((node) => node.id === noteId);
+        const isImageNote = noteToDelete?.type === 'imageNode';
+        const imageUrl = isImageNote ? noteToDelete?.data?.content : null;
+
         // Optimistic update - remove node and associated edges
         set((state) => ({
           nodes: state.nodes.filter((node) => node.id !== noteId),
@@ -674,6 +694,7 @@ export const useNotesStore = create<NotesStore>()(
         useNotesStore.temporal.getState().clear();
 
         try {
+          // Delete from database
           const { error } = await supabase
             .from('notes')
             .delete()
@@ -681,6 +702,22 @@ export const useNotesStore = create<NotesStore>()(
             .eq('user_id', user.id);
 
           if (error) throw error;
+
+          // If it was an image note, also delete the file from storage
+          if (imageUrl && imageUrl.includes('/canvas-assets/')) {
+            try {
+              // Extract file path from URL: .../canvas-assets/userId/filename.png
+              const pathMatch = imageUrl.match(/\/canvas-assets\/(.+)$/);
+              if (pathMatch && pathMatch[1]) {
+                const filePath = pathMatch[1];
+                await supabase.storage
+                  .from('canvas-assets')
+                  .remove([filePath]);
+              }
+            } catch {
+              // Don't fail the whole operation if storage cleanup fails
+            }
+          }
         } catch (error) {
           console.error('Failed to delete note:', error);
           const { currentCanvasId } = get();
@@ -1434,6 +1471,45 @@ export const useNotesStore = create<NotesStore>()(
 
       setSelectedNoteId: (noteId: string | null) => {
         set({ selectedNoteId: noteId });
+      },
+
+      // Upload image to Supabase storage with compression
+      uploadImage: async (file: File): Promise<string> => {
+        const user = useAuthStore.getState().user;
+        if (!user) throw new Error('User not authenticated');
+
+        try {
+          // Compress the image
+          const compressedFile = await imageCompression(file, {
+            maxSizeMB: 0.3,
+            maxWidthOrHeight: 1280,
+            useWebWorker: true,
+          });
+
+          // Generate unique filename
+          const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+          const path = `${user.id}/${filename}`;
+
+          // Upload to Supabase storage
+          const { error: uploadError } = await supabase.storage
+            .from('canvas-assets')
+            .upload(path, compressedFile, {
+              cacheControl: '3600',
+              upsert: false,
+            });
+
+          if (uploadError) throw uploadError;
+
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from('canvas-assets')
+            .getPublicUrl(path);
+
+          return urlData.publicUrl;
+        } catch (error) {
+          console.error('Failed to upload image:', error);
+          throw error instanceof Error ? error : new Error('Failed to upload image');
+        }
       },
 
       getSelectedNote: () => {

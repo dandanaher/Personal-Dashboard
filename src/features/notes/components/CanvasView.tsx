@@ -12,7 +12,7 @@ import ReactFlow, {
   Node,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Crosshair, FileText, MousePointerSquareDashed, Undo2, Redo2, RotateCw } from 'lucide-react';
+import { Crosshair, FileText, MousePointerSquareDashed, Undo2, Redo2, RotateCw, ImagePlus } from 'lucide-react';
 import { useNotesStore } from '@/stores/notesStore';
 import type { NoteNodeData } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
@@ -22,6 +22,7 @@ import { useCanvases } from '../hooks/useCanvases';
 import NoteNode from './NoteNode';
 import LinkNode from './LinkNode';
 import GroupNode from './GroupNode';
+import ImageNode from './ImageNode';
 import FloatingEdge from './FloatingEdge';
 import { FloatingToolbar } from './FloatingToolbar';
 
@@ -30,6 +31,7 @@ const nodeTypes = {
   noteNode: NoteNode,
   linkNode: LinkNode,
   groupNode: GroupNode,
+  imageNode: ImageNode,
 };
 
 type CanvasNode = Node<NoteNodeData | { label?: string | null; color?: string | null }>;
@@ -44,6 +46,7 @@ interface CanvasControlsProps {
   setIsSelecting: (isSelecting: boolean) => void;
   isPlacingNote: boolean;
   onStartNoteDrag: (event: React.PointerEvent<HTMLButtonElement>) => void;
+  onImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
@@ -57,6 +60,7 @@ function CanvasControls({
   setIsSelecting,
   isPlacingNote,
   onStartNoteDrag,
+  onImageUpload,
   canUndo,
   canRedo,
   onUndo,
@@ -65,6 +69,7 @@ function CanvasControls({
 }: CanvasControlsProps) {
   const { fitView } = useReactFlow();
   const accentColor = useThemeStore((state) => state.accentColor);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const handleRecenter = useCallback(() => {
     fitView({ padding: 0.2, duration: 200 });
@@ -119,19 +124,37 @@ function CanvasControls({
 
       {/* Add Note Button */}
       <Panel position="bottom-center" className="!m-4">
-        <button
-          type="button"
-          onPointerDown={onStartNoteDrag}
-          className={`flex h-10 w-10 items-center justify-center rounded-lg border shadow-lg transition-colors cursor-grab active:cursor-grabbing ${isPlacingNote
-            ? 'bg-secondary-100 dark:bg-secondary-700 text-accent border-accent'
-            : 'bg-white dark:bg-secondary-800 border-secondary-200 dark:border-secondary-700 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700'
-            }`}
-          style={isPlacingNote ? { color: accentColor, borderColor: accentColor } : {}}
-          aria-label="Drag to add note"
-          title="Drag to add note"
-        >
-          <FileText className="h-4 w-4" />
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onPointerDown={onStartNoteDrag}
+            className={`flex h-10 w-10 items-center justify-center rounded-lg border shadow-lg transition-colors cursor-grab active:cursor-grabbing ${isPlacingNote
+              ? 'bg-secondary-100 dark:bg-secondary-700 text-accent border-accent'
+              : 'bg-white dark:bg-secondary-800 border-secondary-200 dark:border-secondary-700 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700'
+              }`}
+            style={isPlacingNote ? { color: accentColor, borderColor: accentColor } : {}}
+            aria-label="Drag to add note"
+            title="Drag to add note"
+          >
+            <FileText className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => imageInputRef.current?.click()}
+            className="flex h-10 w-10 items-center justify-center rounded-lg border shadow-lg transition-colors bg-white dark:bg-secondary-800 border-secondary-200 dark:border-secondary-700 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700"
+            aria-label="Add image"
+            title="Add image"
+          >
+            <ImagePlus className="h-4 w-4" />
+          </button>
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={onImageUpload}
+          />
+        </div>
       </Panel>
 
       {/* Recenter Button */}
@@ -163,6 +186,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     createGroup,
     handleNoteDragEnd,
     createNote,
+    updateNoteContent,
     updateNoteColor,
     updateEdge,
     updateGroup,
@@ -170,6 +194,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     deleteGroup,
     deleteEdge,
     fetchCanvasNotes,
+    uploadImage,
   } = useNotesStore();
 
   // Temporal (undo/redo) state - get functions only (they're stable)
@@ -564,7 +589,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     }
   }, [isSelecting]);
 
-  // Magic Paste: Listen for paste events and create link nodes for URLs
+  // Magic Paste: Listen for paste events - handle images first, then URLs
   useEffect(() => {
     const handlePaste = async (event: ClipboardEvent) => {
       // Guard clause: Ignore if user is in an input or textarea
@@ -577,6 +602,77 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
         return;
       }
 
+      // Check for image files first
+      const files = event.clipboardData?.files;
+      if (files && files.length > 0) {
+        const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+        if (imageFiles.length > 0) {
+          event.preventDefault();
+
+          // Get viewport center position
+          if (!canvasRef.current) return;
+          const rect = canvasRef.current.getBoundingClientRect();
+          const centerScreen = {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2,
+          };
+          const flowPosition = screenToFlowPosition(centerScreen);
+
+          // Process each image file
+          for (let i = 0; i < imageFiles.length; i++) {
+            const file = imageFiles[i];
+
+            // Get dimensions inline
+            const getDims = (): Promise<{ width: number; height: number }> => {
+              return new Promise((resolve) => {
+                const img = new Image();
+                const blobUrl = URL.createObjectURL(file);
+                img.onload = () => {
+                  URL.revokeObjectURL(blobUrl);
+                  const ratio = img.naturalWidth / img.naturalHeight;
+                  const width = 256;
+                  const height = Math.round(width / ratio);
+                  resolve({ width, height });
+                };
+                img.onerror = () => {
+                  URL.revokeObjectURL(blobUrl);
+                  resolve({ width: 256, height: 256 });
+                };
+                img.src = blobUrl;
+              });
+            };
+
+            // Get dimensions, then create note and upload
+            getDims().then(async (dims) => {
+              const noteId = await createNote({
+                type: 'image',
+                content: '', // Empty triggers loading state
+                title: 'Image',
+                x: flowPosition.x - (dims.width / 2) + (i * 20),
+                y: flowPosition.y - (dims.height / 2) + (i * 20),
+                canvasId,
+                width: dims.width,
+                height: dims.height,
+              });
+
+              if (!noteId) return;
+
+              // Upload in background and update content when done
+              uploadImage(file)
+                .then((url) => {
+                  updateNoteContent(noteId, 'Image', url);
+                })
+                .catch((error) => {
+                  console.error('Failed to upload pasted image:', error);
+                  deleteNote(noteId);
+                });
+            });
+          }
+          return;
+        }
+      }
+
+      // Otherwise check for URL text
       const clipboardText = event.clipboardData?.getData('text')?.trim();
       if (!clipboardText) return;
 
@@ -622,7 +718,127 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     return () => {
       document.removeEventListener('paste', handlePaste);
     };
-  }, [canvasId, createNote, screenToFlowPosition]);
+  }, [canvasId, createNote, deleteNote, screenToFlowPosition, updateNoteContent, uploadImage]);
+
+  // Helper to get image dimensions from a File before upload
+  const getImageDimensions = useCallback((file: File): Promise<{ width: number; height: number }> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        // Calculate dimensions to fit within 256px width while maintaining aspect ratio
+        const ratio = img.naturalWidth / img.naturalHeight;
+        const width = 256;
+        const height = Math.round(width / ratio);
+        resolve({ width, height });
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve({ width: 256, height: 256 }); // Fallback
+      };
+      img.src = url;
+    });
+  }, []);
+
+  // Handle image file upload from button
+  const handleImageUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    // Get viewport center position
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const centerScreen = {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+    const flowPosition = screenToFlowPosition(centerScreen);
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.type.startsWith('image/')) continue;
+
+      // Get image dimensions first
+      const dims = await getImageDimensions(file);
+
+      // Create node immediately with correct dimensions
+      const noteId = await createNote({
+        type: 'image',
+        content: '',
+        title: 'Image',
+        x: flowPosition.x - (dims.width / 2) + (i * 20),
+        y: flowPosition.y - (dims.height / 2) + (i * 20),
+        canvasId,
+        width: dims.width,
+        height: dims.height,
+      });
+
+      if (!noteId) continue;
+
+      // Upload in background and update content when done
+      uploadImage(file)
+        .then((url) => {
+          updateNoteContent(noteId, 'Image', url);
+        })
+        .catch(() => {
+          deleteNote(noteId);
+        });
+    }
+
+    // Reset input
+    event.target.value = '';
+  }, [canvasId, createNote, deleteNote, getImageDimensions, screenToFlowPosition, updateNoteContent, uploadImage]);
+
+  // Drag & Drop handlers for images
+  const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  const handleDrop = useCallback(async (event: React.DragEvent<HTMLDivElement>) => {
+    const files = event.dataTransfer.files;
+    if (!files || files.length === 0) return;
+
+    const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (imageFiles.length === 0) return;
+
+    event.preventDefault();
+
+    // Get drop position
+    const flowPosition = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+
+    for (let i = 0; i < imageFiles.length; i++) {
+      const file = imageFiles[i];
+
+      // Get image dimensions first
+      const dims = await getImageDimensions(file);
+
+      // Create node immediately with correct dimensions
+      const noteId = await createNote({
+        type: 'image',
+        content: '', // Empty triggers loading state
+        title: 'Image',
+        x: flowPosition.x - (dims.width / 2) + (i * 20),
+        y: flowPosition.y - (dims.height / 2) + (i * 20),
+        canvasId,
+        width: dims.width,
+        height: dims.height,
+      });
+
+      if (!noteId) continue;
+
+      // Upload in background and update content when done
+      uploadImage(file)
+        .then((url) => {
+          updateNoteContent(noteId, 'Image', url);
+        })
+        .catch((error) => {
+          console.error('Failed to upload dropped image:', error);
+          deleteNote(noteId);
+        });
+    }
+  }, [canvasId, createNote, deleteNote, getImageDimensions, screenToFlowPosition, updateNoteContent, uploadImage]);
 
   const edgeTypes = useMemo(() => ({
     floatingEdge: FloatingEdge,
@@ -1001,6 +1217,8 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
       onPointerMove={onSelectionMouseMove}
       onPointerUp={onSelectionMouseUp}
       onPointerCancel={onSelectionMouseUp}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
     >
       <ReactFlow
         nodes={nodes}
@@ -1052,6 +1270,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
           setIsSelecting={setIsSelecting}
           isPlacingNote={isPlacingNote}
           onStartNoteDrag={handleStartNoteDrag}
+          onImageUpload={handleImageUpload}
           canUndo={canUndo}
           canRedo={canRedo}
           onUndo={handleUndo}
