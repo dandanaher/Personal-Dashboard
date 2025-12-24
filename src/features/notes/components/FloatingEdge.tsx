@@ -8,6 +8,7 @@ import {
   useReactFlow,
   useViewport,
   useStore,
+  Position,
 } from 'reactflow';
 import { useNotesStore } from '@/stores/notesStore';
 import { FloatingToolbar } from './FloatingToolbar';
@@ -32,14 +33,61 @@ export default function FloatingEdge({
   const labelInputRef = useRef<HTMLInputElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
 
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  });
+  // Calculate edge path with positions adjusted to card boundaries
+  // Handles are 32px (16px radius) and positioned outside the card
+  // We adjust the connection points inward to connect at the card edge
+  const HANDLE_OFFSET = 16;
+
+  const { edgePath, labelX, labelY } = useMemo(() => {
+    // Adjust source position based on handle direction
+    let adjustedSourceX = sourceX;
+    let adjustedSourceY = sourceY;
+
+    switch (sourcePosition) {
+      case Position.Top:
+        adjustedSourceY += HANDLE_OFFSET;
+        break;
+      case Position.Bottom:
+        adjustedSourceY -= HANDLE_OFFSET;
+        break;
+      case Position.Left:
+        adjustedSourceX += HANDLE_OFFSET;
+        break;
+      case Position.Right:
+        adjustedSourceX -= HANDLE_OFFSET;
+        break;
+    }
+
+    // Adjust target position based on handle direction
+    let adjustedTargetX = targetX;
+    let adjustedTargetY = targetY;
+
+    switch (targetPosition) {
+      case Position.Top:
+        adjustedTargetY += HANDLE_OFFSET;
+        break;
+      case Position.Bottom:
+        adjustedTargetY -= HANDLE_OFFSET;
+        break;
+      case Position.Left:
+        adjustedTargetX += HANDLE_OFFSET;
+        break;
+      case Position.Right:
+        adjustedTargetX -= HANDLE_OFFSET;
+        break;
+    }
+
+    const [path, labelXPos, labelYPos] = getSmoothStepPath({
+      sourceX: adjustedSourceX,
+      sourceY: adjustedSourceY,
+      sourcePosition,
+      targetX: adjustedTargetX,
+      targetY: adjustedTargetY,
+      targetPosition,
+    });
+
+    return { edgePath: path, labelX: labelXPos, labelY: labelYPos };
+  }, [sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition]);
 
   const labelScreenPosition = useMemo(
     () => ({
@@ -81,13 +129,13 @@ export default function FloatingEdge({
   const handleColor = (newColor: string) => {
     updateEdge(id, { color: newColor });
   };
-  
+
   // Custom focus implementation for edge
   const { setCenter } = useReactFlow();
   const handleFocusEdge = () => {
-      const centerX = (sourceX + targetX) / 2;
-      const centerY = (sourceY + targetY) / 2;
-      setCenter(centerX, centerY, { zoom: 1.5, duration: 800 });
+    const centerX = (sourceX + targetX) / 2;
+    const centerY = (sourceY + targetY) / 2;
+    setCenter(centerX, centerY, { zoom: 1.5, duration: 800 });
   };
 
   const handleDelete = () => {
@@ -97,7 +145,7 @@ export default function FloatingEdge({
   const handleLabelSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (labelInputRef.current) {
-        updateEdge(id, { label: labelInputRef.current.value });
+      updateEdge(id, { label: labelInputRef.current.value });
     }
     setIsEditing(false);
   };

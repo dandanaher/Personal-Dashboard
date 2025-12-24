@@ -12,7 +12,7 @@ import ReactFlow, {
   Node,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Crosshair, FileText, MousePointerSquareDashed, Undo2, Redo2 } from 'lucide-react';
+import { Crosshair, FileText, MousePointerSquareDashed, Undo2, Redo2, RotateCw } from 'lucide-react';
 import { useNotesStore } from '@/stores/notesStore';
 import type { NoteNodeData } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
@@ -48,6 +48,7 @@ interface CanvasControlsProps {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
+  onRefresh: () => void;
 }
 
 // Canvas controls component (must be inside ReactFlowProvider)
@@ -60,6 +61,7 @@ function CanvasControls({
   canRedo,
   onUndo,
   onRedo,
+  onRefresh,
 }: CanvasControlsProps) {
   const { fitView } = useReactFlow();
   const accentColor = useThemeStore((state) => state.accentColor);
@@ -72,18 +74,17 @@ function CanvasControls({
     <>
       {/* Top Right Controls */}
       <Panel position="top-right" className="!m-4 flex flex-col gap-2">
-         {/* Selection Toggle */}
+        {/* Selection Toggle */}
         <button
-           onClick={() => setIsSelecting(!isSelecting)}
-           className={`p-2 rounded-xl border shadow-lg transition-colors self-end ${
-               isSelecting
-               ? 'bg-secondary-100 dark:bg-secondary-700 text-accent border-accent'
-               : 'bg-white dark:bg-secondary-800 border-secondary-200 dark:border-secondary-700 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700'
-           }`}
-           style={isSelecting ? { color: accentColor, borderColor: accentColor } : {}}
-           title="Select"
+          onClick={() => setIsSelecting(!isSelecting)}
+          className={`p-2 rounded-xl border shadow-lg transition-colors self-end ${isSelecting
+            ? 'bg-secondary-100 dark:bg-secondary-700 text-accent border-accent'
+            : 'bg-white dark:bg-secondary-800 border-secondary-200 dark:border-secondary-700 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700'
+            }`}
+          style={isSelecting ? { color: accentColor, borderColor: accentColor } : {}}
+          title="Select"
         >
-            <MousePointerSquareDashed className="h-5 w-5" />
+          <MousePointerSquareDashed className="h-5 w-5" />
         </button>
 
         {/* Undo/Redo Controls */}
@@ -105,6 +106,15 @@ function CanvasControls({
             <Redo2 className="h-5 w-5" />
           </button>
         </div>
+
+        {/* Refresh Canvas Button */}
+        <button
+          onClick={onRefresh}
+          className="p-2 rounded-xl border shadow-lg transition-colors bg-white dark:bg-secondary-800 border-secondary-200 dark:border-secondary-700 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700 self-end"
+          title="Refresh canvas"
+        >
+          <RotateCw className="h-5 w-5" />
+        </button>
       </Panel>
 
       {/* Add Note Button */}
@@ -112,11 +122,10 @@ function CanvasControls({
         <button
           type="button"
           onPointerDown={onStartNoteDrag}
-          className={`flex h-10 w-10 items-center justify-center rounded-lg border shadow-lg transition-colors cursor-grab active:cursor-grabbing ${
-            isPlacingNote
-              ? 'bg-secondary-100 dark:bg-secondary-700 text-accent border-accent'
-              : 'bg-white dark:bg-secondary-800 border-secondary-200 dark:border-secondary-700 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700'
-          }`}
+          className={`flex h-10 w-10 items-center justify-center rounded-lg border shadow-lg transition-colors cursor-grab active:cursor-grabbing ${isPlacingNote
+            ? 'bg-secondary-100 dark:bg-secondary-700 text-accent border-accent'
+            : 'bg-white dark:bg-secondary-800 border-secondary-200 dark:border-secondary-700 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700'
+            }`}
           style={isPlacingNote ? { color: accentColor, borderColor: accentColor } : {}}
           aria-label="Drag to add note"
           title="Drag to add note"
@@ -160,6 +169,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     deleteNote,
     deleteGroup,
     deleteEdge,
+    fetchCanvasNotes,
   } = useNotesStore();
 
   // Temporal (undo/redo) state - get functions only (they're stable)
@@ -318,13 +328,13 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
   }, [pause]);
 
   const handleNodeDragStop = useCallback(
-      (_event: React.MouseEvent, node: CanvasNode) => {
-          resume();
-          if (node.type === 'noteNode' || node.type === 'linkNode') {
-            handleNoteDragEnd(node.id);
-          }
-      },
-      [handleNoteDragEnd, resume]
+    (_event: React.MouseEvent, node: CanvasNode) => {
+      resume();
+      if (node.type === 'noteNode' || node.type === 'linkNode') {
+        handleNoteDragEnd(node.id);
+      }
+    },
+    [handleNoteDragEnd, resume]
   );
 
   const previewWidth = NOTE_DROP_PREVIEW_SIZE.width * zoom;
@@ -1046,6 +1056,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
           canRedo={canRedo}
           onUndo={handleUndo}
           onRedo={handleRedo}
+          onRefresh={() => fetchCanvasNotes(canvasId)}
         />
       </ReactFlow>
 
@@ -1053,9 +1064,8 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
       {selectionScreenBounds && selectedNodeIds.length > 0 && (
         <>
           <div
-            className={`absolute z-30 pointer-events-auto ${
-              isDraggingSelection ? 'cursor-grabbing' : 'cursor-move'
-            }`}
+            className={`absolute z-30 pointer-events-auto ${isDraggingSelection ? 'cursor-grabbing' : 'cursor-move'
+              }`}
             data-selection-bounds
             onPointerDown={onSelectionBoundsPointerDown}
             onPointerMove={onSelectionBoundsPointerMove}
@@ -1186,9 +1196,9 @@ export function CanvasView({ canvasId }: CanvasViewProps) {
 
   return (
     <div className="h-full w-full relative">
-       <ReactFlowProvider>
-          <CanvasViewInner canvasId={canvasId} />
-       </ReactFlowProvider>
+      <ReactFlowProvider>
+        <CanvasViewInner canvasId={canvasId} />
+      </ReactFlowProvider>
       {/* Note editor overlay is handled by the parent NotesPage */}
     </div>
   );
