@@ -1,4 +1,4 @@
-import { memo, useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { CheckSquare, Target, Grid, Dumbbell, Home, ChevronLeft, ChevronRight, StickyNote } from 'lucide-react';
 import { useThemeStore } from '@/stores/themeStore';
@@ -47,7 +47,7 @@ const navItems: NavItem[] = [
   },
 ];
 
-const Sidebar = memo(function Sidebar() {
+function Sidebar() {
   const accentColor = useThemeStore((state) => state.accentColor);
   const { isCollapsed, toggleSidebar } = useSidebarStore();
   const location = useLocation();
@@ -69,12 +69,12 @@ const Sidebar = memo(function Sidebar() {
 
   return (
     <aside
-      className={`hidden lg:flex flex-col min-h-screen bg-white dark:bg-secondary-900 border-r border-secondary-200 dark:border-secondary-800 transition-all duration-300 ease-in-out ${isCollapsed ? 'w-20' : 'w-64'
+      className={`hidden lg:flex flex-col h-screen sticky top-0 flex-shrink-0 bg-white dark:bg-secondary-900 border-r border-secondary-200 dark:border-secondary-800 transition-[width] duration-300 ease-in-out ${isCollapsed ? 'w-20' : 'w-64'
         }`}
     >
       {/* Logo/Brand and Toggle */}
       <div
-        className="h-[60px] border-b border-secondary-200 dark:border-secondary-800 flex items-center transition-all duration-300"
+        className="h-[60px] border-b border-secondary-200 dark:border-secondary-800 flex items-center"
         style={{
           paddingLeft: '14px',
           paddingRight: '16px',
@@ -177,6 +177,6 @@ const Sidebar = memo(function Sidebar() {
       </div>
     </aside>
   );
-});
+}
 
 export default Sidebar;

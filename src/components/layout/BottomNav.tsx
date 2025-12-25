@@ -1,4 +1,4 @@
-import { memo, useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { CheckSquare, Target, Grid, Dumbbell, Home, StickyNote } from 'lucide-react';
 import { useThemeStore } from '@/stores/themeStore';
@@ -48,7 +48,7 @@ const navItems: NavItem[] = [
 // Circle size for nav items
 const CIRCLE_SIZE = 48;
 
-const BottomNav = memo(function BottomNav() {
+function BottomNav() {
   const accentColor = useThemeStore((state) => state.accentColor);
   const location = useLocation();
   const navigate = useNavigate();
@@ -117,9 +117,8 @@ const BottomNav = memo(function BottomNav() {
                 to={item.path}
                 onMouseEnter={() => preloadRoute(item.path)}
                 onFocus={() => preloadRoute(item.path)}
-                className={`flex items-center justify-center touch-manipulation ${
-                  index === safeActiveIndex ? '' : 'text-secondary-500 dark:text-secondary-400'
-                }`}
+                className={`flex items-center justify-center touch-manipulation ${index === safeActiveIndex ? '' : 'text-secondary-500 dark:text-secondary-400'
+                  }`}
                 style={{
                   width: `${CIRCLE_SIZE}px`,
                   height: `${CIRCLE_SIZE}px`,
@@ -136,6 +135,6 @@ const BottomNav = memo(function BottomNav() {
       </div>
     </nav>
   );
-});
+}
 
 export default BottomNav;
