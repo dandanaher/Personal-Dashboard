@@ -59,17 +59,17 @@ const MODERN_VARS = {
   '--font-sans': 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
   '--color-light-bg': '#FAF8F5',
   // Slate Colors
-  '--color-secondary-50': '248 250 252',
-  '--color-secondary-100': '241 245 249',
-  '--color-secondary-200': '226 232 240',
-  '--color-secondary-300': '203 213 225',
-  '--color-secondary-400': '148 163 184',
-  '--color-secondary-500': '100 116 139',
-  '--color-secondary-600': '71 85 105',
-  '--color-secondary-700': '51 65 85',
-  '--color-secondary-800': '30 41 59',
-  '--color-secondary-900': '15 23 42',
-  '--color-secondary-950': '2 6 23',
+  '--color-secondary-50': '250 250 250',
+  '--color-secondary-100': '240 240 240',
+  '--color-secondary-200': '224 224 224',
+  '--color-secondary-300': '192 192 192',
+  '--color-secondary-400': '160 160 160',
+  '--color-secondary-500': '128 128 128',
+  '--color-secondary-600': '100 100 100',
+  '--color-secondary-700': '75 75 75',
+  '--color-secondary-800': '50 50 50',
+  '--color-secondary-900': '33 33 33',
+  '--color-secondary-950': '18 18 18',
 };
 
 const RETRO_VARS = {
