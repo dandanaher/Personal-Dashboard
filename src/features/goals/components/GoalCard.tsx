@@ -1,4 +1,4 @@
-import { useMemo, useRef, useCallback, memo } from 'react';
+import { useMemo, useRef, useCallback, useEffect, memo } from 'react';
 import {
   Edit2,
   Trash2,
@@ -105,6 +105,13 @@ export const GoalCard = memo(function GoalCard({
     speedRef.current = 200;
   }, []);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      clearTimers();
+    };
+  }, [clearTimers]);
+
   // Handle hold-to-accelerate for increment/decrement
   const handleHoldStart = useCallback(
     (increment: number) => {
@@ -141,39 +148,37 @@ export const GoalCard = memo(function GoalCard({
     clearTimers();
   }, [clearTimers]);
 
-  // Single click handlers
-  const handleDecrement = useCallback(() => {
-    if (goal.progress > 0) {
-      onProgressChange(goal.progress - 1);
-    }
-  }, [goal.progress, onProgressChange]);
-
-  const handleIncrement = useCallback(() => {
-    if (goal.progress < 100) {
-      onProgressChange(goal.progress + 1);
-    }
-  }, [goal.progress, onProgressChange]);
+  // Add global mouseup listener when holding to ensure cleanup
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      clearTimers();
+    };
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    document.addEventListener('touchend', handleGlobalMouseUp);
+    return () => {
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('touchend', handleGlobalMouseUp);
+    };
+  }, [clearTimers]);
 
   return (
     <Card
       variant="outlined"
       padding="md"
-      className={`transition-all duration-200 ${
-        isOverdue
-          ? 'border-l-4 border-l-red-500 dark:border-l-red-400'
-          : goal.completed
-            ? 'opacity-75'
-            : ''
-      }`}
+      className={`transition-all duration-200 ${isOverdue
+        ? 'border-l-4 border-l-red-500 dark:border-l-red-400'
+        : goal.completed
+          ? 'opacity-75'
+          : ''
+        }`}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <h3
-              className={`font-semibold text-secondary-900 dark:text-white truncate ${
-                goal.completed ? 'line-through text-secondary-500 dark:text-secondary-400' : ''
-              }`}
+              className={`font-semibold text-secondary-900 dark:text-white truncate ${goal.completed ? 'line-through text-secondary-500 dark:text-secondary-400' : ''
+                }`}
             >
               {goal.title}
             </h3>
@@ -223,11 +228,10 @@ export const GoalCard = memo(function GoalCard({
         <div className="flex items-center gap-1">
           {goal.target_date && (
             <div
-              className={`flex items-center gap-1 ${
-                isOverdue
-                  ? 'text-red-600 dark:text-red-400 font-semibold'
-                  : 'text-secondary-600 dark:text-secondary-400'
-              }`}
+              className={`flex items-center gap-1 ${isOverdue
+                ? 'text-red-600 dark:text-red-400 font-semibold'
+                : 'text-secondary-600 dark:text-secondary-400'
+                }`}
             >
               {isOverdue ? (
                 <>
@@ -259,7 +263,6 @@ export const GoalCard = memo(function GoalCard({
           {!goal.completed && !isHabitLinked && (
             <div className="flex items-center gap-2">
               <button
-                onClick={handleDecrement}
                 onMouseDown={() => handleHoldStart(-1)}
                 onMouseUp={handleHoldEnd}
                 onMouseLeave={handleHoldEnd}
@@ -277,7 +280,6 @@ export const GoalCard = memo(function GoalCard({
               </span>
 
               <button
-                onClick={handleIncrement}
                 onMouseDown={() => handleHoldStart(1)}
                 onMouseUp={handleHoldEnd}
                 onMouseLeave={handleHoldEnd}

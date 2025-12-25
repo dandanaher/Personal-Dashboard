@@ -4,7 +4,7 @@ import { Button } from '@/components/ui';
 import type { Goal } from '@/lib/types';
 import { useGoals, FilterType } from './hooks/useGoals';
 import { GoalFilters } from './components/GoalFilters';
-import { GoalsList } from './components/GoalsList';
+import { KanbanBoard } from './components/KanbanBoard';
 import { AddGoalModal } from './components/AddGoalModal';
 
 function GoalsPage() {
@@ -147,8 +147,8 @@ function GoalsPage() {
         </div>
       )}
 
-      {/* Goals List */}
-      <GoalsList
+      {/* Kanban Board */}
+      <KanbanBoard
         goals={filteredGoals}
         loading={loading}
         habitData={habitData}
