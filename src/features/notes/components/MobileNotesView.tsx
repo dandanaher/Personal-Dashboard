@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, FileText, Layout, MoreVertical, Edit2, Trash2, Folder, FolderPlus, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Plus, FileText, Layout, MoreVertical, Edit2, Trash2, Folder, FolderPlus, ChevronRight, ChevronDown, ArrowLeft } from 'lucide-react';
 import { Button, Card, LoadingSpinner } from '@/components/ui';
 import { useThemeStore } from '@/stores/themeStore';
 import { useNotesStore } from '@/stores/notesStore';
@@ -232,7 +232,9 @@ export function MobileNotesView({ onNoteClick, onCanvasClick }: MobileNotesViewP
                     /* In library view: Add button opens dropdown */
                     <div className="relative">
                         <Button size="sm" onClick={() => setShowAddMenu(!showAddMenu)} className="gap-2">
-                            <Plus className="h-4 w-4" />
+                            <ChevronDown
+                                className={`h-4 w-4 transition-transform duration-200 ${showAddMenu ? 'rotate-180' : ''}`}
+                            />
                             Add
                         </Button>
 

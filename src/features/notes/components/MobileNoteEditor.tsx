@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ArrowLeft, Check, Loader2, Bold, Italic, List, ListOrdered } from 'lucide-react';
+import { ArrowLeft, Check, Bold, Italic, List, ListOrdered } from 'lucide-react';
 import { useNotesStore } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
 import type { Note } from '@/lib/types';
@@ -23,11 +23,14 @@ interface MobileNoteEditorProps {
 
 export function MobileNoteEditor({ noteId, onClose }: MobileNoteEditorProps) {
     const accentColor = useThemeStore((state) => state.accentColor);
-    const { fetchNote, updateNoteContent } = useNotesStore();
+    const { fetchNote, updateNoteContent, libraryNotes } = useNotesStore();
 
-    const [note, setNote] = useState<Note | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [title, setTitle] = useState('');
+    // Try to get cached note data immediately for instant title display
+    const cachedNote = libraryNotes.find(n => n.id === noteId);
+
+    const [note, setNote] = useState<Note | null>(cachedNote || null);
+    const [contentLoading, setContentLoading] = useState(!cachedNote);
+    const [title, setTitle] = useState(cachedNote?.title || '');
     const [hasChanges, setHasChanges] = useState(false);
     const [activeFormats, setActiveFormats] = useState({
         bold: false,
@@ -38,27 +41,36 @@ export function MobileNoteEditor({ noteId, onClose }: MobileNoteEditorProps) {
     });
 
     const contentEditableRef = useRef<HTMLDivElement>(null);
-    const lastSavedContent = useRef('');
+    const lastSavedContent = useRef(cachedNote?.content?.replace(/\u200B/g, '') || '');
     const savedSelectionRef = useRef<Range | null>(null);
+    const hasSetInitialContent = useRef(false);
 
-    // Load note
+    // Load fresh note data (for latest content)
     useEffect(() => {
         const loadNote = async () => {
-            setLoading(true);
             const loadedNote = await fetchNote(noteId);
             if (loadedNote) {
                 setNote(loadedNote);
-                setTitle(loadedNote.title || '');
+                // Only update title if we didn't have cached data
+                if (!cachedNote) {
+                    setTitle(loadedNote.title || '');
+                }
                 const sanitizedContent = loadedNote.content.replace(/\u200B/g, '');
                 lastSavedContent.current = sanitizedContent;
-                if (contentEditableRef.current) {
-                    contentEditableRef.current.innerHTML = sanitizedContent || '';
-                }
             }
-            setLoading(false);
+            setContentLoading(false);
         };
         loadNote();
-    }, [noteId, fetchNote]);
+    }, [noteId, fetchNote, cachedNote]);
+
+    // Set content after loading completes and contentEditable is mounted
+    useEffect(() => {
+        if (!contentLoading && note && contentEditableRef.current && !hasSetInitialContent.current) {
+            const sanitizedContent = note.content.replace(/\u200B/g, '');
+            contentEditableRef.current.innerHTML = sanitizedContent || '';
+            hasSetInitialContent.current = true;
+        }
+    }, [contentLoading, note]);
 
     // Auto-save debounced function
     const debouncedSave = useCallback(
@@ -217,17 +229,10 @@ export function MobileNoteEditor({ noteId, onClose }: MobileNoteEditorProps) {
         };
     }, [refreshActiveFormats]);
 
-    if (loading) {
+    // Only show "not found" after loading completes
+    if (!contentLoading && !note) {
         return (
-            <div className="fixed inset-0 z-[60] bg-secondary-50 dark:bg-black flex items-center justify-center pt-safe-top pb-safe-bottom">
-                <Loader2 className="h-8 w-8 animate-spin text-secondary-400" />
-            </div>
-        );
-    }
-
-    if (!note) {
-        return (
-            <div className="fixed inset-0 z-[60] bg-secondary-50 dark:bg-black flex flex-col items-center justify-center pt-safe-top pb-safe-bottom">
+            <div className="fixed inset-0 z-[60] bg-white dark:bg-secondary-900 flex flex-col items-center justify-center pt-safe-top pb-safe-bottom">
                 <p className="text-secondary-500 dark:text-secondary-400 mb-4">Note not found</p>
                 <button
                     onClick={onClose}
@@ -266,7 +271,7 @@ export function MobileNoteEditor({ noteId, onClose }: MobileNoteEditorProps) {
 
     return (
         <div
-            className="fixed inset-0 z-[60] bg-secondary-50 dark:bg-black flex flex-col pt-safe-top pb-0"
+            className="fixed inset-0 z-[60] bg-white dark:bg-secondary-900 flex flex-col pb-0"
             data-note-editor
             style={
                 {
@@ -274,6 +279,9 @@ export function MobileNoteEditor({ noteId, onClose }: MobileNoteEditorProps) {
                 } as React.CSSProperties
             }
         >
+            {/* Safe area spacer - extends header color to top */}
+            <div className="flex-shrink-0 bg-white dark:bg-secondary-900 pt-safe-top" />
+
             {/* Header */}
             <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-white dark:bg-secondary-900 border-b border-secondary-200 dark:border-secondary-800">
                 <button
@@ -399,17 +407,28 @@ export function MobileNoteEditor({ noteId, onClose }: MobileNoteEditorProps) {
             </div>
 
             {/* Content Editor */}
-            <div className="flex-1 overflow-y-auto px-4 py-4">
-                <div
-                    ref={contentEditableRef}
-                    contentEditable
-                    onInput={handleContentChange}
-                    onKeyUp={refreshActiveFormats}
-                    onTouchEnd={refreshActiveFormats}
-                    className="outline-none min-h-full text-secondary-900 dark:text-secondary-100"
-                    style={{ caretColor: accentColor }}
-                    data-placeholder="Start writing..."
-                />
+            <div className="flex-1 overflow-y-auto px-4 py-4 bg-white dark:bg-secondary-900">
+                {contentLoading ? (
+                    /* Skeleton loader for content */
+                    <div className="space-y-3 animate-pulse">
+                        <div className="h-4 bg-secondary-200 dark:bg-secondary-700 rounded w-3/4"></div>
+                        <div className="h-4 bg-secondary-200 dark:bg-secondary-700 rounded w-full"></div>
+                        <div className="h-4 bg-secondary-200 dark:bg-secondary-700 rounded w-5/6"></div>
+                        <div className="h-4 bg-secondary-200 dark:bg-secondary-700 rounded w-2/3"></div>
+                        <div className="h-4 bg-secondary-200 dark:bg-secondary-700 rounded w-4/5"></div>
+                    </div>
+                ) : (
+                    <div
+                        ref={contentEditableRef}
+                        contentEditable
+                        onInput={handleContentChange}
+                        onKeyUp={refreshActiveFormats}
+                        onTouchEnd={refreshActiveFormats}
+                        className="outline-none min-h-full text-secondary-900 dark:text-secondary-100"
+                        style={{ caretColor: accentColor }}
+                        data-placeholder="Start writing..."
+                    />
+                )}
             </div>
 
             <style>{`

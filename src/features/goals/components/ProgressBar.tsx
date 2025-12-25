@@ -83,8 +83,10 @@ export function ProgressBar({
   }
 
   // Modern (Default) Style Rendering
-  // When a custom color is provided, use inline style; otherwise use Tailwind classes
-  const barColor = color ? undefined : getProgressColor(clampedProgress);
+  // Determine if color is a Tailwind class (starts with 'bg-') or a CSS color value
+  const isTailwindClass = color && color.startsWith('bg-');
+  const barColorClass = isTailwindClass ? color : (color ? undefined : getProgressColor(clampedProgress));
+  const barColorStyle = !isTailwindClass && color ? color : undefined;
 
   return (
     <div className={className}>
@@ -100,10 +102,10 @@ export function ProgressBar({
         className={`w-full ${height} bg-secondary-200 dark:bg-secondary-700 rounded-full overflow-hidden`}
       >
         <div
-          className={`${height} ${barColor || ''} transition-all duration-300 ease-out rounded-full`}
+          className={`${height} ${barColorClass || ''} transition-all duration-300 ease-out rounded-full`}
           style={{
             width: `${clampedProgress}%`,
-            backgroundColor: color || undefined
+            backgroundColor: barColorStyle
           }}
           role="progressbar"
           aria-valuenow={clampedProgress}
