@@ -6,6 +6,7 @@ import { useWorkoutSessionStore } from '@/stores/workoutSessionStore';
 import { useSidebarStore } from '@/stores/sidebarStore';
 import { formatTime } from '@/features/workout/lib/workoutEngine';
 import { preloadRoute } from '@/App';
+import { SettingsMenu } from '@/features/gamification/components';
 
 interface NavItem {
   path: string;
@@ -68,9 +69,8 @@ const Sidebar = memo(function Sidebar() {
 
   return (
     <aside
-      className={`hidden lg:flex flex-col min-h-screen bg-white dark:bg-secondary-900 border-r border-secondary-200 dark:border-secondary-800 transition-all duration-300 ease-in-out ${
-        isCollapsed ? 'w-20' : 'w-64'
-      }`}
+      className={`hidden lg:flex flex-col min-h-screen bg-white dark:bg-secondary-900 border-r border-secondary-200 dark:border-secondary-800 transition-all duration-300 ease-in-out ${isCollapsed ? 'w-20' : 'w-64'
+        }`}
     >
       {/* Logo/Brand and Toggle */}
       <div
@@ -115,10 +115,9 @@ const Sidebar = memo(function Sidebar() {
                   onFocus={() => preloadRoute(item.path)}
                   className={`
                     flex items-center rounded-xl transition-colors py-3
-                    ${
-                      isActiveItem
-                        ? 'font-medium'
-                        : 'text-secondary-600 dark:text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800'
+                    ${isActiveItem
+                      ? 'font-medium'
+                      : 'text-secondary-600 dark:text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800'
                     }
                   `}
                   style={{
@@ -155,9 +154,8 @@ const Sidebar = memo(function Sidebar() {
         <div className="p-4 border-t border-secondary-200 dark:border-secondary-800">
           <button
             onClick={handleResume}
-            className={`w-full py-3 rounded-xl bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 shadow-sm text-sm font-medium flex items-center gap-2 hover:bg-secondary-50 dark:hover:bg-secondary-700 transition-all ${
-              isCollapsed ? 'px-3 justify-center' : 'px-4 justify-center'
-            }`}
+            className={`w-full py-3 rounded-xl bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 shadow-sm text-sm font-medium flex items-center gap-2 hover:bg-secondary-50 dark:hover:bg-secondary-700 transition-all ${isCollapsed ? 'px-3 justify-center' : 'px-4 justify-center'
+              }`}
             title={isCollapsed ? `Resume: ${activeTemplate?.name || 'Workout'}` : undefined}
           >
             <Dumbbell className="h-4 w-4 flex-shrink-0" style={{ color: accentColor }} />
@@ -172,6 +170,11 @@ const Sidebar = memo(function Sidebar() {
           </button>
         </div>
       )}
+
+      {/* Settings at the absolute bottom */}
+      <div className="p-4 border-t border-secondary-200 dark:border-secondary-800 mt-auto lg:mt-0">
+        <SettingsMenu isSidebar isCollapsed={isCollapsed} />
+      </div>
     </aside>
   );
 });

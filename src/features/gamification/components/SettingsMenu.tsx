@@ -4,7 +4,12 @@ import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore, APP_COLORS } from '@/stores/themeStore';
 import { useProfileStore } from '@/stores/profileStore';
 
-export function SettingsMenu() {
+interface SettingsMenuProps {
+  isSidebar?: boolean;
+  isCollapsed?: boolean;
+}
+
+export function SettingsMenu({ isSidebar = false, isCollapsed = false }: SettingsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
@@ -71,18 +76,52 @@ export function SettingsMenu() {
 
   return (
     <div className="relative" ref={menuRef}>
-      {/* Trigger button - glass pill style matching BottomNav */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/40 dark:border-white/20 shadow-lg shadow-black/5 hover:bg-white/30 dark:hover:bg-white/20 transition-all duration-200"
-        aria-label="Settings menu"
-      >
-        <Settings className="h-4 w-4 text-secondary-600 dark:text-secondary-400" />
-      </button>
+      {/* Trigger button */}
+      {isSidebar ? (
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className={`
+            flex items-center w-full rounded-xl transition-colors py-3
+            text-secondary-600 dark:text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800
+            ${isOpen ? 'bg-secondary-100 dark:bg-secondary-800' : ''}
+          `}
+          style={{
+            paddingLeft: '14px',
+            paddingRight: '16px',
+          }}
+          title={isCollapsed ? 'Settings' : undefined}
+        >
+          <div className="flex items-center justify-center w-5 flex-shrink-0">
+            <Settings className="h-5 w-5 flex-shrink-0" />
+          </div>
+          <span
+            className="whitespace-nowrap overflow-hidden transition-opacity duration-300 ml-3"
+            style={{
+              opacity: isCollapsed ? 0 : 1,
+              width: isCollapsed ? 0 : 'auto',
+            }}
+          >
+            Settings
+          </span>
+        </button>
+      ) : (
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/40 dark:border-white/20 shadow-lg shadow-black/5 hover:bg-white/30 dark:hover:bg-white/20 transition-all duration-200"
+          aria-label="Settings menu"
+        >
+          <Settings className="h-4 w-4 text-secondary-600 dark:text-secondary-400" />
+        </button>
+      )}
 
       {/* Dropdown menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 bg-white/20 dark:bg-white/10 backdrop-blur-md rounded-2xl border border-white/40 dark:border-white/20 shadow-lg shadow-black/5 z-50 overflow-hidden">
+        <div
+          className={`
+            absolute mt-2 w-64 bg-white/20 dark:bg-white/10 backdrop-blur-md rounded-2xl border border-white/40 dark:border-white/20 shadow-lg shadow-black/5 z-50 overflow-hidden
+            ${isSidebar ? 'left-4 bottom-full mb-2' : 'right-0'}
+          `}
+        >
           {/* Username */}
           <div className="p-3 border-b border-white/30 dark:border-white/10">
             <div className="flex items-center gap-2 mb-2">
@@ -157,9 +196,8 @@ export function SettingsMenu() {
                 style={{ backgroundColor: darkMode ? accentColor : '#d1d5db' }}
               >
                 <div
-                  className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 flex items-center justify-center ${
-                    darkMode ? 'translate-x-4' : 'translate-x-0.5'
-                  }`}
+                  className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 flex items-center justify-center ${darkMode ? 'translate-x-4' : 'translate-x-0.5'
+                    }`}
                 >
                   {darkMode ? (
                     <Moon className="w-3 h-3 text-secondary-600" />
@@ -189,10 +227,9 @@ export function SettingsMenu() {
                   onClick={() => setStylePreset(style)}
                   className={`
                     px-3 py-2 rounded-lg text-sm font-medium capitalize transition-all duration-200
-                    ${
-                      stylePreset === style
-                        ? 'bg-white dark:bg-white/20 text-secondary-900 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
-                        : 'hover:bg-white/40 dark:hover:bg-white/10 text-secondary-600 dark:text-secondary-400'
+                    ${stylePreset === style
+                      ? 'bg-white dark:bg-white/20 text-secondary-900 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                      : 'hover:bg-white/40 dark:hover:bg-white/10 text-secondary-600 dark:text-secondary-400'
                     }
                   `}
                 >
@@ -218,10 +255,9 @@ export function SettingsMenu() {
                   className={`
                     relative w-7 h-7 rounded-full border-2 transition-all duration-150
                     hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2
-                    ${
-                      accentColor === color.value
-                        ? 'border-secondary-900 dark:border-white scale-110'
-                        : 'border-transparent'
+                    ${accentColor === color.value
+                      ? 'border-secondary-900 dark:border-white scale-110'
+                      : 'border-transparent'
                     }
                   `}
                   style={

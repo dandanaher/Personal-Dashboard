@@ -61,7 +61,9 @@ function HomePage() {
           <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">{greeting}</h1>
           <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-0.5">{userName}</p>
         </div>
-        <SettingsMenu />
+        <div className="lg:hidden">
+          <SettingsMenu />
+        </div>
       </div>
 
       {/* Rank Display */}
