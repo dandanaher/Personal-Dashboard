@@ -69,7 +69,7 @@ function Sidebar() {
 
   return (
     <aside
-      className={`hidden lg:flex flex-col h-screen sticky top-0 flex-shrink-0 bg-white dark:bg-secondary-900 border-r border-secondary-200 dark:border-secondary-800 transition-[width] duration-300 ease-in-out ${isCollapsed ? 'w-20' : 'w-64'
+      className={`hidden lg:flex flex-col h-screen sticky top-0 flex-shrink-0 z-50 bg-white dark:bg-secondary-900 border-r border-secondary-200 dark:border-secondary-800 transition-[width] duration-300 ease-in-out ${isCollapsed ? 'w-20' : 'w-64'
         }`}
     >
       {/* Logo/Brand and Toggle */}
