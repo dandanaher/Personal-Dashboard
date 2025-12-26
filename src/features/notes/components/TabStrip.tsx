@@ -48,10 +48,9 @@ export function TabStrip({ onOpenLibrary }: TabStripProps) {
               className={`
                 group relative flex items-center gap-2 px-3 py-2 rounded-t-lg text-sm font-medium
                 transition-colors duration-150 min-w-[100px] max-w-[200px] border-t border-x
-                ${
-                  isActive
-                    ? 'bg-secondary-50 dark:bg-black text-secondary-900 dark:text-white border-secondary-200 dark:border-secondary-800 border-b-secondary-50 dark:border-b-black -mb-[1px] z-10'
-                    : 'bg-transparent text-secondary-600 dark:text-secondary-400 hover:bg-secondary-200 dark:hover:bg-secondary-800 border-transparent'
+                ${isActive
+                  ? 'bg-white dark:bg-secondary-800 text-secondary-900 dark:text-white border-secondary-200 dark:border-secondary-700 border-b-white dark:border-b-secondary-800 -mb-[1px] z-10'
+                  : 'bg-transparent text-secondary-600 dark:text-secondary-400 hover:bg-secondary-200 dark:hover:bg-secondary-800 border-transparent'
                 }
               `}
               style={
