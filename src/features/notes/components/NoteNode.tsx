@@ -6,6 +6,7 @@ import { useNotesStore } from '@/stores/notesStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useDoubleTap } from '@/hooks/useDoubleTap';
 import { FloatingToolbar } from './FloatingToolbar';
+import { useMobileCanvas } from './MobileCanvasContext';
 
 const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeData>) {
   const accentColor = useThemeStore((state) => state.accentColor);
@@ -13,7 +14,8 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
   const { updateNoteSize, updateNoteColor, deleteNote } = useNotesStore();
   const { addTab } = useWorkspaceStore();
   const { fitView } = useReactFlow();
-  
+  const { onEditNote } = useMobileCanvas();
+
   const { id, title, content, color } = data;
   const [isHovered, setIsHovered] = useState(false);
   const [showToolbar, setShowToolbar] = useState(false);
@@ -33,9 +35,15 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
   const doubleTapHandlers = useDoubleTap(handleDoubleTap);
 
   const handleEdit = useCallback(() => {
-    addTab('note', id, title || 'Untitled');
+    // On mobile, use the mobile canvas context to open the note editor
+    if (onEditNote) {
+      onEditNote(id);
+    } else {
+      // On desktop, open in a tab
+      addTab('note', id, title || 'Untitled');
+    }
     setShowToolbar(false);
-  }, [addTab, id, title]);
+  }, [addTab, id, title, onEditNote]);
 
   const handleColor = useCallback((newColor: string) => {
     updateNoteColor(id, newColor);
