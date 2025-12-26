@@ -128,7 +128,7 @@ function CanvasControls({
           <button
             type="button"
             onPointerDown={onStartNoteDrag}
-            className={`flex h-10 w-10 items-center justify-center rounded-lg border shadow-lg transition-colors cursor-grab active:cursor-grabbing ${isPlacingNote
+            className={`flex h-10 w-10 items-center justify-center rounded-lg border shadow-lg transition-colors cursor-grab active:cursor-grabbing touch-none ${isPlacingNote
               ? 'bg-secondary-100 dark:bg-secondary-700 text-accent border-accent'
               : 'bg-white dark:bg-secondary-800 border-secondary-200 dark:border-secondary-700 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700'
               }`}
