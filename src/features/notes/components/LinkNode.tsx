@@ -5,6 +5,7 @@ import { ExternalLink, Video, Globe, Play } from 'lucide-react';
 import type { NoteNodeData } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { useNotesStore } from '@/stores/notesStore';
+import { useDoubleTap } from '@/hooks/useDoubleTap';
 import { FloatingToolbar } from './FloatingToolbar';
 
 // Type workaround for react-player which has incomplete types in v3.x
@@ -125,10 +126,11 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
     }
   }, [isInView, isPlayerActive]);
 
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDoubleTap = useCallback(() => {
     setShowToolbar((prev) => !prev);
   }, []);
+
+  const doubleTapHandlers = useDoubleTap(handleDoubleTap);
 
   const handleColor = useCallback(
     (newColor: string) => {
@@ -264,7 +266,7 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
 
       <div
         className="w-full h-full min-w-[17.5rem] rounded-xl shadow-lg border bg-white dark:bg-secondary-800 relative overflow-hidden flex flex-col"
-        onDoubleClick={handleDoubleClick}
+        {...doubleTapHandlers}
         ref={visibilityRef}
         style={{
           borderColor: cardBorderColor,

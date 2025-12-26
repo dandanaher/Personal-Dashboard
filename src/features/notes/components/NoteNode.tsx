@@ -4,6 +4,7 @@ import type { NoteNodeData } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { useNotesStore } from '@/stores/notesStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { useDoubleTap } from '@/hooks/useDoubleTap';
 import { FloatingToolbar } from './FloatingToolbar';
 
 const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeData>) {
@@ -25,10 +26,11 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
     }
   }, [selected]);
 
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDoubleTap = useCallback(() => {
     setShowToolbar((prev) => !prev);
   }, []);
+
+  const doubleTapHandlers = useDoubleTap(handleDoubleTap);
 
   const handleEdit = useCallback(() => {
     addTab('note', id, title || 'Untitled');
@@ -117,11 +119,11 @@ const NoteNode = memo(function NoteNode({ data, selected }: NodeProps<NoteNodeDa
       
       <div
         className="w-full h-full min-w-[16rem] min-h-[6rem] rounded-xl shadow-lg border cursor-pointer bg-white dark:bg-secondary-800 relative"
-        onDoubleClick={handleDoubleClick}
-        style={{ 
+        {...doubleTapHandlers}
+        style={{
           borderColor: cardBorderColor,
-          boxShadow: selected 
-            ? `0 0 0 2px ${accentColor}` 
+          boxShadow: selected
+            ? `0 0 0 2px ${accentColor}`
             : `0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)`
         }}
       >
