@@ -83,6 +83,7 @@ function NotesPage() {
           <MobileCanvasView
             canvasId={mobileView.id}
             onClose={handleMobileClose}
+            onEditNote={(noteId) => setMobileView({ type: 'note', id: noteId })}
           />
         )}
       </div>
