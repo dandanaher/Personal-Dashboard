@@ -174,11 +174,11 @@ function TasksPageContent() {
           viewMode === 'day'
             ? await addDayTask(taskData.title, taskData.description || undefined, taskData.task_type)
             : await addAllTask(
-                taskData.title,
-                taskData.description || undefined,
-                taskData.date,
-                taskData.task_type
-              );
+              taskData.title,
+              taskData.description || undefined,
+              taskData.date,
+              taskData.task_type
+            );
 
         if (success) {
           showToast('Task added', 'success');
@@ -310,10 +310,9 @@ function TasksPageContent() {
           onClick={() => setViewMode('all')}
           className={`
             px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0
-            ${
-              viewMode === 'all'
-                ? 'text-white'
-                : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
+            ${viewMode === 'all'
+              ? 'text-white'
+              : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
             }
           `}
           style={viewMode === 'all' ? { backgroundColor: accentColor } : undefined}
@@ -324,10 +323,9 @@ function TasksPageContent() {
           onClick={() => setViewMode('day')}
           className={`
             px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0
-            ${
-              viewMode === 'day'
-                ? 'text-white'
-                : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
+            ${viewMode === 'day'
+              ? 'text-white'
+              : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
             }
           `}
           style={viewMode === 'day' ? { backgroundColor: accentColor } : undefined}
@@ -340,10 +338,9 @@ function TasksPageContent() {
             onClick={() => setViewMode(type)}
             className={`
               px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0
-              ${
-                viewMode === type
-                  ? 'text-white'
-                  : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
+              ${viewMode === type
+                ? 'text-white'
+                : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
               }
             `}
             style={viewMode === type ? { backgroundColor: accentColor } : undefined}
@@ -478,46 +475,23 @@ function TasksPageContent() {
             </Card>
           )}
 
-          {/* Task Overview */}
+          {/* Task Overview - 2 column layout */}
           {!loading && !error && filteredTasks && (
             <>
-              {/* Overdue Tasks */}
-              {filteredTasks.overdue.length > 0 && (
-                <div className="space-y-2">
-                  <h2 className="text-xs font-semibold text-red-500 dark:text-red-400 px-1 flex items-center gap-1.5">
-                    <AlertCircle className="h-3.5 w-3.5" />
-                    Overdue ({filteredTasks.overdue.length})
-                  </h2>
-                  <Card variant="outlined" padding="none">
-                    <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
-                      {filteredTasks.overdue.map((task) => (
-                        <div key={task.id} className="group">
-                          <TaskItem
-                            task={task}
-                            onToggle={handleToggleOverviewTask}
-                            onDelete={handleDeleteOverviewTask}
-                            onEdit={handleEditOverviewTask}
-                            onEditClick={handleEditClick}
-                            showDate={true}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-                </div>
-              )}
-
-              {/* Upcoming Tasks by date */}
-              {filteredTasks.upcoming.length > 0 && (
-                <div className="space-y-3">
-                  {Object.entries(groupedUpcomingTasks).map(([date, tasks]) => (
-                    <div key={date} className="space-y-2">
-                      <h2 className="text-xs font-semibold text-secondary-600 dark:text-secondary-400 px-1">
-                        {formatDateHeader(date)}
+              {/* Two column layout: Dated tasks left, General tasks right */}
+              <div className="flex flex-col lg:flex-row gap-6">
+                {/* Left column: Dated tasks (Overdue + Upcoming) */}
+                <div className="flex-1 space-y-3">
+                  {/* Overdue Tasks */}
+                  {filteredTasks.overdue.length > 0 && (
+                    <div className="space-y-2">
+                      <h2 className="text-xs font-semibold text-red-500 dark:text-red-400 px-1 flex items-center gap-1.5">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        Overdue ({filteredTasks.overdue.length})
                       </h2>
                       <Card variant="outlined" padding="none">
                         <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
-                          {tasks.map((task) => (
+                          {filteredTasks.overdue.map((task) => (
                             <div key={task.id} className="group">
                               <TaskItem
                                 task={task}
@@ -525,73 +499,102 @@ function TasksPageContent() {
                                 onDelete={handleDeleteOverviewTask}
                                 onEdit={handleEditOverviewTask}
                                 onEditClick={handleEditClick}
-                                showDate={false}
+                                showDate={true}
                               />
                             </div>
                           ))}
                         </div>
                       </Card>
                     </div>
-                  ))}
-                </div>
-              )}
+                  )}
 
-              {/* Dateless/General Tasks */}
-              {filteredTasks.dateless.length > 0 && (
-                <div className="space-y-2">
-                  <h2 className="text-xs font-semibold text-secondary-600 dark:text-secondary-400 px-1">
-                    {viewMode === 'all' ? 'General Tasks' : viewMode} ({filteredTasks.dateless.length})
-                  </h2>
-                  <Card variant="outlined" padding="none">
-                    <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
-                      {filteredTasks.dateless.map((task) => (
-                        <div key={task.id} className="group">
-                          <TaskItem
-                            task={task}
-                            onToggle={handleToggleOverviewTask}
-                            onDelete={handleDeleteOverviewTask}
-                            onEdit={handleEditOverviewTask}
-                            onEditClick={handleEditClick}
-                            showDate={false}
-                          />
+                  {/* Upcoming Tasks by date */}
+                  {filteredTasks.upcoming.length > 0 && (
+                    <div className="space-y-3">
+                      {Object.entries(groupedUpcomingTasks).map(([date, tasks]) => (
+                        <div key={date} className="space-y-2">
+                          <h2 className="text-xs font-semibold text-secondary-600 dark:text-secondary-400 px-1">
+                            {formatDateHeader(date)}
+                          </h2>
+                          <Card variant="outlined" padding="none">
+                            <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
+                              {tasks.map((task) => (
+                                <div key={task.id} className="group">
+                                  <TaskItem
+                                    task={task}
+                                    onToggle={handleToggleOverviewTask}
+                                    onDelete={handleDeleteOverviewTask}
+                                    onEdit={handleEditOverviewTask}
+                                    onEditClick={handleEditClick}
+                                    showDate={false}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </Card>
                         </div>
                       ))}
                     </div>
-                  </Card>
-                </div>
-              )}
+                  )}
 
-              {/* Empty state */}
-              {filteredTasks.upcoming.length === 0 &&
-                filteredTasks.dateless.length === 0 &&
-                filteredTasks.overdue.length === 0 && (
-                  <Card variant="outlined" className="text-center py-8">
-                    <AlertCircle className="h-10 w-10 mx-auto text-secondary-400 dark:text-secondary-500 mb-3" />
-                    <p className="text-sm text-secondary-500 dark:text-secondary-400 mb-1">
-                      {viewMode === 'all' ? 'No tasks yet' : `No ${viewMode} tasks`}
-                    </p>
-                    <p className="text-xs text-secondary-400 dark:text-secondary-500">
-                      Click the Add button above to get started!
-                    </p>
-                  </Card>
-                )}
+                  {/* Empty state for dated tasks */}
+                  {filteredTasks.overdue.length === 0 && filteredTasks.upcoming.length === 0 && (
+                    <Card variant="outlined" className="text-center py-8">
+                      <p className="text-sm text-secondary-500 dark:text-secondary-400">
+                        No dated tasks
+                      </p>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Right column: General/Dateless Tasks */}
+                <div className="flex-1 space-y-3">
+                  <h2 className="text-xs font-semibold text-secondary-600 dark:text-secondary-400 px-1">
+                    {viewMode === 'all' ? 'General Tasks' : viewMode} ({filteredTasks.dateless.length})
+                  </h2>
+                  {filteredTasks.dateless.length > 0 ? (
+                    <Card variant="outlined" padding="none">
+                      <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
+                        {filteredTasks.dateless.map((task) => (
+                          <div key={task.id} className="group">
+                            <TaskItem
+                              task={task}
+                              onToggle={handleToggleOverviewTask}
+                              onDelete={handleDeleteOverviewTask}
+                              onEdit={handleEditOverviewTask}
+                              onEditClick={handleEditClick}
+                              showDate={false}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  ) : (
+                    <Card variant="outlined" className="text-center py-8">
+                      <p className="text-sm text-secondary-500 dark:text-secondary-400">
+                        No general tasks
+                      </p>
+                    </Card>
+                  )}
+                </div>
+              </div>
 
               {/* Summary */}
               {(filteredTasks.upcoming.length > 0 ||
                 filteredTasks.dateless.length > 0 ||
                 filteredTasks.overdue.length > 0) && (
-                <div className="text-center">
-                  <p className="text-xs text-secondary-400 dark:text-secondary-500">
-                    {filteredTasks.overdue.length +
-                      filteredTasks.upcoming.length +
-                      filteredTasks.dateless.length}{' '}
-                    total tasks
-                    {filteredTasks.overdue.length > 0 && (
-                      <span className="text-red-500"> • {filteredTasks.overdue.length} overdue</span>
-                    )}
-                  </p>
-                </div>
-              )}
+                  <div className="text-center">
+                    <p className="text-xs text-secondary-400 dark:text-secondary-500">
+                      {filteredTasks.overdue.length +
+                        filteredTasks.upcoming.length +
+                        filteredTasks.dateless.length}{' '}
+                      total tasks
+                      {filteredTasks.overdue.length > 0 && (
+                        <span className="text-red-500"> • {filteredTasks.overdue.length} overdue</span>
+                      )}
+                    </p>
+                  </div>
+                )}
 
               {/* Completed Tasks Section (all views except 'day') */}
               {viewMode !== 'day' && filteredCompletedTasks.length > 0 && (
@@ -609,22 +612,65 @@ function TasksPageContent() {
                   </button>
 
                   {showCompletedTasks && (
-                    <Card variant="outlined" padding="none">
-                      <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
-                        {filteredCompletedTasks.map((task) => (
-                          <div key={task.id} className="group">
-                            <TaskItem
-                              task={task}
-                              onToggle={handleToggleOverviewTask}
-                              onDelete={handleDeleteOverviewTask}
-                              onEdit={handleEditOverviewTask}
-                              onEditClick={handleEditClick}
-                              showDate={true}
-                            />
-                          </div>
-                        ))}
+                    <div className="flex flex-col lg:flex-row gap-6 mt-2">
+                      {/* Left Column: Completed with Date */}
+                      <div className="flex-1 space-y-2">
+                        <h3 className="text-xs font-medium text-secondary-500 dark:text-secondary-400 px-1">
+                          With Due Date
+                        </h3>
+                        {filteredCompletedTasks.some((t) => t.date) ? (
+                          <Card variant="outlined" padding="none">
+                            <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
+                              {filteredCompletedTasks
+                                .filter((task) => task.date)
+                                .map((task) => (
+                                  <div key={task.id} className="group">
+                                    <TaskItem
+                                      task={task}
+                                      onToggle={handleToggleOverviewTask}
+                                      onDelete={handleDeleteOverviewTask}
+                                      onEdit={handleEditOverviewTask}
+                                      onEditClick={handleEditClick}
+                                      showDate={true}
+                                    />
+                                  </div>
+                                ))}
+                            </div>
+                          </Card>
+                        ) : (
+                          <p className="text-xs text-secondary-400 italic px-1">None</p>
+                        )}
                       </div>
-                    </Card>
+
+                      {/* Right Column: Completed without Date */}
+                      <div className="flex-1 space-y-2">
+                        <h3 className="text-xs font-medium text-secondary-500 dark:text-secondary-400 px-1">
+                          General
+                        </h3>
+                        {filteredCompletedTasks.some((t) => !t.date) ? (
+                          <Card variant="outlined" padding="none">
+                            <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
+                              {filteredCompletedTasks
+                                .filter((task) => !task.date)
+                                .map((task) => (
+                                  <div key={task.id} className="group">
+                                    <TaskItem
+                                      task={task}
+                                      onToggle={handleToggleOverviewTask}
+                                      onDelete={handleDeleteOverviewTask}
+                                      onEdit={handleEditOverviewTask}
+                                      onEditClick={handleEditClick}
+                                      showDate={false}
+                                    />
+                                  </div>
+                                ))}
+                            </div>
+                          </Card>
+                        ) : (
+                          <p className="text-xs text-secondary-400 italic px-1">None</p>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
               )}

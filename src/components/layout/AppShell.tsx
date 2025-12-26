@@ -4,7 +4,7 @@ import Sidebar from './Sidebar';
 
 function AppShell() {
   const location = useLocation();
-  const isWideLayout = location.pathname === '/goals';
+  const isWideLayout = ['/goals', '/tasks', '/habits', '/workout'].includes(location.pathname);
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen min-h-[100dvh] lg:h-screen lg:max-h-screen lg:overflow-hidden bg-light-bg dark:bg-secondary-900 overflow-x-hidden">
