@@ -4,6 +4,7 @@ import { Loader2, ImageIcon } from 'lucide-react';
 import type { NoteNodeData } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { useNotesStore } from '@/stores/notesStore';
+import { useDoubleTap } from '@/hooks/useDoubleTap';
 import { FloatingToolbar } from './FloatingToolbar';
 
 const ImageNode = memo(function ImageNode({ data, selected }: NodeProps<NoteNodeData>) {
@@ -55,10 +56,11 @@ const ImageNode = memo(function ImageNode({ data, selected }: NodeProps<NoteNode
         setImageError(true);
     }, []);
 
-    const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
+    const handleDoubleTap = useCallback(() => {
         setShowToolbar((prev) => !prev);
     }, []);
+
+    const doubleTapHandlers = useDoubleTap(handleDoubleTap);
 
     const handleColor = useCallback((newColor: string) => {
         updateNoteColor(id, newColor);
@@ -187,7 +189,7 @@ const ImageNode = memo(function ImageNode({ data, selected }: NodeProps<NoteNode
 
             <div
                 className="w-full h-full rounded-xl shadow-lg border cursor-pointer bg-white dark:bg-secondary-800 relative overflow-hidden"
-                onDoubleClick={handleDoubleClick}
+                {...doubleTapHandlers}
                 style={{
                     borderColor: cardBorderColor,
                     boxShadow: selected

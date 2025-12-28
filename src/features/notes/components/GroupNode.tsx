@@ -1,6 +1,7 @@
 import { memo, useState, useMemo, useCallback, useEffect } from 'react';
 import { NodeProps, NodeResizer, Handle, Position, NodeToolbar, useReactFlow } from 'reactflow';
 import { useNotesStore } from '@/stores/notesStore';
+import { useDoubleTap } from '@/hooks/useDoubleTap';
 import { FloatingToolbar } from './FloatingToolbar';
 
 const GroupNode = memo(({ data, selected, id }: NodeProps) => {
@@ -23,10 +24,11 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
     }
   }, [selected]);
 
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDoubleTap = useCallback(() => {
     setShowToolbar((prev) => !prev);
   }, []);
+
+  const doubleTapHandlers = useDoubleTap(handleDoubleTap);
 
   const handleEdit = useCallback(() => {
     setIsEditingLabel(true);
@@ -71,15 +73,15 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
   );
 
   return (
-    <div 
+    <div
       className="group w-full h-full relative rounded-2xl border-2 transition-all duration-200"
-      style={{ 
+      style={{
         borderColor: color,
         backgroundColor: backgroundColor,
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onDoubleClick={handleDoubleClick}
+      {...doubleTapHandlers}
     >
       <NodeToolbar
         isVisible={showToolbar}

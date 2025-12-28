@@ -1,6 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { ReactFlowProvider } from 'reactflow';
 import CanvasView from './CanvasView';
+import { MobileCanvasProvider } from './MobileCanvasContext';
 import { useCanvases } from '../hooks';
 import { useThemeStore } from '@/stores/themeStore';
 import { LoadingSpinner } from '@/components/ui';
@@ -8,9 +9,10 @@ import { LoadingSpinner } from '@/components/ui';
 interface MobileCanvasViewProps {
     canvasId: string;
     onClose: () => void;
+    onEditNote?: (noteId: string) => void;
 }
 
-export function MobileCanvasView({ canvasId, onClose }: MobileCanvasViewProps) {
+export function MobileCanvasView({ canvasId, onClose, onEditNote }: MobileCanvasViewProps) {
     const accentColor = useThemeStore((state) => state.accentColor);
     const { canvases, loading } = useCanvases();
 
@@ -18,7 +20,7 @@ export function MobileCanvasView({ canvasId, onClose }: MobileCanvasViewProps) {
 
     if (loading) {
         return (
-            <div className="fixed inset-0 z-[60] bg-secondary-50 dark:bg-black flex items-center justify-center pt-safe-top pb-safe-bottom">
+            <div className="fixed inset-0 z-[60] bg-light-bg dark:bg-secondary-900 flex items-center justify-center pt-safe-top pb-safe-bottom">
                 <LoadingSpinner size="md" />
             </div>
         );
@@ -26,7 +28,7 @@ export function MobileCanvasView({ canvasId, onClose }: MobileCanvasViewProps) {
 
     if (!canvas) {
         return (
-            <div className="fixed inset-0 z-[60] bg-secondary-50 dark:bg-black flex flex-col items-center justify-center pt-safe-top pb-safe-bottom">
+            <div className="fixed inset-0 z-[60] bg-light-bg dark:bg-secondary-900 flex flex-col items-center justify-center pt-safe-top pb-safe-bottom">
                 <p className="text-secondary-500 dark:text-secondary-400 mb-4">Canvas not found</p>
                 <button
                     onClick={onClose}
@@ -40,7 +42,7 @@ export function MobileCanvasView({ canvasId, onClose }: MobileCanvasViewProps) {
     }
 
     return (
-        <div className="fixed inset-0 z-[60] bg-secondary-50 dark:bg-black flex flex-col pt-safe-top pb-0">
+        <div className="fixed inset-0 z-[60] bg-light-bg dark:bg-secondary-900 flex flex-col pt-safe-top pb-0">
             {/* Header */}
             <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-white dark:bg-secondary-900 border-b border-secondary-200 dark:border-secondary-800 z-10">
                 <button
@@ -57,9 +59,11 @@ export function MobileCanvasView({ canvasId, onClose }: MobileCanvasViewProps) {
 
             {/* Canvas */}
             <div className="flex-1 relative overflow-hidden">
-                <ReactFlowProvider>
-                    <CanvasView canvasId={canvasId} />
-                </ReactFlowProvider>
+                <MobileCanvasProvider onEditNote={onEditNote}>
+                    <ReactFlowProvider>
+                        <CanvasView canvasId={canvasId} />
+                    </ReactFlowProvider>
+                </MobileCanvasProvider>
             </div>
         </div>
     );
