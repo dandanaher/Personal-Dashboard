@@ -73,6 +73,60 @@ export function getBackgroundColor(
   return BACKGROUND_COLORS[stylePreset][mode];
 }
 
+/**
+ * Generate a colored logo data URL for use in components
+ * White pixels -> accent color, black pixels -> background color, transparent stays transparent
+ */
+export async function generateColoredLogoDataUrl(
+  accentColor: string,
+  darkMode: boolean,
+  stylePreset: 'modern' | 'retro',
+  size: number = 40
+): Promise<string> {
+  const img = await loadBaseImage();
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return '';
+
+  canvas.width = size;
+  canvas.height = size;
+  ctx.drawImage(img, 0, 0, size, size);
+
+  const imageData = ctx.getImageData(0, 0, size, size);
+  const data = imageData.data;
+  const accentRgb = hexToRgb(accentColor);
+  const backgroundColor = getBackgroundColor(darkMode, stylePreset);
+  const bgRgb = hexToRgb(backgroundColor);
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const a = data[i + 3];
+
+    // Transparent pixels stay transparent
+    if (a === 0) continue;
+
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+    if (luminance < 0.5) {
+      // Dark/black pixels -> background color
+      data[i] = bgRgb.r;
+      data[i + 1] = bgRgb.g;
+      data[i + 2] = bgRgb.b;
+    } else {
+      // Light/white pixels -> accent color
+      data[i] = accentRgb.r;
+      data[i + 1] = accentRgb.g;
+      data[i + 2] = accentRgb.b;
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
 export async function updateFavicon(
   accentColor: string,
   darkMode: boolean,

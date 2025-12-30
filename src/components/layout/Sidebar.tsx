@@ -1,12 +1,13 @@
 import { useMemo, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { CheckSquare, Target, Grid, Dumbbell, Home, ChevronLeft, ChevronRight, StickyNote } from 'lucide-react';
+import { CheckSquare, Target, Grid, Dumbbell, Home, ChevronLeft, StickyNote } from 'lucide-react';
 import { useThemeStore } from '@/stores/themeStore';
 import { useWorkoutSessionStore } from '@/stores/workoutSessionStore';
 import { useSidebarStore } from '@/stores/sidebarStore';
 import { formatTime } from '@/features/workout/lib/workoutEngine';
 import { preloadRoute } from '@/App';
 import { SettingsMenu } from '@/features/gamification/components';
+import { DynamicLogo } from '@/components/ui/DynamicLogo';
 
 interface NavItem {
   path: string;
@@ -81,25 +82,31 @@ function Sidebar() {
           justifyContent: isCollapsed ? 'center' : 'space-between',
         }}
       >
-        {!isCollapsed && (
-          <h1
-            className="text-xl font-bold text-secondary-900 dark:text-white transition-opacity duration-300"
-            style={{ paddingLeft: '14px' }}
+        {isCollapsed ? (
+          <button
+            onClick={toggleSidebar}
+            className="p-1 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors flex-shrink-0"
+            aria-label="Expand sidebar"
           >
-            MyDash
-          </h1>
+            <DynamicLogo size={32} />
+          </button>
+        ) : (
+          <>
+            <h1
+              className="text-xl font-bold text-secondary-900 dark:text-white transition-opacity duration-300"
+              style={{ paddingLeft: '14px' }}
+            >
+              MyDash
+            </h1>
+            <button
+              onClick={toggleSidebar}
+              className="p-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors text-secondary-600 dark:text-secondary-400 flex-shrink-0"
+              aria-label="Collapse sidebar"
+            >
+              <ChevronLeft className="h-5 w-5 flex-shrink-0" />
+            </button>
+          </>
         )}
-        <button
-          onClick={toggleSidebar}
-          className="p-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors text-secondary-600 dark:text-secondary-400 flex-shrink-0"
-          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {isCollapsed ? (
-            <ChevronRight className="h-5 w-5 flex-shrink-0" />
-          ) : (
-            <ChevronLeft className="h-5 w-5 flex-shrink-0" />
-          )}
-        </button>
       </div>
 
       {/* Navigation */}

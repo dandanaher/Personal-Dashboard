@@ -4,6 +4,7 @@ import { useProfileStats, useProfile, useRankDecay } from '@/features/gamificati
 import { RankDisplay, SettingsMenu, RankOverview } from '@/features/gamification/components';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { DayOverview } from '@/components/DayOverview';
+import { DynamicLogo } from '@/components/ui/DynamicLogo';
 
 function HomePage() {
   const { user } = useAuthStore();
@@ -57,9 +58,15 @@ function HomePage() {
     <div className="min-h-full">
       {/* Header with Settings */}
       <div className="flex items-start justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">{greeting}</h1>
-          <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-0.5">{userName}</p>
+        <div className="flex items-center gap-3">
+          {/* Logo - mobile only */}
+          <div className="lg:hidden">
+            <DynamicLogo size={40} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">{greeting}</h1>
+            <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-0.5">{userName}</p>
+          </div>
         </div>
         <div className="lg:hidden">
           <SettingsMenu />
