@@ -39,6 +39,7 @@ function GoalsPage() {
       weekly: 0,
       monthly: 0,
       yearly: 0,
+      custom: 0,
       open: 0,
     };
 
@@ -56,7 +57,15 @@ function GoalsPage() {
     if (activeFilter === 'all') {
       return 'No goals yet';
     }
-    return `No ${activeFilter} goals`;
+    const filterLabels: Record<FilterType, string> = {
+      all: 'all',
+      weekly: 'this week',
+      monthly: 'this month',
+      yearly: 'this year',
+      custom: 'custom date',
+      open: 'no deadline',
+    };
+    return `No ${filterLabels[activeFilter]} goals`;
   }, [activeFilter]);
 
   // Handlers

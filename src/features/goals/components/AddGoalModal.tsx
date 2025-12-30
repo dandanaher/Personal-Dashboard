@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Calendar, Target, Link, Unlink, AlertTriangle } from 'lucide-react';
-import { endOfWeek, endOfMonth, endOfYear, format, differenceInDays, parseISO } from 'date-fns';
+import { endOfWeek, endOfMonth, endOfYear, addWeeks, addMonths, addYears, format, differenceInDays, parseISO } from 'date-fns';
 import { Button, Input } from '@/components/ui';
 import { Goal, Habit } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
@@ -10,12 +10,26 @@ import { useThemeStore } from '@/stores/themeStore';
 import { useScrollLock } from '@/hooks/useScrollLock';
 
 type GoalType = Goal['type'];
+type DateMode = 'end' | 'from_now';
 
-const goalTypeOptions: { value: GoalType; label: string }[] = [
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'yearly', label: 'Yearly' },
-  { value: 'open', label: 'No deadline' },
+// First row: time-period based goals (auto-select date)
+const timePeriodOptions: { value: GoalType; label: string }[] = [
+  { value: 'weekly', label: 'This Week' },
+  { value: 'monthly', label: 'This Month' },
+  { value: 'yearly', label: 'This Year' },
+];
+
+// Date mode options for each time period type
+const dateModeOptions: Record<'weekly' | 'monthly' | 'yearly', { end: string; from_now: string }> = {
+  weekly: { end: 'End of Week', from_now: 'Week from Now' },
+  monthly: { end: 'End of Month', from_now: 'Month from Now' },
+  yearly: { end: 'End of Year', from_now: 'Year from Now' },
+};
+
+// Bottom row: custom date and no deadline
+const otherOptions: { value: GoalType; label: string }[] = [
+  { value: 'custom', label: 'Custom Date' },
+  { value: 'open', label: 'No Deadline' },
 ];
 
 interface AddGoalModalProps {
@@ -33,27 +47,50 @@ interface AddGoalModalProps {
   editingGoal?: Goal | null;
 }
 
-// Get default target date based on goal type
-function getDefaultTargetDate(type: GoalType): string {
-  if (type === 'open') return '';
+// Get default target date based on goal type and date mode
+function getDefaultTargetDate(type: GoalType, dateMode: DateMode = 'end'): string {
+  if (type === 'open' || type === 'custom') return '';
   const now = new Date();
   let targetDate: Date;
 
-  switch (type) {
-    case 'weekly':
-      targetDate = endOfWeek(now, { weekStartsOn: 1 }); // End of week (Sunday)
-      break;
-    case 'monthly':
-      targetDate = endOfMonth(now);
-      break;
-    case 'yearly':
-      targetDate = endOfYear(now);
-      break;
-    default:
-      targetDate = endOfMonth(now);
+  if (dateMode === 'end') {
+    // End of current period
+    switch (type) {
+      case 'weekly':
+        targetDate = endOfWeek(now, { weekStartsOn: 1 }); // End of week (Sunday)
+        break;
+      case 'monthly':
+        targetDate = endOfMonth(now);
+        break;
+      case 'yearly':
+        targetDate = endOfYear(now);
+        break;
+      default:
+        targetDate = endOfMonth(now);
+    }
+  } else {
+    // Period from now
+    switch (type) {
+      case 'weekly':
+        targetDate = addWeeks(now, 1);
+        break;
+      case 'monthly':
+        targetDate = addMonths(now, 1);
+        break;
+      case 'yearly':
+        targetDate = addYears(now, 1);
+        break;
+      default:
+        targetDate = addMonths(now, 1);
+    }
   }
 
   return format(targetDate, 'yyyy-MM-dd');
+}
+
+// Check if the goal type auto-selects a date (locked)
+function isDateLocked(type: GoalType): boolean {
+  return type === 'weekly' || type === 'monthly' || type === 'yearly';
 }
 
 export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalModalProps) {
@@ -62,6 +99,7 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<GoalType>('monthly');
+  const [dateMode, setDateMode] = useState<DateMode>('end');
   const [targetDate, setTargetDate] = useState('');
   const [progress, setProgress] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -113,6 +151,7 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
         setTitle(editingGoal.title);
         setDescription(editingGoal.description || '');
         setType(editingGoal.type);
+        setDateMode('end'); // Default to 'end' when editing
         setTargetDate(editingGoal.target_date || '');
         setProgress(editingGoal.progress);
         // Habit linking
@@ -129,7 +168,8 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
         setTitle('');
         setDescription('');
         setType('monthly');
-        setTargetDate(getDefaultTargetDate('monthly'));
+        setDateMode('end');
+        setTargetDate(getDefaultTargetDate('monthly', 'end'));
         setProgress(0);
         setLinkToHabit(false);
         setSelectedHabitId('');
@@ -147,8 +187,24 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
       return;
     }
 
-    if (!editingGoal || !targetDate) {
-      setTargetDate(getDefaultTargetDate(newType));
+    if (newType === 'custom') {
+      // For custom, keep existing date if editing, otherwise clear for user to select
+      if (!editingGoal) {
+        setTargetDate('');
+      }
+      return;
+    }
+
+    // For time-period types (weekly/monthly/yearly), reset to 'end' mode and set the auto-calculated date
+    setDateMode('end');
+    setTargetDate(getDefaultTargetDate(newType, 'end'));
+  };
+
+  // Handle date mode change (end of period vs. period from now)
+  const handleDateModeChange = (newMode: DateMode) => {
+    setDateMode(newMode);
+    if (isDateLocked(type)) {
+      setTargetDate(getDefaultTargetDate(type, newMode));
     }
   };
 
@@ -331,13 +387,61 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
             <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-2">
               Goal Type
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              {goalTypeOptions.map((goalType) => (
+            {/* First row: This Week, This Month, This Year */}
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              {timePeriodOptions.map((goalType) => (
                 <button
                   key={goalType.value}
                   type="button"
                   onClick={() => handleTypeChange(goalType.value)}
-                  className={`px-3 py-2 rounded-full text-sm font-medium capitalize transition-colors ${
+                  className={`px-2 py-2 rounded-full text-sm font-medium transition-colors ${
+                    type === goalType.value
+                      ? 'text-white'
+                      : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
+                  }`}
+                  style={type === goalType.value ? { backgroundColor: accentColor } : undefined}
+                >
+                  {goalType.label}
+                </button>
+              ))}
+            </div>
+            {/* Date mode row: Only shown when a time period type is selected */}
+            {isDateLocked(type) && (
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <button
+                  type="button"
+                  onClick={() => handleDateModeChange('end')}
+                  className={`px-3 py-2 rounded-full text-sm font-medium transition-colors ${
+                    dateMode === 'end'
+                      ? 'text-white'
+                      : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
+                  }`}
+                  style={dateMode === 'end' ? { backgroundColor: accentColor } : undefined}
+                >
+                  {dateModeOptions[type as 'weekly' | 'monthly' | 'yearly'].end}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDateModeChange('from_now')}
+                  className={`px-3 py-2 rounded-full text-sm font-medium transition-colors ${
+                    dateMode === 'from_now'
+                      ? 'text-white'
+                      : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
+                  }`}
+                  style={dateMode === 'from_now' ? { backgroundColor: accentColor } : undefined}
+                >
+                  {dateModeOptions[type as 'weekly' | 'monthly' | 'yearly'].from_now}
+                </button>
+              </div>
+            )}
+            {/* Bottom row: Custom Date, No Deadline */}
+            <div className="grid grid-cols-2 gap-2">
+              {otherOptions.map((goalType) => (
+                <button
+                  key={goalType.value}
+                  type="button"
+                  onClick={() => handleTypeChange(goalType.value)}
+                  className={`px-3 py-2 rounded-full text-sm font-medium transition-colors ${
                     type === goalType.value
                       ? 'text-white'
                       : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
@@ -365,15 +469,25 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
                 type="date"
                 value={targetDate}
                 onChange={(e) => setTargetDate(e.target.value)}
+                disabled={isDateLocked(type)}
+                className={isDateLocked(type) ? 'opacity-60 cursor-not-allowed bg-secondary-100 dark:bg-secondary-800' : ''}
               />
-              <p className="mt-1 text-xs text-secondary-500 dark:text-secondary-400">
-                Auto-suggested based on time period
-              </p>
+              {isDateLocked(type) ? (
+                <p className="mt-1 text-xs text-secondary-500 dark:text-secondary-400">
+                  {dateMode === 'end'
+                    ? `Auto-set to end of ${type === 'weekly' ? 'this week' : type === 'monthly' ? 'this month' : 'this year'}`
+                    : `Auto-set to one ${type === 'weekly' ? 'week' : type === 'monthly' ? 'month' : 'year'} from today`}
+                </p>
+              ) : type === 'custom' ? (
+                <p className="mt-1 text-xs text-secondary-500 dark:text-secondary-400">
+                  Select your target completion date
+                </p>
+              ) : null}
             </div>
           )}
 
           {/* Habit Linking Section */}
-          <div className="border-t border-secondary-200 dark:border-secondary-700 pt-4">
+          <div>
             <div className="flex items-center justify-between mb-3">
               <label className="text-sm font-medium text-secondary-700 dark:text-secondary-300">
                 Link to Habit (Optional)

@@ -152,7 +152,7 @@ export interface Goal {
   title: string;
   description: string | null;
   /** Goal timeframe type */
-  type: 'weekly' | 'monthly' | 'yearly' | 'open';
+  type: 'weekly' | 'monthly' | 'yearly' | 'custom' | 'open';
   /** Target completion date in ISO format (YYYY-MM-DD) */
   target_date: string | null;
   /** Whether the goal is completed */

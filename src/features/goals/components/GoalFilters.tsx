@@ -14,10 +14,11 @@ export function GoalFilters({ activeFilter, onFilterChange, counts }: GoalFilter
 
   const filters: { value: FilterType; label: string }[] = [
     { value: 'all', label: 'All' },
-    { value: 'weekly', label: 'Weekly' },
-    { value: 'monthly', label: 'Monthly' },
-    { value: 'yearly', label: 'Yearly' },
-    { value: 'open', label: 'No deadline' },
+    { value: 'weekly', label: 'This Week' },
+    { value: 'monthly', label: 'This Month' },
+    { value: 'yearly', label: 'This Year' },
+    { value: 'custom', label: 'Custom Date' },
+    { value: 'open', label: 'No Deadline' },
   ];
 
   return (
