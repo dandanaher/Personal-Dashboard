@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
 export default defineConfig({
-  base: '/Personal-Dashboard/',
+  base: '/MyDash/',
   plugins: [
     react(),
     VitePWA({
@@ -18,8 +18,8 @@ export default defineConfig({
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/Personal-Dashboard/',
-        scope: '/Personal-Dashboard/',
+        start_url: '/MyDash/',
+        scope: '/MyDash/',
         icons: [
           {
             src: 'pwa-192x192.png',
