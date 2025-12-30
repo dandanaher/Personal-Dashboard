@@ -133,70 +133,8 @@ export async function updateFavicon(
   stylePreset: 'modern' | 'retro'
 ): Promise<void> {
   try {
-    const img = await loadBaseImage();
-
-    // Create a canvas to manipulate the image
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Use a reasonable favicon size (32x32 is standard)
-    const size = 32;
-    canvas.width = size;
-    canvas.height = size;
-
-    // Draw the image scaled to favicon size
-    ctx.drawImage(img, 0, 0, size, size);
-
-    // Get the pixel data
-    const imageData = ctx.getImageData(0, 0, size, size);
-    const data = imageData.data;
-
-    // Get the target colors
-    const backgroundColor = getBackgroundColor(darkMode, stylePreset);
-    const bgRgb = hexToRgb(backgroundColor);
-    const accentRgb = hexToRgb(accentColor);
-
-    // Process each pixel
-    // Black pixels (the squares) -> background color
-    // White/transparent pixels -> accent color
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i];
-      const g = data[i + 1];
-      const b = data[i + 2];
-      const a = data[i + 3];
-
-      // Skip fully transparent pixels
-      if (a === 0) {
-        // Make transparent pixels the accent color
-        data[i] = accentRgb.r;
-        data[i + 1] = accentRgb.g;
-        data[i + 2] = accentRgb.b;
-        data[i + 3] = 255;
-        continue;
-      }
-
-      // Calculate luminance to determine if pixel is dark or light
-      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-      if (luminance < 0.5) {
-        // Dark pixel (black squares) -> background color
-        data[i] = bgRgb.r;
-        data[i + 1] = bgRgb.g;
-        data[i + 2] = bgRgb.b;
-      } else {
-        // Light pixel (white background) -> accent color
-        data[i] = accentRgb.r;
-        data[i + 1] = accentRgb.g;
-        data[i + 2] = accentRgb.b;
-      }
-    }
-
-    // Put the modified image data back
-    ctx.putImageData(imageData, 0, 0);
-
-    // Convert to data URL
-    const dataUrl = canvas.toDataURL('image/png');
+    // Generate favicon (32x32) using shared logic
+    const faviconDataUrl = await generateColoredLogoDataUrl(accentColor, darkMode, stylePreset, 32);
 
     // Update the favicon
     let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
@@ -206,55 +144,16 @@ export async function updateFavicon(
       link.type = 'image/png';
       document.head.appendChild(link);
     }
-    link.href = dataUrl;
+    link.href = faviconDataUrl;
 
     // Also update apple-touch-icon if it exists
     const appleLink = document.querySelector<HTMLLinkElement>(
       'link[rel="apple-touch-icon"]'
     );
     if (appleLink) {
-      // Create a larger version for apple-touch-icon (180x180)
-      const appleCanvas = document.createElement('canvas');
-      const appleCtx = appleCanvas.getContext('2d');
-      if (appleCtx) {
-        const appleSize = 180;
-        appleCanvas.width = appleSize;
-        appleCanvas.height = appleSize;
-        appleCtx.drawImage(img, 0, 0, appleSize, appleSize);
-
-        const appleImageData = appleCtx.getImageData(0, 0, appleSize, appleSize);
-        const appleData = appleImageData.data;
-
-        for (let i = 0; i < appleData.length; i += 4) {
-          const r = appleData[i];
-          const g = appleData[i + 1];
-          const b = appleData[i + 2];
-          const a = appleData[i + 3];
-
-          if (a === 0) {
-            appleData[i] = accentRgb.r;
-            appleData[i + 1] = accentRgb.g;
-            appleData[i + 2] = accentRgb.b;
-            appleData[i + 3] = 255;
-            continue;
-          }
-
-          const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-          if (luminance < 0.5) {
-            appleData[i] = bgRgb.r;
-            appleData[i + 1] = bgRgb.g;
-            appleData[i + 2] = bgRgb.b;
-          } else {
-            appleData[i] = accentRgb.r;
-            appleData[i + 1] = accentRgb.g;
-            appleData[i + 2] = accentRgb.b;
-          }
-        }
-
-        appleCtx.putImageData(appleImageData, 0, 0);
-        appleLink.href = appleCanvas.toDataURL('image/png');
-      }
+      // Generate larger version for apple-touch-icon (180x180)
+      const appleDataUrl = await generateColoredLogoDataUrl(accentColor, darkMode, stylePreset, 180);
+      appleLink.href = appleDataUrl;
     }
   } catch (error) {
     // Silently fail - favicon update is not critical
