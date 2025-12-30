@@ -4,7 +4,7 @@ import { X, CheckSquare, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button, Input } from '@/components/ui';
 import { Task } from '@/lib/types';
-import { useThemeStore } from '@/stores/themeStore';
+import { useThemeStore, getColorVariants } from '@/stores/themeStore';
 import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface AddTaskModalProps {
@@ -19,6 +19,7 @@ interface AddTaskModalProps {
   editingTask?: Task | null;
   existingTypes: string[];
   defaultDate?: string | null;
+  defaultTag?: string | null;
 }
 
 export function AddTaskModal({
@@ -26,10 +27,12 @@ export function AddTaskModal({
   onClose,
   onSave,
   editingTask,
-  existingTypes: _existingTypes,
+  existingTypes,
   defaultDate,
+  defaultTag,
 }: AddTaskModalProps) {
   const { accentColor } = useThemeStore();
+  const accentVariants = getColorVariants(accentColor);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState<string>('');
@@ -37,6 +40,7 @@ export function AddTaskModal({
   const [taskType, setTaskType] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hoveredTag, setHoveredTag] = useState<string | null>(null);
 
   // Reset form when modal opens/closes or editing task changes
   useEffect(() => {
@@ -57,11 +61,11 @@ export function AddTaskModal({
           setDate(format(new Date(), 'yyyy-MM-dd'));
           setHasDate(false);
         }
-        setTaskType('');
+        setTaskType(defaultTag || '');
       }
       setError(null);
     }
-  }, [isOpen, editingTask, defaultDate]);
+  }, [isOpen, editingTask, defaultDate, defaultTag]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -253,6 +257,35 @@ export function AddTaskModal({
               onChange={(e) => setTaskType(e.target.value)}
               placeholder="e.g., Work, Personal, Errands"
             />
+            {existingTypes.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {existingTypes.map((type) => {
+                  const isHovered = hoveredTag === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setTaskType(type)}
+                      onMouseEnter={() => setHoveredTag(type)}
+                      onMouseLeave={() => setHoveredTag(null)}
+                      disabled={isSaving}
+                      className={`
+                        px-3 py-1 rounded-full text-xs font-medium
+                        transition-colors
+                        disabled:opacity-50 disabled:cursor-not-allowed
+                        ${!isHovered ? 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300' : ''}
+                      `}
+                      style={{
+                        backgroundColor: isHovered ? accentVariants.light : undefined,
+                        color: isHovered ? accentColor : undefined,
+                      }}
+                    >
+                      {type}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Actions */}

@@ -687,6 +687,7 @@ function TasksPageContent() {
         editingTask={editingTask}
         existingTypes={taskTypes}
         defaultDate={viewMode === 'day' ? selectedDateString : undefined}
+        defaultTag={viewMode !== 'all' && viewMode !== 'day' ? viewMode : undefined}
       />
     </div>
   );
