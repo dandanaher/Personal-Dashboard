@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { updateFavicon } from '../utils/faviconUtils';
 
 // Same colors as habits page
 export const APP_COLORS = [
@@ -128,6 +129,9 @@ export const useThemeStore = create<ThemeState>()(
         document.documentElement.style.setProperty('--accent-color', color);
         // Update PWA window header color
         updateThemeColorMeta(color);
+        // Update favicon with new accent color
+        const { darkMode, stylePreset } = get();
+        updateFavicon(color, darkMode, stylePreset);
       },
       toggleDarkMode: () => {
         const newDarkMode = !get().darkMode;
@@ -139,6 +143,9 @@ export const useThemeStore = create<ThemeState>()(
           document.documentElement.classList.remove('dark');
           localStorage.theme = 'light';
         }
+        // Update favicon with new dark mode
+        const { accentColor, stylePreset } = get();
+        updateFavicon(accentColor, newDarkMode, stylePreset);
       },
       setDarkMode: (isDark: boolean) => {
         set({ darkMode: isDark });
@@ -149,6 +156,9 @@ export const useThemeStore = create<ThemeState>()(
           document.documentElement.classList.remove('dark');
           localStorage.theme = 'light';
         }
+        // Update favicon with new dark mode
+        const { accentColor, stylePreset } = get();
+        updateFavicon(accentColor, isDark, stylePreset);
       },
       setStylePreset: (style: 'modern' | 'retro') => {
         const currentStyle = get().stylePreset;
@@ -156,6 +166,9 @@ export const useThemeStore = create<ThemeState>()(
         set({ stylePreset: style });
         document.documentElement.classList.add(`style-${style}`);
         applyThemeVariables(style);
+        // Update favicon with new style preset
+        const { accentColor, darkMode } = get();
+        updateFavicon(accentColor, darkMode, style);
       },
     }),
     {
@@ -185,6 +198,11 @@ export const useThemeStore = create<ThemeState>()(
           document.documentElement.classList.add('style-modern');
           applyThemeVariables('modern');
         }
+        // Update favicon with persisted theme values
+        const accentColor = state?.accentColor || '#3b82f6';
+        const darkMode = state?.darkMode ?? getInitialDarkMode();
+        const stylePreset = state?.stylePreset || 'modern';
+        updateFavicon(accentColor, darkMode, stylePreset);
       },
     }
   )
