@@ -6,6 +6,6 @@
   "background_color": "#ffffff",
   "display": "standalone",
   "orientation": "portrait",
-  "scope": "/Personal-Dashboard/",
-  "start_url": "/Personal-Dashboard/"
+  "scope": "/MyDash/",
+  "start_url": "/MyDash/"
 }

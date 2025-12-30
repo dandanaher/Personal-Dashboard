@@ -15,7 +15,7 @@ interface RankDisplayProps {
  */
 function getRankImagePath(rankName: string, tier: 'I' | 'II' | 'III'): string {
   const tierNumber = tier === 'I' ? 1 : tier === 'II' ? 2 : 3;
-  return `/Personal-Dashboard/images/ranks/${rankName.toLowerCase()}${tierNumber}.png`;
+  return `${import.meta.env.BASE_URL}images/ranks/${rankName.toLowerCase()}${tierNumber}.png`;
 }
 
 /**
