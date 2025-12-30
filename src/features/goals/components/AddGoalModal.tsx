@@ -130,13 +130,13 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
   useEffect(() => {
     if (isOpen && user) {
       setLoadingHabits(true);
-      supabase
+      void supabase
         .from('habits')
         .select('*')
         .eq('user_id', user.id)
         .order('name', { ascending: true })
-        .then(({ data, error }) => {
-          if (!error && data) {
+        .then(({ data, error: fetchError }) => {
+          if (!fetchError && data) {
             setHabits(data);
           }
           setLoadingHabits(false);

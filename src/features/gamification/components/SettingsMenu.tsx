@@ -141,13 +141,13 @@ export function SettingsMenu({ isSidebar = false, isCollapsed = false }: Setting
                   className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white/50 dark:bg-white/10 border border-white/40 dark:border-white/20 text-secondary-900 dark:text-white placeholder-secondary-400 focus:outline-none focus:ring-2 focus:ring-offset-0"
                   style={{ '--tw-ring-color': accentColor } as React.CSSProperties}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveUsername();
+                    if (e.key === 'Enter') void handleSaveUsername();
                     if (e.key === 'Escape') handleCancelEdit();
                   }}
                 />
                 <div className="flex gap-1.5">
                   <button
-                    onClick={handleSaveUsername}
+                    onClick={() => void handleSaveUsername()}
                     disabled={savingUsername}
                     className="flex-1 px-2.5 py-1 text-xs font-medium rounded-lg text-white transition-colors disabled:opacity-50"
                     style={{ backgroundColor: accentColor }}
@@ -282,7 +282,7 @@ export function SettingsMenu({ isSidebar = false, isCollapsed = false }: Setting
           {/* Sign Out */}
           <div className="p-2">
             <button
-              onClick={handleSignOut}
+              onClick={() => void handleSignOut()}
               className="flex items-center gap-2 w-full p-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-500/20 dark:hover:bg-red-500/20 transition-colors"
             >
               <LogOut className="h-3.5 w-3.5" />

@@ -1131,7 +1131,7 @@ export const useNotesStore = create<NotesStore>()(
 
         // Case 1: Moved into a group (from root or another group)
         if (targetGroupId && targetGroupId !== currentParentId) {
-          const groupNode = targetGroup!;
+          const groupNode = targetGroup;
           const newRelX = absX - groupNode.position.x;
           const newRelY = absY - groupNode.position.y;
           const updatedAt = new Date().toISOString();

@@ -48,7 +48,7 @@ export function useProfileStats(): UseProfileStatsReturn {
 
       // Create a map of attribute_id to current_xp
       const xpMap = new Map<string, number>();
-      xpData?.forEach((xp) => {
+      xpData?.forEach((xp: { attribute_id: string; current_xp: number }) => {
         xpMap.set(xp.attribute_id, xp.current_xp);
       });
 
@@ -74,7 +74,7 @@ export function useProfileStats(): UseProfileStatsReturn {
 
   // Initial fetch
   useEffect(() => {
-    fetchStats();
+    void fetchStats();
   }, [fetchStats]);
 
   // Real-time subscription for XP updates
@@ -92,13 +92,13 @@ export function useProfileStats(): UseProfileStatsReturn {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          fetchStats();
+          void fetchStats();
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [user, fetchStats]);
 

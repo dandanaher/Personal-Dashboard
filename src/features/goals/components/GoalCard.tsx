@@ -236,7 +236,7 @@ export const GoalCard = memo(function GoalCard({
               {isOverdue ? (
                 <>
                   <AlertTriangle className="w-4 h-4" />
-                  <span>Overdue by {Math.abs(daysUntilTarget!)} days</span>
+                  <span>Overdue by {Math.abs(daysUntilTarget)} days</span>
                 </>
               ) : daysUntilTarget === 0 ? (
                 <>

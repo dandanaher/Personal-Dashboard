@@ -21,12 +21,12 @@ const NotesPage = lazy(() => import('@/features/notes/NotesPage'));
 
 // Route preloading map for instant navigation
 const routePreloaders: Record<string, () => void> = {
-  '/home': () => import('@/pages/HomePage'),
-  '/tasks': () => import('@/features/todos/TasksPage'),
-  '/goals': () => import('@/features/goals/GoalsPage'),
-  '/habits': () => import('@/features/habits/HabitsPage'),
-  '/workout': () => import('@/features/workout/WorkoutPage'),
-  '/notes': () => import('@/features/notes/NotesPage'),
+  '/home': () => void import('@/pages/HomePage'),
+  '/tasks': () => void import('@/features/todos/TasksPage'),
+  '/goals': () => void import('@/features/goals/GoalsPage'),
+  '/habits': () => void import('@/features/habits/HabitsPage'),
+  '/workout': () => void import('@/features/workout/WorkoutPage'),
+  '/notes': () => void import('@/features/notes/NotesPage'),
 };
 
 // Preload route on hover/focus for instant navigation

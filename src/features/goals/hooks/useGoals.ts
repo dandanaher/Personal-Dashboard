@@ -83,14 +83,14 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
 
         // Count completions per habit
         const completionCounts = new Map<string, number>();
-        logs?.forEach((log) => {
+        logs?.forEach((log: { habit_id: string }) => {
           const current = completionCounts.get(log.habit_id) || 0;
           completionCounts.set(log.habit_id, current + 1);
         });
 
         // Build habit data map
         const newHabitData = new Map<string, HabitCompletionData>();
-        habits?.forEach((habit) => {
+        habits?.forEach((habit: { id: string; name: string }) => {
           newHabitData.set(habit.id, {
             habitId: habit.id,
             habitName: habit.name,
@@ -134,7 +134,7 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
         return;
       }
 
-      const goalsData = data || [];
+      const goalsData = (data as Goal[]) || [];
       setGoals(goalsData);
 
       // Fetch habit data for linked goals
@@ -181,8 +181,9 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
           return null;
         }
 
+        const newGoal = data as Goal;
         setGoals((prev) => {
-          const newGoals = [data, ...prev];
+          const newGoals = [newGoal, ...prev];
           // Re-sort by target date
           return newGoals.sort((a, b) => {
             if (!a.target_date && !b.target_date) return 0;
@@ -193,11 +194,11 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
         });
 
         // Refetch habit data if this goal is linked
-        if (data.linked_habit_id) {
-          fetchHabitData([...goals, data]);
+        if (newGoal.linked_habit_id) {
+          void fetchHabitData([...goals, newGoal]);
         }
 
-        return data;
+        return newGoal;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to add goal');
         return null;
@@ -232,7 +233,7 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
         // Refetch habit data if linked_habit_id changed
         if ('linked_habit_id' in updates) {
           const updatedGoals = goals.map((g) => (g.id === id ? { ...g, ...updates } : g));
-          fetchHabitData(updatedGoals);
+          void fetchHabitData(updatedGoals);
         }
 
         return true;
@@ -247,7 +248,7 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
   );
 
   // Update progress (quick action) with debouncing for database updates
-  const updateProgress = useCallback(async (id: string, progress: number): Promise<boolean> => {
+  const updateProgress = useCallback((id: string, progress: number): Promise<boolean> => {
     const clampedProgress = Math.min(100, Math.max(0, progress));
     const completed = clampedProgress >= 100;
 
@@ -270,30 +271,26 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
     }
 
     // Set new debounce timer to save to database
-    const timer = setTimeout(async () => {
+    const timer = setTimeout(() => {
       const pending = pendingProgressRef.current.get(id);
       if (!pending) return;
 
       progressDebounceRef.current.delete(id);
       pendingProgressRef.current.delete(id);
 
-      try {
-        const { error: updateError } = await supabase
-          .from('goals')
-          .update({ progress: pending.progress, completed: pending.completed })
-          .eq('id', id);
-
-        if (updateError) {
-          setError(updateError.message);
-          // Could refetch here to get correct state, but optimistic update might be acceptable
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to update progress');
-      }
+      void supabase
+        .from('goals')
+        .update({ progress: pending.progress, completed: pending.completed })
+        .eq('id', id)
+        .then(({ error: updateError }) => {
+          if (updateError) {
+            setError(updateError.message);
+          }
+        });
     }, 300); // Debounce for 300ms
 
     progressDebounceRef.current.set(id, timer);
-    return true;
+    return Promise.resolve(true);
   }, []);
 
   // Toggle completion
@@ -368,7 +365,7 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
 
   // Initial fetch
   useEffect(() => {
-    fetchGoals();
+    void fetchGoals();
   }, [fetchGoals]);
 
   // Cleanup debounce timers on unmount
@@ -395,13 +392,13 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          fetchGoals();
+          void fetchGoals();
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [user, fetchGoals]);
 
@@ -424,13 +421,13 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          fetchHabitData(goals);
+          void fetchHabitData(goals);
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [user, goals, fetchHabitData]);
 

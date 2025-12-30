@@ -27,7 +27,7 @@ export function useProfile(): UseProfileReturn {
   // Initial fetch when user changes
   useEffect(() => {
     if (user) {
-      fetchProfile(user.id);
+      void fetchProfile(user.id);
     }
   }, [user, fetchProfile]);
 

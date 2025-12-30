@@ -162,9 +162,9 @@ function GoalsPage() {
         loading={loading}
         habitData={habitData}
         onEdit={handleEditClick}
-        onDelete={handleDeleteClick}
-        onProgressChange={handleProgressChange}
-        onToggleComplete={handleToggleComplete}
+        onDelete={(goalId) => void handleDeleteClick(goalId)}
+        onProgressChange={(goalId, progress) => void handleProgressChange(goalId, progress)}
+        onToggleComplete={(goalId) => void handleToggleComplete(goalId)}
         onAddClick={handleAddClick}
         emptyMessage={emptyMessage}
       />

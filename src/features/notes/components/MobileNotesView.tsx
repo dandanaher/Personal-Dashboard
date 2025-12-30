@@ -94,7 +94,7 @@ export function MobileNotesView({ onNoteClick, onCanvasClick }: MobileNotesViewP
     // Combined and sorted items based on filter and current folder
     const items = useMemo(() => {
         type ItemType = { type: 'note' | 'canvas' | 'folder'; data: Note | Canvas | FolderType };
-        let result: ItemType[] = [];
+        const result: ItemType[] = [];
 
         if (filter === 'folders' || currentFolderId) {
             // Show folder contents

@@ -14,7 +14,9 @@
       "Bash(if exist node_modules.vite rmdir /s /q node_modules.vite)",
       "Bash(cat:*)",
       "Bash(npm ls:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Skill(cleanup)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []
