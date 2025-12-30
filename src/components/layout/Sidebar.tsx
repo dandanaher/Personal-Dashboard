@@ -75,37 +75,28 @@ function Sidebar() {
     >
       {/* Logo/Brand and Toggle */}
       <div
-        className="h-[60px] border-b border-secondary-200 dark:border-secondary-800 flex items-center"
-        style={{
-          paddingLeft: '14px',
-          paddingRight: '16px',
-          justifyContent: isCollapsed ? 'center' : 'space-between',
-        }}
+        className="h-[60px] border-b border-secondary-200 dark:border-secondary-800 flex items-center justify-between pl-6 pr-4"
       >
-        {isCollapsed ? (
-          <button
-            onClick={toggleSidebar}
-            className="p-1 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors flex-shrink-0"
-            aria-label="Expand sidebar"
-          >
-            <DynamicLogo size={32} />
-          </button>
-        ) : (
-          <>
-            <h1
-              className="text-xl font-bold text-secondary-900 dark:text-white transition-opacity duration-300"
-              style={{ paddingLeft: '14px' }}
-            >
+        <button
+          onClick={isCollapsed ? toggleSidebar : undefined}
+          className={`flex items-center gap-3 ${isCollapsed ? 'cursor-pointer' : 'cursor-default'}`}
+          aria-label={isCollapsed ? 'Expand sidebar' : undefined}
+        >
+          <DynamicLogo size={32} />
+          {!isCollapsed && (
+            <h1 className="text-xl font-bold text-secondary-900 dark:text-white">
               MyDash
             </h1>
-            <button
-              onClick={toggleSidebar}
-              className="p-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors text-secondary-600 dark:text-secondary-400 flex-shrink-0"
-              aria-label="Collapse sidebar"
-            >
-              <ChevronLeft className="h-5 w-5 flex-shrink-0" />
-            </button>
-          </>
+          )}
+        </button>
+        {!isCollapsed && (
+          <button
+            onClick={toggleSidebar}
+            className="p-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors text-secondary-600 dark:text-secondary-400 flex-shrink-0"
+            aria-label="Collapse sidebar"
+          >
+            <ChevronLeft className="h-5 w-5 flex-shrink-0" />
+          </button>
         )}
       </div>
 
