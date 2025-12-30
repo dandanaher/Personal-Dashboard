@@ -1,3 +1,14 @@
+/**
+ * KanbanBoard - Goals displayed in To Do / In Progress / Complete columns
+ *
+ * RESPONSIVE BEHAVIOR:
+ * - Desktop (lg:): All 3 columns visible side-by-side, no tab navigation
+ * - Mobile: Tab navigation to switch between columns (one column visible at a time)
+ *
+ * Key classes:
+ * - `lg:hidden` on tab navigation: tabs only shown on mobile
+ * - `hidden lg:block` on columns: show/hide based on active tab (mobile) vs always show (desktop)
+ */
 import { useMemo, useState } from 'react';
 import { parseISO, differenceInDays } from 'date-fns';
 import { Target, Plus } from 'lucide-react';
@@ -139,7 +150,7 @@ export function KanbanBoard({
 
     return (
         <div className="space-y-4">
-            {/* Mobile Tab Navigation */}
+            {/* MOBILE ONLY: Tab navigation to switch between columns */}
             <div className="flex lg:hidden gap-1 mb-4">
                 {renderTabButton('todo', 'To Do', todoGoals.length)}
                 {renderTabButton('inprogress', 'In Progress', inProgressGoals.length)}

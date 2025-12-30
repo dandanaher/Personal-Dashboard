@@ -1,3 +1,15 @@
+/**
+ * Sidebar - DESKTOP ONLY navigation component
+ *
+ * Visibility: `hidden lg:flex` - hidden below 1024px, flex on desktop
+ *
+ * Features:
+ * - Collapsible (toggle via chevron button)
+ * - Shows app logo, navigation links, resume workout button, and settings
+ * - Fixed to left side of screen on desktop
+ *
+ * Mobile equivalent: BottomNav.tsx
+ */
 import { useMemo, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { CheckSquare, Target, Grid, Dumbbell, Home, ChevronLeft, StickyNote } from 'lucide-react';

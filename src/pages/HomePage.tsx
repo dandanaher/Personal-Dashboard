@@ -59,7 +59,7 @@ function HomePage() {
       {/* Header with Settings */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          {/* Logo - mobile only */}
+          {/* MOBILE ONLY: Logo shown here since Sidebar (which has logo) is hidden on mobile */}
           <div className="lg:hidden">
             <DynamicLogo size={40} />
           </div>
@@ -68,6 +68,7 @@ function HomePage() {
             <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-0.5">{userName}</p>
           </div>
         </div>
+        {/* MOBILE ONLY: Settings button here since Sidebar (which has settings) is hidden on mobile */}
         <div className="lg:hidden">
           <SettingsMenu />
         </div>

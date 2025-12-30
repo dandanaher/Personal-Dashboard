@@ -1,3 +1,16 @@
+/**
+ * BottomNav - MOBILE ONLY navigation component
+ *
+ * Visibility: `lg:hidden` - visible below 1024px, hidden on desktop
+ *
+ * Features:
+ * - Fixed to bottom of screen with safe-area-inset support
+ * - Animated circle indicator for active tab
+ * - Resume workout floating button when workout is minimized
+ * - Touch-optimized with 48px tap targets
+ *
+ * Desktop equivalent: Sidebar.tsx
+ */
 import { useMemo, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { CheckSquare, Target, Grid, Dumbbell, Home, StickyNote } from 'lucide-react';
