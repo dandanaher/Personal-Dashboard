@@ -1,6 +1,5 @@
 import { memo, useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { Handle, Position, NodeProps, NodeResizer, NodeToolbar, useReactFlow } from 'reactflow';
-import ReactPlayerImport from 'react-player';
 import { ExternalLink, Video, Globe, Play } from 'lucide-react';
 import type { NoteNodeData } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
@@ -8,9 +7,17 @@ import { useNotesStore } from '@/stores/notesStore';
 import { useDoubleTap } from '@/hooks/useDoubleTap';
 import { FloatingToolbar } from './FloatingToolbar';
 
-// Type workaround for react-player which has incomplete types in v3.x
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ReactPlayer = ReactPlayerImport as any;
+// Import only the URL patterns for canPlay check (tiny ~2KB)
+// This avoids loading the full react-player until it's needed
+import { canPlay as canPlayPatterns } from 'react-player/patterns';
+
+// Import react-player - it will be code-split by Vite since Notes page is lazy-loaded
+import ReactPlayer from 'react-player';
+
+// Check if any player can handle this URL (uses lightweight patterns only)
+function canPlayUrl(url: string): boolean {
+  return Object.values(canPlayPatterns).some((check) => check(url));
+}
 
 function getYouTubeId(url: URL | null): string | null {
   if (!url) return null;
@@ -67,9 +74,9 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
   }, [url]);
   const youtubeId = useMemo(() => getYouTubeId(parsedUrl), [parsedUrl]);
   const isValidUrl = Boolean(parsedUrl);
-  // Check if react-player can play this URL (fallback to YouTube detection)
+  // Check if react-player can play this URL using lightweight patterns
   const canPlay = useMemo(
-    () => isValidUrl && (ReactPlayer.canPlay(url) || Boolean(youtubeId)),
+    () => isValidUrl && (canPlayUrl(url) || Boolean(youtubeId)),
     [isValidUrl, url, youtubeId]
   );
   const videoThumbnail = useMemo(
@@ -327,15 +334,6 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
                   onError={() => {
                     setIsPlaying(false);
                     setIsPlayerActive(false);
-                  }}
-                  config={{
-                    youtube: {
-                      playerVars: {
-                        modestbranding: 1,
-                        rel: 0,
-                        playsinline: 1,
-                      },
-                    },
                   }}
                 />
               ) : (

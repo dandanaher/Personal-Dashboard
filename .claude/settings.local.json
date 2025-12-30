@@ -16,7 +16,8 @@
       "Bash(npm ls:*)",
       "Bash(mkdir:*)",
       "Skill(cleanup)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

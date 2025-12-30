@@ -51,5 +51,23 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core React - cached long-term, rarely changes
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // Supabase client - separate chunk for auth/data layer
+          'vendor-supabase': ['@supabase/supabase-js'],
+          // ReactFlow - only needed for Notes canvas feature
+          'vendor-reactflow': ['reactflow'],
+          // Date utilities - used across multiple features
+          'vendor-date': ['date-fns'],
+          // State management
+          'vendor-state': ['zustand', 'zundo'],
+          // UI libraries - icons and markdown editor
+          'vendor-ui': ['lucide-react', '@uiw/react-md-editor'],
+        },
+      },
+    },
   },
 });
