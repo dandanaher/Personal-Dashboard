@@ -105,6 +105,17 @@ function applyThemeVariables(style: 'modern' | 'retro') {
   });
 }
 
+// Update the PWA theme-color meta tag for window header color
+function updateThemeColorMeta(color: string) {
+  let metaThemeColor = document.querySelector('meta[name="theme-color"]');
+  if (!metaThemeColor) {
+    metaThemeColor = document.createElement('meta');
+    metaThemeColor.setAttribute('name', 'theme-color');
+    document.head.appendChild(metaThemeColor);
+  }
+  metaThemeColor.setAttribute('content', color);
+}
+
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
@@ -115,6 +126,8 @@ export const useThemeStore = create<ThemeState>()(
         set({ accentColor: color });
         // Update CSS custom property for global access
         document.documentElement.style.setProperty('--accent-color', color);
+        // Update PWA window header color
+        updateThemeColorMeta(color);
       },
       toggleDarkMode: () => {
         const newDarkMode = !get().darkMode;
@@ -151,6 +164,7 @@ export const useThemeStore = create<ThemeState>()(
         // Apply the persisted color on rehydration
         if (state?.accentColor) {
           document.documentElement.style.setProperty('--accent-color', state.accentColor);
+          updateThemeColorMeta(state.accentColor);
         }
         // Apply the persisted dark mode on rehydration
         if (state?.darkMode !== undefined) {
