@@ -1,6 +1,6 @@
-# CLAUDE.md - Personal Dashboard Codebase Guide
+# AGENTS.md - Personal Dashboard Codebase Guide
 
-**Last Updated:** 2025-11-24
+**Last Updated:** 2025-12-31
 
 This document provides a comprehensive guide to the Personal Dashboard codebase for AI assistants and developers. It covers architecture, conventions, and best practices.
 
@@ -32,6 +32,7 @@ This document provides a comprehensive guide to the Personal Dashboard codebase 
 - **Habits**: Habit tracking with streaks, types/tags, and contribution graphs
 - **Workout**: Exercise templates and session logging with progressive overload
 - **Gamification**: XP system with four attributes (Consistency, Vitality, Focus, Drive)
+- **Notes**: Infinite canvas with markdown notes, folders, groups, and connections (ReactFlow)
 
 The app is built with React + TypeScript + Vite, uses Supabase for backend, and follows a feature-based architecture.
 
@@ -48,6 +49,8 @@ The app is built with React + TypeScript + Vite, uses Supabase for backend, and 
 - **UI Icons**: Lucide React
 - **Date Handling**: date-fns
 - **Charts**: Recharts
+- **Canvas**: ReactFlow (node-based infinite canvas)
+- **State Time-Travel**: Zundo (undo/redo for canvas)
 
 ### Backend
 - **BaaS**: Supabase (PostgreSQL + Auth + Realtime)
@@ -233,6 +236,27 @@ export function useFeatureData(params): UseFeatureDataReturn {
 │   │       └── lib/
 │   │           ├── workoutEngine.ts        # Session management
 │   │           └── progressiveOverload.ts  # Auto-suggestions
+│   │   └── notes/                  # Notes and canvas feature
+│   │       ├── NotesPage.tsx       # Desktop/mobile notes page
+│   │       ├── components/
+│   │       │   ├── CanvasView.tsx          # ReactFlow canvas container
+│   │       │   ├── NoteNode.tsx            # Note node component
+│   │       │   ├── GroupNode.tsx           # Group node component
+│   │       │   ├── ImageNode.tsx           # Image node component
+│   │       │   ├── LinkNode.tsx            # Link embed node
+│   │       │   ├── FloatingEdge.tsx        # Custom edge component
+│   │       │   ├── FloatingToolbar.tsx     # Canvas toolbar
+│   │       │   ├── NotesLibrarySidebar.tsx # Notes/folders sidebar
+│   │       │   ├── TabStrip.tsx            # Tab bar for open notes
+│   │       │   ├── StandaloneNoteEditor.tsx # Full note editor
+│   │       │   ├── MobileNotesView.tsx     # Mobile notes list
+│   │       │   ├── MobileNoteEditor.tsx    # Mobile note editor
+│   │       │   └── MobileCanvasView.tsx    # Mobile canvas view
+│   │       └── hooks/
+│   │           ├── useCanvases.ts          # Canvas CRUD
+│   │           ├── useFolders.ts           # Folder management
+│   │           ├── useCanvasGroups.ts      # Group management
+│   │           └── useNotesLibraryData.ts  # Aggregated notes data
 │   ├── hooks/
 │   │   ├── useAuth.ts              # Authentication utilities
 │   │   └── useScrollLock.ts        # Modal scroll lock
@@ -246,7 +270,11 @@ export function useFeatureData(params): UseFeatureDataReturn {
 │   ├── stores/
 │   │   ├── authStore.ts            # Auth state (Zustand)
 │   │   ├── themeStore.ts           # Theme state
-│   │   └── profileStore.ts         # User profile and XP
+│   │   ├── profileStore.ts         # User profile and XP
+│   │   ├── notesStore.ts           # Notes canvas state (ReactFlow)
+│   │   ├── workspaceStore.ts       # Tab management for notes
+│   │   ├── sidebarStore.ts         # Sidebar collapse state
+│   │   └── workoutSessionStore.ts  # Active workout session
 │   ├── App.tsx                     # Root component with routing
 │   ├── main.tsx                    # Entry point
 │   ├── index.css                   # Global styles + Tailwind
@@ -262,7 +290,7 @@ export function useFeatureData(params): UseFeatureDataReturn {
 ├── tsconfig.node.json              # TypeScript config for Node
 ├── vite.config.ts                  # Vite config
 ├── README.md                       # User-facing documentation
-└── CLAUDE.md                       # This file (AI assistant guide)
+└── AGENTS.md                       # This file (AI assistant guide)
 ```
 
 ---
@@ -527,6 +555,84 @@ interface WorkoutSessionData {
 }
 ```
 
+#### `canvases`
+```typescript
+interface Canvas {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  last_accessed_at: string;      // ISO timestamp
+  created_at: string;
+  updated_at: string;
+}
+```
+
+#### `folders`
+```typescript
+interface Folder {
+  id: string;
+  user_id: string;
+  name: string;
+  parent_id: string | null;      // Null for root folders
+  created_at: string;
+}
+```
+
+#### `notes`
+```typescript
+interface Note {
+  id: string;
+  user_id: string;
+  title: string;
+  content: string;               // Markdown content
+  type?: 'text' | 'link' | 'image';  // Note type
+  position_x: number;            // X position on canvas
+  position_y: number;            // Y position on canvas
+  width?: number | null;         // Note card width
+  height?: number | null;        // Note card height
+  folder_id: string | null;      // Optional folder
+  canvas_id: string | null;      // Optional canvas
+  group_id: string | null;       // Optional group
+  created_at: string;
+  updated_at: string;
+}
+```
+
+#### `canvas_groups`
+```typescript
+interface CanvasGroup {
+  id: string;
+  user_id: string;
+  canvas_id: string | null;
+  label: string | null;
+  position_x: number;
+  position_y: number;
+  width: number;
+  height: number;
+  color: string;                 // Hex color
+  created_at: string;
+  updated_at: string;
+}
+```
+
+#### `note_edges`
+```typescript
+interface NoteEdge {
+  id: string;
+  user_id: string;
+  source_note_id: string | null;
+  target_note_id: string | null;
+  source_group_id?: string | null;
+  target_group_id?: string | null;
+  source_handle?: string | null;  // ReactFlow handle ID
+  target_handle?: string | null;  // ReactFlow handle ID
+  label?: string | null;          // Edge label
+  color?: string | null;          // Edge color
+  created_at: string;
+}
+```
+
 ### Row Level Security (RLS)
 
 All tables have RLS enabled with policies:
@@ -604,6 +710,71 @@ create policy "Users can manage their own data" on table_name
 - `fetchProfile(userId)`: Load user profile
 - `fetchAttributes(userId)`: Load XP data
 - `clearProfile()`: Clear profile on logout
+
+#### `notesStore` (`src/stores/notesStore.ts`)
+
+**Purpose**: Manages notes canvas state with ReactFlow integration and undo/redo via Zundo.
+
+**State:**
+```typescript
+{
+  nodes: Node[];                // ReactFlow nodes (notes, images, links)
+  edges: Edge[];                // ReactFlow edges (connections)
+  groups: CanvasGroup[];        // Canvas groups
+  selectedNoteId: string | null;
+  loading: boolean;
+  error: string | null;
+  currentCanvasId: string | null;
+  libraryNotes: Note[];         // Notes not on canvas
+}
+```
+
+**Actions:**
+- `fetchCanvasNotes(canvasId)`: Load notes for a canvas
+- `createNote(options)`: Create note (text/link/image)
+- `updateNoteContent(noteId, title, content)`: Update note
+- `deleteNote(noteId)`: Delete note
+- `connectNotes(connection)`: Create edge between notes
+- `createGroup(bounds)`: Create canvas group
+- `uploadImage(file)`: Upload image to Supabase storage
+
+**Features:**
+- Uses `temporal` middleware from Zundo for undo/redo
+- Debounced position/size updates to database
+- Automatic group membership calculation
+
+#### `workspaceStore` (`src/stores/workspaceStore.ts`)
+
+**Purpose**: Manages tab system for notes and canvases.
+
+**State:**
+```typescript
+{
+  tabs: WorkspaceTab[];         // Open tabs
+  activeTabId: string;          // Currently active tab
+}
+```
+
+**Actions:**
+- `addTab(type, entityId, title)`: Open new tab
+- `closeTab(tabId)`: Close tab
+- `setActiveTab(tabId)`: Switch to tab
+- `updateTabTitle(tabId, newTitle)`: Rename tab
+
+#### `sidebarStore` (`src/stores/sidebarStore.ts`)
+
+**Purpose**: Manages sidebar collapse state.
+
+**State:**
+```typescript
+{
+  isCollapsed: boolean;         // Sidebar collapsed state
+}
+```
+
+**Actions:**
+- `toggleSidebar()`: Toggle sidebar
+- `setSidebarCollapsed(collapsed)`: Set collapse state
 
 ---
 
@@ -1016,6 +1187,7 @@ When creating a new file:
 - **Supabase**: https://supabase.com/docs
 - **Zustand**: https://docs.pmnd.rs/zustand/
 - **React Router**: https://reactrouter.com/
+- **ReactFlow**: https://reactflow.dev/
 
 ### Project Documentation
 
@@ -1025,8 +1197,8 @@ When creating a new file:
 
 ---
 
-**Last Updated**: 2025-11-24
-**Version**: 1.0.0
+**Last Updated**: 2025-12-31
+**Version**: 2.0.0
 **Maintained by**: Dan Danaher
 
 For questions or updates to this guide, create an issue or pull request on GitHub.
