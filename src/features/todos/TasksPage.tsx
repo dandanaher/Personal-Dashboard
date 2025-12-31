@@ -7,10 +7,15 @@ import {
   ChevronDown,
   ChevronUp,
   Plus,
+  ListFilter,
+  CalendarDays,
+  Tag,
+  X,
 } from 'lucide-react';
 import { addDays, subDays, isToday } from 'date-fns';
 import { Button, Card } from '@/components/ui';
 import { useThemeStore } from '@/stores/themeStore';
+import { useSidebarStore } from '@/stores/sidebarStore';
 import { useTasks, useAllTasks } from './hooks';
 import { TaskList } from './components/TaskList';
 import { TaskItem } from './components/TaskItem';
@@ -52,6 +57,7 @@ function TasksPageContent() {
     toggleTask: toggleAllTask,
     deleteTask: deleteAllTask,
     updateTask: updateAllTask,
+    deleteTag: deleteAllTag,
     refetch: refetchAll,
   } = useAllTasks();
 
@@ -73,6 +79,10 @@ function TasksPageContent() {
 
   const { showToast } = useToast();
   const { accentColor } = useThemeStore();
+  const { isCollapsed } = useSidebarStore();
+
+  // Desktop layout classes
+  const desktopPageClasses = `hidden lg:flex fixed inset-0 ${isCollapsed ? 'lg:left-20' : 'lg:left-64'} transition-all duration-300`;
 
   // Extract unique task types from all tasks
   const taskTypes = useMemo(() => {
@@ -294,70 +304,504 @@ function TasksPageContent() {
   const error = viewMode === 'day' ? dayError : allError;
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">Tasks</h1>
-        <Button size="sm" onClick={handleAddClick} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add
-        </Button>
-      </div>
+    <>
+      {/* Mobile View */}
+      <div className="lg:hidden space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">Tasks</h1>
+          <Button size="sm" onClick={handleAddClick} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add
+          </Button>
+        </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-        <button
-          onClick={() => setViewMode('all')}
-          className={`
+        {/* Filter Tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+          <button
+            onClick={() => setViewMode('all')}
+            className={`
             px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0
             ${viewMode === 'all'
-              ? 'text-white'
-              : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
-            }
-          `}
-          style={viewMode === 'all' ? { backgroundColor: accentColor } : undefined}
-        >
-          All ({filterCounts.all || 0})
-        </button>
-        <button
-          onClick={() => setViewMode('day')}
-          className={`
-            px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0
-            ${viewMode === 'day'
-              ? 'text-white'
-              : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
-            }
-          `}
-          style={viewMode === 'day' ? { backgroundColor: accentColor } : undefined}
-        >
-          Day View ({filterCounts.day || 0})
-        </button>
-        {taskTypes.map((type) => (
-          <button
-            key={type}
-            onClick={() => setViewMode(type)}
-            className={`
-              px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0
-              ${viewMode === type
                 ? 'text-white'
                 : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
               }
-            `}
-            style={viewMode === type ? { backgroundColor: accentColor } : undefined}
+          `}
+            style={viewMode === 'all' ? { backgroundColor: accentColor } : undefined}
           >
-            {type} ({filterCounts[type] || 0})
+            All ({filterCounts.all || 0})
           </button>
-        ))}
+          <button
+            onClick={() => setViewMode('day')}
+            className={`
+            px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0
+            ${viewMode === 'day'
+                ? 'text-white'
+                : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
+              }
+          `}
+            style={viewMode === 'day' ? { backgroundColor: accentColor } : undefined}
+          >
+            Day View ({filterCounts.day || 0})
+          </button>
+          {taskTypes.map((type) => (
+            <button
+              key={type}
+              onClick={() => setViewMode(type)}
+              className={`
+              px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0
+              ${viewMode === type
+                  ? 'text-white'
+                  : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700'
+                }
+            `}
+              style={viewMode === type ? { backgroundColor: accentColor } : undefined}
+            >
+              {type} ({filterCounts[type] || 0})
+            </button>
+          ))}
+        </div>
+
+        {viewMode === 'day' ? (
+          // Day View Mode
+          <>
+            {/* Date Navigation */}
+            <Card variant="outlined" padding="sm">
+              <div className="flex items-center">
+                {/* Left side - equal width container */}
+                <div className="flex-1 flex items-center justify-start gap-1">
+                  <div className="relative">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={goToPreviousDay}
+                      aria-label="Previous day"
+                      className="p-1.5"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    {/* Red circle indicator for uncompleted tasks before selected date */}
+                    {hasTasksBeforeSelectedDate && (
+                      <span
+                        className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full"
+                        title="You have uncompleted tasks from previous days"
+                      />
+                    )}
+                  </div>
+                  {/* Today button on left when viewing future dates */}
+                  {!isToday(selectedDate) && selectedDate > new Date() && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={goToToday}
+                      className="text-xs px-2 py-1"
+                      style={{ color: accentColor }}
+                    >
+                      <Calendar className="h-3 w-3 mr-1" />
+                      Today
+                    </Button>
+                  )}
+                </div>
+
+                {/* Date display - centered */}
+                <h2 className="text-base font-semibold text-secondary-900 dark:text-white text-center">
+                  {displayDate}
+                </h2>
+
+                {/* Right side - equal width container */}
+                <div className="flex-1 flex items-center justify-end gap-1">
+                  {/* Today button on right when viewing past dates */}
+                  {!isToday(selectedDate) && selectedDate < new Date() && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={goToToday}
+                      className="text-xs px-2 py-1"
+                      style={{ color: accentColor }}
+                    >
+                      Today
+                      <Calendar className="h-3 w-3 ml-1" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={goToNextDay}
+                    aria-label="Next day"
+                    className="p-1.5"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+
+            {/* Task List for selected day */}
+            <TaskList
+              tasks={dayTasks}
+              loading={dayLoading}
+              error={dayError}
+              onToggle={handleToggleDayTask}
+              onDelete={handleDeleteDayTask}
+              onEdit={handleEditDayTask}
+              onEditClick={handleEditClick}
+              onRetry={refetchDay}
+            />
+
+            {/* Task count */}
+            {!dayLoading && !dayError && dayTasks.length > 0 && (
+              <div className="text-center">
+                <p className="text-xs text-secondary-400 dark:text-secondary-500">
+                  {dayTasks.filter((t) => !t.completed).length} remaining
+                  {dayTasks.filter((t) => t.completed).length > 0 &&
+                    ` • ${dayTasks.filter((t) => t.completed).length} completed`}
+                </p>
+              </div>
+            )}
+          </>
+        ) : (
+          // Overview Mode (All or filtered by task type)
+          <>
+            {/* Loading state */}
+            {loading && (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="h-16 bg-secondary-200 dark:bg-secondary-700 rounded-lg" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Error state */}
+            {error && (
+              <Card variant="outlined" className="text-center py-6">
+                <AlertCircle className="h-8 w-8 mx-auto text-red-500 mb-2" />
+                <h3 className="text-base font-semibold text-secondary-700 dark:text-secondary-300 mb-1">
+                  Failed to load tasks
+                </h3>
+                <p className="text-xs text-secondary-500 dark:text-secondary-400 mb-3">{error}</p>
+                <Button variant="outline" size="sm" onClick={refetchAll}>
+                  Try Again
+                </Button>
+              </Card>
+            )}
+
+            {/* Task Overview - 2 column layout */}
+            {!loading && !error && filteredTasks && (
+              <>
+                {/* Two column layout: Dated tasks left, General tasks right */}
+                <div className="flex flex-col lg:flex-row gap-6">
+                  {/* Left column: Dated tasks (Overdue + Upcoming) */}
+                  <div className="flex-1 space-y-3">
+                    {/* Overdue Tasks */}
+                    {filteredTasks.overdue.length > 0 && (
+                      <div className="space-y-2">
+                        <h2 className="text-xs font-semibold text-red-500 dark:text-red-400 px-1 flex items-center gap-1.5">
+                          <AlertCircle className="h-3.5 w-3.5" />
+                          Overdue ({filteredTasks.overdue.length})
+                        </h2>
+                        <Card variant="outlined" padding="none">
+                          <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
+                            {filteredTasks.overdue.map((task) => (
+                              <div key={task.id} className="group">
+                                <TaskItem
+                                  task={task}
+                                  onToggle={handleToggleOverviewTask}
+                                  onDelete={handleDeleteOverviewTask}
+                                  onEdit={handleEditOverviewTask}
+                                  onEditClick={handleEditClick}
+                                  showDate={true}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </Card>
+                      </div>
+                    )}
+
+                    {/* Upcoming Tasks by date */}
+                    {filteredTasks.upcoming.length > 0 && (
+                      <div className="space-y-3">
+                        {Object.entries(groupedUpcomingTasks).map(([date, tasks]) => (
+                          <div key={date} className="space-y-2">
+                            <h2 className="text-xs font-semibold text-secondary-600 dark:text-secondary-400 px-1">
+                              {formatDateHeader(date)}
+                            </h2>
+                            <Card variant="outlined" padding="none">
+                              <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
+                                {tasks.map((task) => (
+                                  <div key={task.id} className="group">
+                                    <TaskItem
+                                      task={task}
+                                      onToggle={handleToggleOverviewTask}
+                                      onDelete={handleDeleteOverviewTask}
+                                      onEdit={handleEditOverviewTask}
+                                      onEditClick={handleEditClick}
+                                      showDate={false}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </Card>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Empty state for dated tasks */}
+                    {filteredTasks.overdue.length === 0 && filteredTasks.upcoming.length === 0 && (
+                      <Card variant="outlined" className="text-center py-8">
+                        <p className="text-sm text-secondary-500 dark:text-secondary-400">
+                          No dated tasks
+                        </p>
+                      </Card>
+                    )}
+                  </div>
+
+                  {/* Right column: General/Dateless Tasks */}
+                  <div className="flex-1 space-y-3">
+                    <h2 className="text-xs font-semibold text-secondary-600 dark:text-secondary-400 px-1">
+                      {viewMode === 'all' ? 'General Tasks' : viewMode} ({filteredTasks.dateless.length})
+                    </h2>
+                    {filteredTasks.dateless.length > 0 ? (
+                      <Card variant="outlined" padding="none">
+                        <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
+                          {filteredTasks.dateless.map((task) => (
+                            <div key={task.id} className="group">
+                              <TaskItem
+                                task={task}
+                                onToggle={handleToggleOverviewTask}
+                                onDelete={handleDeleteOverviewTask}
+                                onEdit={handleEditOverviewTask}
+                                onEditClick={handleEditClick}
+                                showDate={false}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    ) : (
+                      <Card variant="outlined" className="text-center py-8">
+                        <p className="text-sm text-secondary-500 dark:text-secondary-400">
+                          No general tasks
+                        </p>
+                      </Card>
+                    )}
+                  </div>
+                </div>
+
+                {/* Summary */}
+                {(filteredTasks.upcoming.length > 0 ||
+                  filteredTasks.dateless.length > 0 ||
+                  filteredTasks.overdue.length > 0) && (
+                    <div className="text-center">
+                      <p className="text-xs text-secondary-400 dark:text-secondary-500">
+                        {filteredTasks.overdue.length +
+                          filteredTasks.upcoming.length +
+                          filteredTasks.dateless.length}{' '}
+                        total tasks
+                        {filteredTasks.overdue.length > 0 && (
+                          <span className="text-red-500"> • {filteredTasks.overdue.length} overdue</span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+
+                {/* Completed Tasks Section (all views except 'day') */}
+                {viewMode !== 'day' && filteredCompletedTasks.length > 0 && (
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => setShowCompletedTasks(!showCompletedTasks)}
+                      className="w-full flex items-center justify-between px-1 py-1.5 text-xs font-semibold text-secondary-600 dark:text-secondary-400 hover:text-secondary-800 dark:hover:text-secondary-200 transition-colors"
+                    >
+                      <span>Completed Tasks ({filteredCompletedTasks.length})</span>
+                      {showCompletedTasks ? (
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      ) : (
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+
+                    {showCompletedTasks && (
+                      <div className="flex flex-col lg:flex-row gap-6 mt-2">
+                        {/* Left Column: Completed with Date */}
+                        <div className="flex-1 space-y-2">
+                          <h3 className="text-xs font-medium text-secondary-500 dark:text-secondary-400 px-1">
+                            With Due Date
+                          </h3>
+                          {filteredCompletedTasks.some((t) => t.date) ? (
+                            <Card variant="outlined" padding="none">
+                              <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
+                                {filteredCompletedTasks
+                                  .filter((task) => task.date)
+                                  .map((task) => (
+                                    <div key={task.id} className="group">
+                                      <TaskItem
+                                        task={task}
+                                        onToggle={handleToggleOverviewTask}
+                                        onDelete={handleDeleteOverviewTask}
+                                        onEdit={handleEditOverviewTask}
+                                        onEditClick={handleEditClick}
+                                        showDate={true}
+                                      />
+                                    </div>
+                                  ))}
+                              </div>
+                            </Card>
+                          ) : (
+                            <p className="text-xs text-secondary-400 italic px-1">None</p>
+                          )}
+                        </div>
+
+                        {/* Right Column: Completed without Date */}
+                        <div className="flex-1 space-y-2">
+                          <h3 className="text-xs font-medium text-secondary-500 dark:text-secondary-400 px-1">
+                            General
+                          </h3>
+                          {filteredCompletedTasks.some((t) => !t.date) ? (
+                            <Card variant="outlined" padding="none">
+                              <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
+                                {filteredCompletedTasks
+                                  .filter((task) => !task.date)
+                                  .map((task) => (
+                                    <div key={task.id} className="group">
+                                      <TaskItem
+                                        task={task}
+                                        onToggle={handleToggleOverviewTask}
+                                        onDelete={handleDeleteOverviewTask}
+                                        onEdit={handleEditOverviewTask}
+                                        onEditClick={handleEditClick}
+                                        showDate={false}
+                                      />
+                                    </div>
+                                  ))}
+                              </div>
+                            </Card>
+                          ) : (
+                            <p className="text-xs text-secondary-400 italic px-1">None</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
+
+        {/* Add/Edit Modal */}
+        <AddTaskModal
+          isOpen={isModalOpen}
+          onClose={handleModalClose}
+          onSave={handleSaveTask}
+          editingTask={editingTask}
+          existingTypes={taskTypes}
+          defaultDate={viewMode === 'day' ? selectedDateString : undefined}
+          defaultTag={viewMode !== 'all' && viewMode !== 'day' ? viewMode : undefined}
+        />
       </div>
 
-      {viewMode === 'day' ? (
-        // Day View Mode
-        <>
-          {/* Date Navigation */}
-          <Card variant="outlined" padding="sm">
-            <div className="flex items-center">
-              {/* Left side - equal width container */}
-              <div className="flex-1 flex items-center justify-start gap-1">
+      {/* Desktop View */}
+      <div className={desktopPageClasses}>
+        {/* Left Panel - Filters */}
+        <div className="w-64 flex-shrink-0 h-full border-r border-secondary-200 dark:border-secondary-800 bg-white dark:bg-secondary-900 flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="h-[60px] flex items-center justify-between px-4 border-b border-secondary-200 dark:border-secondary-800 flex-shrink-0">
+            <h1 className="text-xl font-bold text-secondary-900 dark:text-white">Tasks</h1>
+            <Button size="sm" onClick={handleAddClick} className="gap-1.5">
+              <Plus className="h-4 w-4" />
+              Add
+            </Button>
+          </div>
+
+          {/* Filter List */}
+          <div className="flex-1 overflow-y-auto p-3">
+            <div className="space-y-1">
+              <button
+                onClick={() => setViewMode('all')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${viewMode === 'all'
+                  ? 'text-white'
+                  : 'text-secondary-700 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
+                  }`}
+                style={viewMode === 'all' ? { backgroundColor: accentColor } : undefined}
+              >
+                <ListFilter className="h-4 w-4 flex-shrink-0" />
+                <span className="flex-1 text-left">All Tasks</span>
+                <span className="text-xs opacity-70">{filterCounts.all || 0}</span>
+              </button>
+
+              <button
+                onClick={() => setViewMode('day')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${viewMode === 'day'
+                  ? 'text-white'
+                  : 'text-secondary-700 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
+                  }`}
+                style={viewMode === 'day' ? { backgroundColor: accentColor } : undefined}
+              >
+                <CalendarDays className="h-4 w-4 flex-shrink-0" />
+                <span className="flex-1 text-left">Day View</span>
+                <span className="text-xs opacity-70">{filterCounts.day || 0}</span>
+              </button>
+
+              {taskTypes.length > 0 && (
+                <>
+                  <div className="pt-3 pb-1 px-3">
+                    <span className="text-xs font-semibold text-secondary-500 dark:text-secondary-400 uppercase tracking-wider">Tags</span>
+                  </div>
+                  {taskTypes.map((type) => {
+                    const taskCount = filterCounts[type] || 0;
+                    const canDelete = taskCount === 0;
+                    return (
+                      <div key={type} className="group relative">
+                        <button
+                          onClick={() => setViewMode(type)}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${viewMode === type
+                            ? 'text-white'
+                            : 'text-secondary-700 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
+                            }`}
+                          style={viewMode === type ? { backgroundColor: accentColor } : undefined}
+                        >
+                          <Tag className="h-4 w-4 flex-shrink-0" />
+                          <span className="flex-1 text-left">{type}</span>
+                          <span className={`text-xs opacity-70 ${canDelete ? 'group-hover:hidden' : ''}`}>{taskCount}</span>
+                        </button>
+                        {canDelete && (
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Remove tag "${type}" from all tasks?`)) {
+                                // Reset to 'all' view if currently viewing this tag
+                                if (viewMode === type) {
+                                  setViewMode('all');
+                                }
+                                await deleteAllTag(type);
+                              }
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-secondary-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remove unused tag"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Panel - Content */}
+        <div className="flex-1 flex flex-col overflow-hidden bg-light-bg dark:bg-secondary-900">
+          {/* Header */}
+          <div className="h-[60px] flex items-center justify-between px-6 border-b border-secondary-200 dark:border-secondary-800 bg-white dark:bg-secondary-900 flex-shrink-0">
+            <h2 className="text-lg font-semibold text-secondary-900 dark:text-white">
+              {viewMode === 'all' ? 'All Tasks' : viewMode === 'day' ? displayDate : viewMode}
+            </h2>
+            {viewMode === 'day' && (
+              <div className="flex items-center gap-2">
                 <div className="relative">
                   <Button
                     variant="ghost"
@@ -368,7 +812,6 @@ function TasksPageContent() {
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  {/* Red circle indicator for uncompleted tasks before selected date */}
                   {hasTasksBeforeSelectedDate && (
                     <span
                       className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full"
@@ -376,30 +819,7 @@ function TasksPageContent() {
                     />
                   )}
                 </div>
-                {/* Today button on left when viewing future dates */}
-                {!isToday(selectedDate) && selectedDate > new Date() && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={goToToday}
-                    className="text-xs px-2 py-1"
-                    style={{ color: accentColor }}
-                  >
-                    <Calendar className="h-3 w-3 mr-1" />
-                    Today
-                  </Button>
-                )}
-              </div>
-
-              {/* Date display - centered */}
-              <h2 className="text-base font-semibold text-secondary-900 dark:text-white text-center">
-                {displayDate}
-              </h2>
-
-              {/* Right side - equal width container */}
-              <div className="flex-1 flex items-center justify-end gap-1">
-                {/* Today button on right when viewing past dates */}
-                {!isToday(selectedDate) && selectedDate < new Date() && (
+                {!isToday(selectedDate) && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -408,7 +828,6 @@ function TasksPageContent() {
                     style={{ color: accentColor }}
                   >
                     Today
-                    <Calendar className="h-3 w-3 ml-1" />
                   </Button>
                 )}
                 <Button
@@ -421,104 +840,60 @@ function TasksPageContent() {
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
-          </Card>
+            )}
+          </div>
 
-          {/* Task List for selected day */}
-          <TaskList
-            tasks={dayTasks}
-            loading={dayLoading}
-            error={dayError}
-            onToggle={handleToggleDayTask}
-            onDelete={handleDeleteDayTask}
-            onEdit={handleEditDayTask}
-            onEditClick={handleEditClick}
-            onRetry={refetchDay}
-          />
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {viewMode === 'day' ? (
+              <TaskList
+                tasks={dayTasks}
+                loading={dayLoading}
+                error={dayError}
+                onToggle={handleToggleDayTask}
+                onDelete={handleDeleteDayTask}
+                onEdit={handleEditDayTask}
+                onEditClick={handleEditClick}
+                onRetry={refetchDay}
+              />
+            ) : (
+              <>
+                {loading && (
+                  <div className="space-y-2">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="animate-pulse">
+                        <div className="h-16 bg-secondary-200 dark:bg-secondary-700 rounded-lg" />
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-          {/* Task count */}
-          {!dayLoading && !dayError && dayTasks.length > 0 && (
-            <div className="text-center">
-              <p className="text-xs text-secondary-400 dark:text-secondary-500">
-                {dayTasks.filter((t) => !t.completed).length} remaining
-                {dayTasks.filter((t) => t.completed).length > 0 &&
-                  ` • ${dayTasks.filter((t) => t.completed).length} completed`}
-              </p>
-            </div>
-          )}
-        </>
-      ) : (
-        // Overview Mode (All or filtered by task type)
-        <>
-          {/* Loading state */}
-          {loading && (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="h-16 bg-secondary-200 dark:bg-secondary-700 rounded-lg" />
-                </div>
-              ))}
-            </div>
-          )}
+                {error && (
+                  <Card variant="outlined" className="text-center py-6">
+                    <AlertCircle className="h-8 w-8 mx-auto text-red-500 mb-2" />
+                    <h3 className="text-base font-semibold text-secondary-700 dark:text-secondary-300 mb-1">
+                      Failed to load tasks
+                    </h3>
+                    <p className="text-xs text-secondary-500 dark:text-secondary-400 mb-3">{error}</p>
+                    <Button variant="outline" size="sm" onClick={refetchAll}>
+                      Try Again
+                    </Button>
+                  </Card>
+                )}
 
-          {/* Error state */}
-          {error && (
-            <Card variant="outlined" className="text-center py-6">
-              <AlertCircle className="h-8 w-8 mx-auto text-red-500 mb-2" />
-              <h3 className="text-base font-semibold text-secondary-700 dark:text-secondary-300 mb-1">
-                Failed to load tasks
-              </h3>
-              <p className="text-xs text-secondary-500 dark:text-secondary-400 mb-3">{error}</p>
-              <Button variant="outline" size="sm" onClick={refetchAll}>
-                Try Again
-              </Button>
-            </Card>
-          )}
-
-          {/* Task Overview - 2 column layout */}
-          {!loading && !error && filteredTasks && (
-            <>
-              {/* Two column layout: Dated tasks left, General tasks right */}
-              <div className="flex flex-col lg:flex-row gap-6">
-                {/* Left column: Dated tasks (Overdue + Upcoming) */}
-                <div className="flex-1 space-y-3">
-                  {/* Overdue Tasks */}
-                  {filteredTasks.overdue.length > 0 && (
-                    <div className="space-y-2">
-                      <h2 className="text-xs font-semibold text-red-500 dark:text-red-400 px-1 flex items-center gap-1.5">
-                        <AlertCircle className="h-3.5 w-3.5" />
-                        Overdue ({filteredTasks.overdue.length})
-                      </h2>
-                      <Card variant="outlined" padding="none">
-                        <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
-                          {filteredTasks.overdue.map((task) => (
-                            <div key={task.id} className="group">
-                              <TaskItem
-                                task={task}
-                                onToggle={handleToggleOverviewTask}
-                                onDelete={handleDeleteOverviewTask}
-                                onEdit={handleEditOverviewTask}
-                                onEditClick={handleEditClick}
-                                showDate={true}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </Card>
-                    </div>
-                  )}
-
-                  {/* Upcoming Tasks by date */}
-                  {filteredTasks.upcoming.length > 0 && (
-                    <div className="space-y-3">
-                      {Object.entries(groupedUpcomingTasks).map(([date, tasks]) => (
-                        <div key={date} className="space-y-2">
-                          <h2 className="text-xs font-semibold text-secondary-600 dark:text-secondary-400 px-1">
-                            {formatDateHeader(date)}
-                          </h2>
+                {!loading && !error && filteredTasks && (
+                  <div className="flex gap-6">
+                    {/* Left column: Dated tasks */}
+                    <div className="flex-1 space-y-3">
+                      {filteredTasks.overdue.length > 0 && (
+                        <div className="space-y-2">
+                          <h3 className="text-xs font-semibold text-red-500 dark:text-red-400 px-1 flex items-center gap-1.5">
+                            <AlertCircle className="h-3.5 w-3.5" />
+                            Overdue ({filteredTasks.overdue.length})
+                          </h3>
                           <Card variant="outlined" padding="none">
                             <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
-                              {tasks.map((task) => (
+                              {filteredTasks.overdue.map((task) => (
                                 <div key={task.id} className="group">
                                   <TaskItem
                                     task={task}
@@ -526,160 +901,91 @@ function TasksPageContent() {
                                     onDelete={handleDeleteOverviewTask}
                                     onEdit={handleEditOverviewTask}
                                     onEditClick={handleEditClick}
-                                    showDate={false}
+                                    showDate={true}
                                   />
                                 </div>
                               ))}
                             </div>
                           </Card>
                         </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Empty state for dated tasks */}
-                  {filteredTasks.overdue.length === 0 && filteredTasks.upcoming.length === 0 && (
-                    <Card variant="outlined" className="text-center py-8">
-                      <p className="text-sm text-secondary-500 dark:text-secondary-400">
-                        No dated tasks
-                      </p>
-                    </Card>
-                  )}
-                </div>
-
-                {/* Right column: General/Dateless Tasks */}
-                <div className="flex-1 space-y-3">
-                  <h2 className="text-xs font-semibold text-secondary-600 dark:text-secondary-400 px-1">
-                    {viewMode === 'all' ? 'General Tasks' : viewMode} ({filteredTasks.dateless.length})
-                  </h2>
-                  {filteredTasks.dateless.length > 0 ? (
-                    <Card variant="outlined" padding="none">
-                      <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
-                        {filteredTasks.dateless.map((task) => (
-                          <div key={task.id} className="group">
-                            <TaskItem
-                              task={task}
-                              onToggle={handleToggleOverviewTask}
-                              onDelete={handleDeleteOverviewTask}
-                              onEdit={handleEditOverviewTask}
-                              onEditClick={handleEditClick}
-                              showDate={false}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
-                  ) : (
-                    <Card variant="outlined" className="text-center py-8">
-                      <p className="text-sm text-secondary-500 dark:text-secondary-400">
-                        No general tasks
-                      </p>
-                    </Card>
-                  )}
-                </div>
-              </div>
-
-              {/* Summary */}
-              {(filteredTasks.upcoming.length > 0 ||
-                filteredTasks.dateless.length > 0 ||
-                filteredTasks.overdue.length > 0) && (
-                  <div className="text-center">
-                    <p className="text-xs text-secondary-400 dark:text-secondary-500">
-                      {filteredTasks.overdue.length +
-                        filteredTasks.upcoming.length +
-                        filteredTasks.dateless.length}{' '}
-                      total tasks
-                      {filteredTasks.overdue.length > 0 && (
-                        <span className="text-red-500"> • {filteredTasks.overdue.length} overdue</span>
                       )}
-                    </p>
+
+                      {filteredTasks.upcoming.length > 0 && (
+                        <div className="space-y-3">
+                          {Object.entries(groupedUpcomingTasks).map(([date, tasks]) => (
+                            <div key={date} className="space-y-2">
+                              <h3 className="text-xs font-semibold text-secondary-600 dark:text-secondary-400 px-1">
+                                {formatDateHeader(date)}
+                              </h3>
+                              <Card variant="outlined" padding="none">
+                                <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
+                                  {tasks.map((task) => (
+                                    <div key={task.id} className="group">
+                                      <TaskItem
+                                        task={task}
+                                        onToggle={handleToggleOverviewTask}
+                                        onDelete={handleDeleteOverviewTask}
+                                        onEdit={handleEditOverviewTask}
+                                        onEditClick={handleEditClick}
+                                        showDate={false}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </Card>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {filteredTasks.overdue.length === 0 && filteredTasks.upcoming.length === 0 && (
+                        <Card variant="outlined" className="text-center py-8">
+                          <p className="text-sm text-secondary-500 dark:text-secondary-400">
+                            No dated tasks
+                          </p>
+                        </Card>
+                      )}
+                    </div>
+
+                    {/* Right column: Dateless tasks */}
+                    <div className="flex-1 space-y-3">
+                      <h3 className="text-xs font-semibold text-secondary-600 dark:text-secondary-400 px-1">
+                        {viewMode === 'all' ? 'General Tasks' : viewMode} ({filteredTasks.dateless.length})
+                      </h3>
+                      {filteredTasks.dateless.length > 0 ? (
+                        <Card variant="outlined" padding="none">
+                          <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
+                            {filteredTasks.dateless.map((task) => (
+                              <div key={task.id} className="group">
+                                <TaskItem
+                                  task={task}
+                                  onToggle={handleToggleOverviewTask}
+                                  onDelete={handleDeleteOverviewTask}
+                                  onEdit={handleEditOverviewTask}
+                                  onEditClick={handleEditClick}
+                                  showDate={false}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </Card>
+                      ) : (
+                        <Card variant="outlined" className="text-center py-8">
+                          <p className="text-sm text-secondary-500 dark:text-secondary-400">
+                            No general tasks
+                          </p>
+                        </Card>
+                      )}
+                    </div>
                   </div>
                 )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
 
-              {/* Completed Tasks Section (all views except 'day') */}
-              {viewMode !== 'day' && filteredCompletedTasks.length > 0 && (
-                <div className="space-y-2">
-                  <button
-                    onClick={() => setShowCompletedTasks(!showCompletedTasks)}
-                    className="w-full flex items-center justify-between px-1 py-1.5 text-xs font-semibold text-secondary-600 dark:text-secondary-400 hover:text-secondary-800 dark:hover:text-secondary-200 transition-colors"
-                  >
-                    <span>Completed Tasks ({filteredCompletedTasks.length})</span>
-                    {showCompletedTasks ? (
-                      <ChevronUp className="h-3.5 w-3.5" />
-                    ) : (
-                      <ChevronDown className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-
-                  {showCompletedTasks && (
-                    <div className="flex flex-col lg:flex-row gap-6 mt-2">
-                      {/* Left Column: Completed with Date */}
-                      <div className="flex-1 space-y-2">
-                        <h3 className="text-xs font-medium text-secondary-500 dark:text-secondary-400 px-1">
-                          With Due Date
-                        </h3>
-                        {filteredCompletedTasks.some((t) => t.date) ? (
-                          <Card variant="outlined" padding="none">
-                            <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
-                              {filteredCompletedTasks
-                                .filter((task) => task.date)
-                                .map((task) => (
-                                  <div key={task.id} className="group">
-                                    <TaskItem
-                                      task={task}
-                                      onToggle={handleToggleOverviewTask}
-                                      onDelete={handleDeleteOverviewTask}
-                                      onEdit={handleEditOverviewTask}
-                                      onEditClick={handleEditClick}
-                                      showDate={true}
-                                    />
-                                  </div>
-                                ))}
-                            </div>
-                          </Card>
-                        ) : (
-                          <p className="text-xs text-secondary-400 italic px-1">None</p>
-                        )}
-                      </div>
-
-                      {/* Right Column: Completed without Date */}
-                      <div className="flex-1 space-y-2">
-                        <h3 className="text-xs font-medium text-secondary-500 dark:text-secondary-400 px-1">
-                          General
-                        </h3>
-                        {filteredCompletedTasks.some((t) => !t.date) ? (
-                          <Card variant="outlined" padding="none">
-                            <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
-                              {filteredCompletedTasks
-                                .filter((task) => !task.date)
-                                .map((task) => (
-                                  <div key={task.id} className="group">
-                                    <TaskItem
-                                      task={task}
-                                      onToggle={handleToggleOverviewTask}
-                                      onDelete={handleDeleteOverviewTask}
-                                      onEdit={handleEditOverviewTask}
-                                      onEditClick={handleEditClick}
-                                      showDate={false}
-                                    />
-                                  </div>
-                                ))}
-                            </div>
-                          </Card>
-                        ) : (
-                          <p className="text-xs text-secondary-400 italic px-1">None</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </>
-      )}
-
-      {/* Add/Edit Modal */}
+      {/* Modal (shared) */}
       <AddTaskModal
         isOpen={isModalOpen}
         onClose={handleModalClose}
@@ -689,7 +995,7 @@ function TasksPageContent() {
         defaultDate={viewMode === 'day' ? selectedDateString : undefined}
         defaultTag={viewMode !== 'all' && viewMode !== 'day' ? viewMode : undefined}
       />
-    </div>
+    </>
   );
 }
 

@@ -18,9 +18,7 @@ import { useThemeStore } from '@/stores/themeStore';
 import { useNotesStore } from '@/stores/notesStore';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
-import { useCanvases } from '../hooks/useCanvases';
-import { useCanvasGroups } from '../hooks/useCanvasGroups';
-import { useFolders } from '../hooks/useFolders';
+import { useNotesLibraryData } from '../hooks/useNotesLibraryData';
 import { LoadingSpinner } from '@/components/ui';
 import type { Note, Folder as FolderType, Canvas, CanvasGroup } from '@/lib/types';
 
@@ -644,9 +642,21 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
     currentCanvasId,
     loading: canvasLoading,
   } = useNotesStore();
-  const { canvases, loading: canvasesLoading, createCanvas, deleteCanvas, updateCanvas } = useCanvases();
-  const { groups: canvasGroups, loading: groupsLoading } = useCanvasGroups();
-  const { folders, loading: foldersLoading, createFolder, updateFolder, deleteFolder } = useFolders();
+
+  // Use combined hook for parallel data fetching (improves load time)
+  const {
+    canvases,
+    folders,
+    groups: canvasGroups,
+    loading: libraryDataLoading,
+    createCanvas,
+    updateCanvas,
+    deleteCanvas,
+    createFolder,
+    updateFolder,
+    deleteFolder,
+  } = useNotesLibraryData();
+
   const accentColor = useThemeStore((state) => state.accentColor);
 
   const [renameCanvasId, setRenameCanvasId] = useState<string | null>(null);
@@ -852,7 +862,7 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
     setRenameValue('');
   };
 
-  const isLoading = canvasesLoading || foldersLoading || groupsLoading;
+  const isLoading = libraryDataLoading;
 
   // Unified sorted list of items
   const sortedItems = [

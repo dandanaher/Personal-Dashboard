@@ -6,17 +6,18 @@ import { useThemeStore } from '@/stores/themeStore';
 import { useHabitLogs } from '../hooks';
 import { ContributionGraph } from './ContributionGraph';
 import { HabitDetailModal } from './HabitDetailModal';
-import type { Habit } from '@/lib/types';
+import type { Habit, HabitLog } from '@/lib/types';
 
 interface HabitCardProps {
   habit: Habit;
   onEdit: () => void;
   onDelete: () => void;
   onCompletionChange?: (habitId: string, isCompleted: boolean) => void;
+  initialLogs?: HabitLog[];
 }
 
-export function HabitCard({ habit, onEdit, onDelete, onCompletionChange }: HabitCardProps) {
-  const { logs, stats, toggleLog, loading } = useHabitLogs(habit.id);
+export function HabitCard({ habit, onEdit, onDelete, onCompletionChange, initialLogs }: HabitCardProps) {
+  const { logs, stats, toggleLog, loading } = useHabitLogs(habit.id, initialLogs);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const { accentColor } = useThemeStore();
 
@@ -88,9 +89,9 @@ export function HabitCard({ habit, onEdit, onDelete, onCompletionChange }: Habit
               style={
                 isCompletedToday
                   ? {
-                      backgroundColor: `${accentColor}30`,
-                      borderColor: `${accentColor}50`,
-                    }
+                    backgroundColor: `${accentColor}30`,
+                    borderColor: `${accentColor}50`,
+                  }
                   : undefined
               }
             >

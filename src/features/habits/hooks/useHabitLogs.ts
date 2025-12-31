@@ -23,9 +23,85 @@ interface UseHabitLogsReturn {
   refetch: () => Promise<void>;
 }
 
-export function useHabitLogs(habitId: string): UseHabitLogsReturn {
-  const [logs, setLogs] = useState<HabitLog[]>([]);
-  const [loading, setLoading] = useState(true);
+/**
+ * Calculate habit stats from a list of logs
+ */
+export function calculateHabitStats(logs: HabitLog[]): HabitStats {
+  if (logs.length === 0) {
+    return {
+      currentStreak: 0,
+      longestStreak: 0,
+      completionRate: 0,
+      completedDays: 0,
+      totalDays: 365,
+    };
+  }
+
+  // Get completed dates as a Set for quick lookup
+  const completedDates = new Set(logs.filter((log) => log.completed).map((log) => log.date));
+
+  const completedDays = completedDates.size;
+  const completionRate = Math.round((completedDays / 365) * 100);
+
+  // Calculate current streak (consecutive days up to today or yesterday)
+  let currentStreak = 0;
+  const today = startOfDay(new Date());
+  const todayStr = format(today, 'yyyy-MM-dd');
+  const todayCompleted = completedDates.has(todayStr);
+
+  // If today is completed, count from today backward
+  // If today is NOT completed, count from yesterday backward (giving user until end of day)
+  let checkDate = todayCompleted ? today : subDays(today, 1);
+
+  while (true) {
+    const dateStr = format(checkDate, 'yyyy-MM-dd');
+    if (completedDates.has(dateStr)) {
+      currentStreak++;
+      checkDate = subDays(checkDate, 1);
+    } else {
+      break;
+    }
+  }
+
+  // Calculate longest streak
+  let longestStreak = 0;
+  let tempStreak = 0;
+
+  // Sort dates chronologically
+  const sortedDates = Array.from(completedDates).sort();
+
+  for (let i = 0; i < sortedDates.length; i++) {
+    if (i === 0) {
+      tempStreak = 1;
+    } else {
+      const prevDate = parseISO(sortedDates[i - 1]);
+      const currDate = parseISO(sortedDates[i]);
+      const diff = differenceInDays(currDate, prevDate);
+
+      if (diff === 1) {
+        tempStreak++;
+      } else {
+        tempStreak = 1;
+      }
+    }
+
+    if (tempStreak > longestStreak) {
+      longestStreak = tempStreak;
+    }
+  }
+
+  return {
+    currentStreak,
+    longestStreak,
+    completionRate,
+    completedDays,
+    totalDays: 365,
+  };
+}
+
+export function useHabitLogs(habitId: string, initialLogs?: HabitLog[]): UseHabitLogsReturn {
+  const [logs, setLogs] = useState<HabitLog[]>(initialLogs || []);
+  const [loading, setLoading] = useState(!initialLogs);
   const [error, setError] = useState<string | null>(null);
 
   const { user } = useAuthStore();
@@ -141,83 +217,17 @@ export function useHabitLogs(habitId: string): UseHabitLogsReturn {
   );
 
   // Calculate stats from logs
-  const stats = useMemo((): HabitStats => {
-    if (logs.length === 0) {
-      return {
-        currentStreak: 0,
-        longestStreak: 0,
-        completionRate: 0,
-        completedDays: 0,
-        totalDays: 365,
-      };
-    }
-
-    // Get completed dates as a Set for quick lookup
-    const completedDates = new Set(logs.filter((log) => log.completed).map((log) => log.date));
-
-    const completedDays = completedDates.size;
-    const completionRate = Math.round((completedDays / 365) * 100);
-
-    // Calculate current streak (consecutive days up to today or yesterday)
-    let currentStreak = 0;
-    const today = startOfDay(new Date());
-    const todayStr = format(today, 'yyyy-MM-dd');
-    const todayCompleted = completedDates.has(todayStr);
-
-    // If today is completed, count from today backward
-    // If today is NOT completed, count from yesterday backward (giving user until end of day)
-    let checkDate = todayCompleted ? today : subDays(today, 1);
-
-    while (true) {
-      const dateStr = format(checkDate, 'yyyy-MM-dd');
-      if (completedDates.has(dateStr)) {
-        currentStreak++;
-        checkDate = subDays(checkDate, 1);
-      } else {
-        break;
-      }
-    }
-
-    // Calculate longest streak
-    let longestStreak = 0;
-    let tempStreak = 0;
-
-    // Sort dates chronologically
-    const sortedDates = Array.from(completedDates).sort();
-
-    for (let i = 0; i < sortedDates.length; i++) {
-      if (i === 0) {
-        tempStreak = 1;
-      } else {
-        const prevDate = parseISO(sortedDates[i - 1]);
-        const currDate = parseISO(sortedDates[i]);
-        const diff = differenceInDays(currDate, prevDate);
-
-        if (diff === 1) {
-          tempStreak++;
-        } else {
-          tempStreak = 1;
-        }
-      }
-
-      if (tempStreak > longestStreak) {
-        longestStreak = tempStreak;
-      }
-    }
-
-    return {
-      currentStreak,
-      longestStreak,
-      completionRate,
-      completedDays,
-      totalDays: 365,
-    };
-  }, [logs]);
+  const stats = useMemo(() => calculateHabitStats(logs), [logs]);
 
   // Initial fetch
   useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+    if (initialLogs) {
+      setLogs(initialLogs);
+      setLoading(false);
+    } else {
+      fetchLogs();
+    }
+  }, [fetchLogs, initialLogs]);
 
   // Real-time subscription
   useEffect(() => {

@@ -24,6 +24,8 @@ interface UseAllTasksReturn {
   toggleTask: (taskId: string) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   updateTask: (taskId: string, updates: TaskUpdate) => Promise<boolean>;
+  /** Delete a tag by clearing task_type for all tasks that use it */
+  deleteTag: (tag: string) => Promise<boolean>;
   refetch: () => Promise<void>;
 }
 
@@ -297,6 +299,38 @@ export function useAllTasks(): UseAllTasksReturn {
     [allTasks, sortTasks]
   );
 
+  /** Delete a tag by clearing task_type for all tasks that use it */
+  const deleteTag = useCallback(
+    async (tag: string): Promise<boolean> => {
+      if (!user) return false;
+
+      // Optimistic update: clear task_type for all tasks locally
+      setAllTasks((prev) =>
+        prev.map((t) => (t.task_type === tag ? { ...t, task_type: null } : t))
+      );
+
+      try {
+        const { error: updateError } = await supabase
+          .from('tasks')
+          .update({ task_type: null })
+          .eq('user_id', user.id)
+          .eq('task_type', tag);
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        return true;
+      } catch (err) {
+        logger.error('Error deleting tag:', err);
+        // Rollback by refetching
+        await fetchTasks();
+        return false;
+      }
+    },
+    [user, fetchTasks]
+  );
+
   // Initial fetch
   useEffect(() => {
     setLoading(true);
@@ -371,6 +405,7 @@ export function useAllTasks(): UseAllTasksReturn {
     toggleTask,
     deleteTask,
     updateTask,
+    deleteTag,
     refetch: fetchTasks,
   };
 }

@@ -1,7 +1,7 @@
 import { RefreshCw, Plus } from 'lucide-react';
 import { Card, Button } from '@/components/ui';
 import { HabitCard } from './HabitCard';
-import type { Habit } from '@/lib/types';
+import type { Habit, HabitLog } from '@/lib/types';
 
 interface HabitListProps {
   habits: Habit[];
@@ -12,6 +12,7 @@ interface HabitListProps {
   onRetry: () => void;
   onAddClick: () => void;
   onCompletionChange?: (habitId: string, isCompleted: boolean) => void;
+  logsByHabit?: Record<string, HabitLog[]>;
 }
 
 // Loading skeleton for habit card
@@ -56,6 +57,7 @@ export function HabitList({
   onRetry,
   onAddClick,
   onCompletionChange,
+  logsByHabit,
 }: HabitListProps) {
   // Error state
   if (error) {
@@ -126,6 +128,7 @@ export function HabitList({
           onEdit={() => onEdit(habit)}
           onDelete={() => onDelete(habit)}
           onCompletionChange={onCompletionChange}
+          initialLogs={logsByHabit?.[habit.id]}
         />
       ))}
     </div>

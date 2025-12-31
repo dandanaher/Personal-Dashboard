@@ -22,6 +22,7 @@ interface AddHabitModalProps {
     updates: { name: string; color: string; description?: string; habitType?: string }
   ) => Promise<boolean>;
   existingTypes?: string[];
+  defaultType?: string | null; // Pre-fill habit type when adding new habit
 }
 
 export function AddHabitModal({
@@ -31,6 +32,7 @@ export function AddHabitModal({
   editingHabit,
   onUpdate,
   existingTypes = [],
+  defaultType,
 }: AddHabitModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -56,10 +58,10 @@ export function AddHabitModal({
         setName('');
         setDescription('');
         setColor(HABIT_COLORS[0].value);
-        setHabitType('');
+        setHabitType(defaultType || '');
       }
     }
-  }, [isOpen, editingHabit]);
+  }, [isOpen, editingHabit, defaultType]);
 
   // Prevent body scroll when modal is open
   useScrollLock(isOpen);
