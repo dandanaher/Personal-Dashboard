@@ -1,1 +1,1 @@
-MyDash is my personal tracking app for everything
+MyDash is my personal tracking app
