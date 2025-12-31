@@ -120,11 +120,10 @@ function FolderItem({
     <div className="select-none">
       {/* Folder header */}
       <div
-        className={`group relative flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors ${
-          isDragOver
-            ? 'bg-accent-100 dark:bg-accent-900/20 border-2 border-dashed'
-            : 'hover:bg-secondary-100 dark:hover:bg-secondary-800'
-        }`}
+        className={`group relative flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors ${isDragOver
+          ? 'bg-accent-100 dark:bg-accent-900/20 border-2 border-dashed'
+          : 'hover:bg-secondary-100 dark:hover:bg-secondary-800'
+          }`}
         style={{
           paddingLeft: `${level * 16 + 8}px`,
           borderColor: isDragOver ? accentColor : 'transparent',
@@ -340,9 +339,8 @@ function NoteItem({
         draggable
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
-        className={`flex items-center gap-2 flex-1 min-w-0 text-secondary-600 dark:text-secondary-400 text-sm cursor-move text-left ${
-          isDragging ? 'opacity-50' : ''
-        }`}
+        className={`flex items-center gap-2 flex-1 min-w-0 text-secondary-600 dark:text-secondary-400 text-sm cursor-move text-left ${isDragging ? 'opacity-50' : ''
+          }`}
         style={{ paddingLeft }}
       >
         <FileText className="h-4 w-4 flex-shrink-0" style={noteIconStyle} />
@@ -498,11 +496,10 @@ function CanvasItem({
     <div className="select-none">
       {/* Canvas header */}
       <div
-        className={`group relative flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors ${
-          isDragOver
-            ? 'bg-accent-100 dark:bg-accent-900/20 border-2 border-dashed'
-            : 'hover:bg-secondary-100 dark:hover:bg-secondary-800'
-        }`}
+        className={`group relative flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors ${isDragOver
+          ? 'bg-accent-100 dark:bg-accent-900/20 border-2 border-dashed'
+          : 'hover:bg-secondary-100 dark:hover:bg-secondary-800'
+          }`}
         style={{
           paddingLeft: `${level * 16 + 8}px`,
           borderColor: isDragOver ? accentColor : 'transparent',
@@ -525,7 +522,7 @@ function CanvasItem({
               <ChevronRight className="h-4 w-4 flex-shrink-0" />
             )}
           </button>
-          
+
           <button
             onClick={onClick}
             className="flex items-center gap-2 flex-1 min-w-0 text-secondary-600 dark:text-secondary-400 text-sm"
@@ -718,14 +715,14 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
         // Optimistically we know which notes are in folder
         const notesInFolder = libraryNotes.filter(n => n.folder_id === folderId);
         if (notesInFolder.length > 0) {
-            await supabase
-              .from('notes')
-              .update({ folder_id: null })
-              .in('id', notesInFolder.map(n => n.id))
-              .eq('user_id', user.id);
+          await supabase
+            .from('notes')
+            .update({ folder_id: null })
+            .in('id', notesInFolder.map(n => n.id))
+            .eq('user_id', user.id);
         }
       }
-      
+
       await deleteFolder(folderId);
       await fetchLibraryNotes();
     }
@@ -737,7 +734,7 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
       addTab('note', noteId, 'New Note');
     }
   };
-  
+
   const handleAddNoteToCanvas = async (canvasId: string) => {
     const noteId = await createNote({ canvasId, title: 'New Note' });
     if (noteId) {
@@ -755,10 +752,10 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
     try {
       const { error } = await supabase
         .from('notes')
-        .update({ 
-          folder_id: folderId, 
+        .update({
+          folder_id: folderId,
           canvas_id: null, // Move out of canvas if it was in one
-          updated_at: new Date().toISOString() 
+          updated_at: new Date().toISOString()
         })
         .eq('id', noteId)
         .eq('user_id', user.id);
@@ -769,7 +766,7 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
       console.error('Failed to move note to folder:', error);
     }
   };
-  
+
   const handleNoteDropToCanvas = async (noteId: string, canvasId: string) => {
     const note = libraryNotes.find((n) => n.id === noteId);
     if (!note) return;
@@ -780,10 +777,10 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
     try {
       const { error } = await supabase
         .from('notes')
-        .update({ 
-          canvas_id: canvasId, 
+        .update({
+          canvas_id: canvasId,
           folder_id: null, // Move out of folder if it was in one
-          updated_at: new Date().toISOString() 
+          updated_at: new Date().toISOString()
         })
         .eq('id', noteId)
         .eq('user_id', user.id);
@@ -797,16 +794,16 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
 
   const handleDeleteCanvas = async (id: string) => {
     if (window.confirm('Delete this canvas? Notes inside will be moved to root.')) {
-        // Unlink notes first
+      // Unlink notes first
       const { user } = useAuthStore.getState();
       if (user) {
         const notesInCanvas = libraryNotes.filter(n => n.canvas_id === id);
         if (notesInCanvas.length > 0) {
-            await supabase
-              .from('notes')
-              .update({ canvas_id: null })
-              .in('id', notesInCanvas.map(n => n.id))
-              .eq('user_id', user.id);
+          await supabase
+            .from('notes')
+            .update({ canvas_id: null })
+            .in('id', notesInCanvas.map(n => n.id))
+            .eq('user_id', user.id);
         }
       }
 
@@ -897,7 +894,7 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
                 <ChevronLeft className="h-4 w-4" />
               </button>
             )}
-            <h2 className="font-semibold text-secondary-900 dark:text-white">Notes</h2>
+            <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">Notes</h1>
           </div>
           <div className="flex items-center gap-1">
             <button

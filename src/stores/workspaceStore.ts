@@ -102,22 +102,21 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       closeTab: (tabId: string) => {
         const { tabs, activeTabId } = get();
 
-        // Don't allow closing the last tab
-        if (tabs.length <= 1) {
-          return;
-        }
-
         const tabIndex = tabs.findIndex((t) => t.id === tabId);
         if (tabIndex === -1) return;
 
         const newTabs = tabs.filter((t) => t.id !== tabId);
 
-        // If closing the active tab, switch to another tab
+        // If closing the active tab, switch to another tab (or empty if no tabs left)
         let newActiveTabId = activeTabId;
         if (activeTabId === tabId) {
-          // Prefer the tab to the left, otherwise to the right
-          const newIndex = tabIndex > 0 ? tabIndex - 1 : 0;
-          newActiveTabId = newTabs[newIndex]?.id || newTabs[0]?.id || 'home';
+          if (newTabs.length === 0) {
+            newActiveTabId = '';
+          } else {
+            // Prefer the tab to the left, otherwise to the right
+            const newIndex = tabIndex > 0 ? tabIndex - 1 : 0;
+            newActiveTabId = newTabs[newIndex]?.id || newTabs[0]?.id || '';
+          }
         }
 
         set({
