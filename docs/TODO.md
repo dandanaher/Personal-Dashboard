@@ -98,6 +98,7 @@
 
 ## Completed Recently
 
+- [x] Animated sidebar logo with theme-aware variants
 - [x] Mobile canvas bug fixes (background gap, edit button)
 - [x] Tasks QOL improvements
 - [x] Goals QOL improvements
@@ -105,6 +106,7 @@
 - [x] Memoized derived task lists
 - [x] Centralized goal progress calculations
 - [x] Limited Supabase logging to dev builds
+- [x] Desktop view updates to homepage, tasks, goals, habits and workouts pages
 
 ## Notes for Maintainers
 
@@ -130,4 +132,4 @@ When updating Supabase schema:
 
 ---
 
-*Last updated: 2025-12-30*
+*Last updated: 2025-12-31*

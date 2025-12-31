@@ -65,7 +65,8 @@ src/
 │   │   │   └── HabitStats.tsx
 │   │   └── hooks/
 │   │       ├── useHabits.ts
-│   │       └── useHabitLogs.ts
+│   │       ├── useHabitLogs.ts
+│   │       └── useAllHabitLogs.ts
 │   │
 │   ├── workout/         # Workout logging feature
 │   │   ├── WorkoutPage.tsx
@@ -114,7 +115,8 @@ src/
 │   │   └── hooks/
 │   │       ├── useCanvases.ts
 │   │       ├── useCanvasGroups.ts
-│   │       └── useFolders.ts
+│   │       ├── useFolders.ts
+│   │       └── useNotesLibraryData.ts
 │   │
 │   └── gamification/    # XP and rank system
 │       ├── utils.ts     # XP calculations, rank definitions
@@ -130,6 +132,7 @@ src/
 │
 ├── hooks/               # Shared custom hooks
 │   ├── useAuth.ts       # Authentication hook
+│   ├── useDoubleTap.ts  # Double-tap gesture detection
 │   └── useScrollLock.ts # Scroll lock utility
 │
 ├── lib/                 # Core utilities
@@ -137,6 +140,10 @@ src/
 │   ├── types.ts         # TypeScript type definitions
 │   ├── logger.ts        # Logging utility
 │   └── dateUtils.ts     # Date formatting helpers
+│
+├── utils/               # Utility functions
+│   ├── faviconUtils.ts  # Dynamic favicon utilities
+│   └── gifUtils.ts      # GIF processing utilities
 │
 ├── pages/               # Page-level components
 │   ├── HomePage.tsx     # Dashboard home page
@@ -293,4 +300,4 @@ Route preloading is available via `preloadRoute()` for instant navigation on hov
 
 ---
 
-*Last updated: 2025-12-30*
+*Last updated: 2025-12-31*

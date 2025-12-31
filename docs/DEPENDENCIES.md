@@ -17,6 +17,7 @@
 | `@uiw/react-md-editor` | ^4.0.11 | Markdown editor for notes content |
 | `browser-image-compression` | ^2.0.2 | Client-side image compression before upload |
 | `react-player` | ^3.4.0 | Video/media player (for embedded content) |
+| `omggif` | ^1.0.10 | GIF parsing and frame extraction |
 
 ## Dev Dependencies
 
@@ -37,6 +38,7 @@
 | `prettier` | ^3.1.1 | Code formatter |
 | `@types/react` | ^18.2.45 | TypeScript definitions for React |
 | `@types/react-dom` | ^18.2.18 | TypeScript definitions for ReactDOM |
+| `@types/omggif` | ^1.0.5 | TypeScript definitions for omggif |
 
 ## Dependency Details
 
@@ -106,6 +108,8 @@
 
 **browser-image-compression** reduces image sizes before upload to storage.
 
+**omggif** is used for parsing GIF files and extracting frames for the animated logo feature.
+
 ## Version Constraints
 
 - Node.js 18+ required for native fetch and modern ES features
@@ -131,4 +135,4 @@ npm update
 
 ---
 
-*Last updated: 2025-12-30*
+*Last updated: 2025-12-31*

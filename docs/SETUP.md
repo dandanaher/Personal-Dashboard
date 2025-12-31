@@ -306,7 +306,7 @@ This will:
 
 ## Deployment
 
-The app is configured to deploy to GitHub Pages with a base path of `/Personal-Dashboard/`. To deploy elsewhere:
+The app is configured to deploy to GitHub Pages with a base path of `/MyDash/`. To deploy elsewhere:
 
 1. Update `base` in `vite.config.ts`
 2. Update `start_url` and `scope` in the PWA manifest
@@ -344,4 +344,4 @@ For Vercel, Netlify, or similar:
 
 ---
 
-*Last updated: 2025-12-30*
+*Last updated: 2025-12-31*
