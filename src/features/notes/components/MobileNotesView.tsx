@@ -2,8 +2,10 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Plus, FileText, Layout, MoreVertical, Edit2, Trash2, Folder, FolderPlus, ChevronRight, ChevronDown, ArrowLeft } from 'lucide-react';
 import { Button, Card, LoadingSpinner } from '@/components/ui';
 import { useThemeStore } from '@/stores/themeStore';
+import { useAuthStore } from '@/stores/authStore';
 import { useNotesStore } from '@/stores/notesStore';
 import { useCanvases, useFolders } from '../hooks';
+import { supabase } from '@/lib/supabase';
 import type { Note, Canvas, Folder as FolderType } from '@/lib/types';
 
 type FilterType = 'all' | 'notes' | 'canvases' | 'folders';
@@ -166,8 +168,21 @@ export function MobileNotesView({ onNoteClick, onCanvasClick }: MobileNotesViewP
     };
 
     const handleDeleteFolder = async (folderId: string) => {
-        if (window.confirm('Delete this folder and all its contents?')) {
+        if (window.confirm('Delete this folder? Notes inside will be moved to root.')) {
+            // Unlink notes from this folder before deletion
+            const { user } = useAuthStore.getState();
+            if (user) {
+                const notesInFolder = libraryNotes.filter(n => n.folder_id === folderId);
+                if (notesInFolder.length > 0) {
+                    await supabase
+                        .from('notes')
+                        .update({ folder_id: null })
+                        .in('id', notesInFolder.map(n => n.id))
+                        .eq('user_id', user.id);
+                }
+            }
             await deleteFolder(folderId);
+            await fetchLibraryNotes(); // Refresh to show unlinked notes
         }
         setActiveMenu(null);
     };
@@ -377,7 +392,7 @@ export function MobileNotesView({ onNoteClick, onCanvasClick }: MobileNotesViewP
                         };
 
                         return (
-                            <Card key={id} variant="outlined" padding="none" className="relative overflow-hidden">
+                            <Card key={id} variant="outlined" padding="none" className="relative">
                                 <button
                                     onClick={handleClick}
                                     className="w-full flex items-center gap-3 p-4 text-left hover:bg-secondary-50 dark:hover:bg-secondary-800/50 transition-colors"
