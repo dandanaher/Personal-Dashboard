@@ -17,7 +17,8 @@
       "Bash(mkdir:*)",
       "Skill(cleanup)",
       "Bash(dir:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []
