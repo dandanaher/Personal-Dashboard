@@ -4,10 +4,10 @@
 import logoSrc from '../assets/mydash-logo.png';
 
 // Background colors for theme (style does not affect background color)
-// Light mode: #FAF9F4, Dark mode: #313131
+// Light mode: #FAF9F4, Dark mode: #202021
 const BACKGROUND_COLORS = {
   light: '#FAF9F4',
-  dark: '#313131', // rgb(49, 49, 49)
+  dark: '#202021', // rgb(32, 32, 33)
 };
 
 // Cache the base image and loading promise to avoid race conditions

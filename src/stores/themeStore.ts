@@ -69,7 +69,7 @@ const MODERN_VARS = {
   '--color-secondary-600': '100 100 100',
   '--color-secondary-700': '75 75 75',
   '--color-secondary-800': '50 50 50',
-  '--color-secondary-900': '49 49 49',
+  '--color-secondary-900': '32 32 33',
   '--color-secondary-950': '18 18 18',
 };
 
@@ -97,7 +97,7 @@ const RETRO_VARS = {
   '--color-secondary-600': '100 100 100',
   '--color-secondary-700': '75 75 75',
   '--color-secondary-800': '50 50 50',
-  '--color-secondary-900': '49 49 49',
+  '--color-secondary-900': '32 32 33',
   '--color-secondary-950': '18 18 18',
 };
 

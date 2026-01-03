@@ -2,9 +2,8 @@ import { useEffect, useState, useRef } from 'react';
 import { useThemeStore } from '@/stores/themeStore';
 import { generateColoredLogoDataUrl } from '@/utils/faviconUtils';
 import { extractAndRecolorGifFrames, GifFrame } from '@/utils/gifUtils';
-import logoDarkModern from '@/assets/logo-darkmode-modern.gif';
-import logoDarkRetro from '@/assets/logo-darkmode-retro.gif';
-import logoLight from '@/assets/logo-lightmode.gif';
+import logoDark from '@/assets/logo-dark.gif';
+import logoLight from '@/assets/logo-light.gif';
 import carouselDark from '@/assets/carousel-dark.gif';
 import carouselLight from '@/assets/carousel-light.gif';
 
@@ -34,20 +33,15 @@ export function DynamicLogo({ size = 40, className = '' }: DynamicLogoProps) {
     generateColoredLogoDataUrl(accentColor, darkMode, stylePreset, size).then(setLogoUrl);
   }, [accentColor, darkMode, stylePreset, size]);
 
-  // Pre-load and recolor logo GIF frames based on current theme and style
+  // Pre-load and recolor logo GIF frames based on current theme
   useEffect(() => {
-    let gifSrc = logoLight;
-    let colorMode: 'light' | 'dark' = 'light';
-
-    if (darkMode) {
-      colorMode = 'dark';
-      gifSrc = stylePreset === 'retro' ? logoDarkRetro : logoDarkModern;
-    }
+    const gifSrc = darkMode ? logoDark : logoLight;
+    const colorMode: 'light' | 'dark' = darkMode ? 'dark' : 'light';
 
     extractAndRecolorGifFrames(gifSrc, accentColor, size, colorMode)
       .then(setLogoFrames)
       .catch(err => console.error('Failed to load animated logo:', err));
-  }, [accentColor, size, darkMode, stylePreset]);
+  }, [accentColor, size, darkMode]);
 
   // Pre-load and recolor carousel GIF frames based on current theme only
   useEffect(() => {
