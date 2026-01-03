@@ -137,6 +137,8 @@ export const useThemeStore = create<ThemeState>()(
       },
       toggleDarkMode: () => {
         const newDarkMode = !get().darkMode;
+        // Disable transitions during theme switch for instant visual update
+        document.documentElement.classList.add('switching-theme');
         set({ darkMode: newDarkMode });
         if (newDarkMode) {
           document.documentElement.classList.add('dark');
@@ -148,8 +150,14 @@ export const useThemeStore = create<ThemeState>()(
         // Update favicon with new dark mode
         const { accentColor, stylePreset } = get();
         updateFavicon(accentColor, newDarkMode, stylePreset);
+        // Re-enable transitions after paint
+        requestAnimationFrame(() => {
+          document.documentElement.classList.remove('switching-theme');
+        });
       },
       setDarkMode: (isDark: boolean) => {
+        // Disable transitions during theme switch for instant visual update
+        document.documentElement.classList.add('switching-theme');
         set({ darkMode: isDark });
         if (isDark) {
           document.documentElement.classList.add('dark');
@@ -161,6 +169,10 @@ export const useThemeStore = create<ThemeState>()(
         // Update favicon with new dark mode
         const { accentColor, stylePreset } = get();
         updateFavicon(accentColor, isDark, stylePreset);
+        // Re-enable transitions after paint
+        requestAnimationFrame(() => {
+          document.documentElement.classList.remove('switching-theme');
+        });
       },
       setStylePreset: (style: 'modern' | 'retro') => {
         const currentStyle = get().stylePreset;

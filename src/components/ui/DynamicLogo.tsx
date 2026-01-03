@@ -16,67 +16,85 @@ interface DynamicLogoProps {
  * Dynamic logo colored with user's theme colors
  * White pixels -> accent color, black pixels -> background color
  * Plays an animation on hover
+ *
+ * Both light and dark frame sets are pre-loaded so theme can be switched
+ * mid-animation without visual glitches - the animation continues from the
+ * same frame, just with the new theme's colors.
  */
 export function DynamicLogo({ size = 40, className = '' }: DynamicLogoProps) {
   const [logoUrl, setLogoUrl] = useState<string>('');
-  const [logoFrames, setLogoFrames] = useState<GifFrame[]>([]);
-  const [carouselFrames, setCarouselFrames] = useState<GifFrame[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
   const frameIndexRef = useRef(0);
   const useCarouselNextRef = useRef(false);
+
+  // Track which animation type is currently playing
+  const playingAnimationTypeRef = useRef<'logo' | 'carousel' | null>(null);
+
+  // Store frame sets in refs so animation loop can access latest values
+  const logoFramesLightRef = useRef<GifFrame[]>([]);
+  const logoFramesDarkRef = useRef<GifFrame[]>([]);
+  const carouselFramesLightRef = useRef<GifFrame[]>([]);
+  const carouselFramesDarkRef = useRef<GifFrame[]>([]);
+
   const { accentColor, darkMode, stylePreset } = useThemeStore();
+
+  // Keep darkMode in a ref so animation loop can read current value
+  // Updated synchronously during render (not in useEffect) to avoid frame delay
+  const darkModeRef = useRef(darkMode);
+  darkModeRef.current = darkMode;
 
   // Load static logo
   useEffect(() => {
     generateColoredLogoDataUrl(accentColor, darkMode, stylePreset, size).then(setLogoUrl);
   }, [accentColor, darkMode, stylePreset, size]);
 
-  // Pre-load and recolor logo GIF frames based on current theme
+  // Pre-load and recolor BOTH light and dark logo GIF frames
   useEffect(() => {
-    const gifSrc = darkMode ? logoDark : logoLight;
-    const colorMode: 'light' | 'dark' = darkMode ? 'dark' : 'light';
+    Promise.all([
+      extractAndRecolorGifFrames(logoLight, accentColor, size, 'light'),
+      extractAndRecolorGifFrames(logoDark, accentColor, size, 'dark'),
+    ])
+      .then(([lightFrames, darkFrames]) => {
+        logoFramesLightRef.current = lightFrames;
+        logoFramesDarkRef.current = darkFrames;
+      })
+      .catch(err => console.error('Failed to load logo animations:', err));
+  }, [accentColor, size]);
 
-    extractAndRecolorGifFrames(gifSrc, accentColor, size, colorMode)
-      .then(setLogoFrames)
-      .catch(err => console.error('Failed to load animated logo:', err));
-  }, [accentColor, size, darkMode]);
-
-  // Pre-load and recolor carousel GIF frames based on current theme only
+  // Pre-load and recolor BOTH light and dark carousel GIF frames
   useEffect(() => {
-    const gifSrc = darkMode ? carouselDark : carouselLight;
-    const colorMode: 'light' | 'dark' = darkMode ? 'dark' : 'light';
+    Promise.all([
+      extractAndRecolorGifFrames(carouselLight, accentColor, size, 'light'),
+      extractAndRecolorGifFrames(carouselDark, accentColor, size, 'dark'),
+    ])
+      .then(([lightFrames, darkFrames]) => {
+        carouselFramesLightRef.current = lightFrames;
+        carouselFramesDarkRef.current = darkFrames;
+      })
+      .catch(err => console.error('Failed to load carousel animations:', err));
+  }, [accentColor, size]);
 
-    extractAndRecolorGifFrames(gifSrc, accentColor, size, colorMode)
-      .then(setCarouselFrames)
-      .catch(err => console.error('Failed to load carousel animation:', err));
-  }, [accentColor, size, darkMode]);
+  // Get the current frame set based on animation type and current dark mode
+  const getCurrentFrames = (): GifFrame[] => {
+    const animType = playingAnimationTypeRef.current;
+    const isDark = darkModeRef.current;
 
-  const activeFramesRef = useRef<GifFrame[]>([]);
-
-  const startAnimation = () => {
-    // Determine which frame set to use
-    const useCarousel = useCarouselNextRef.current;
-    const framesToPlay = useCarousel ? carouselFrames : logoFrames;
-
-    if (isPlaying || framesToPlay.length === 0) return;
-
-    // Toggle for next hover
-    useCarouselNextRef.current = !useCarouselNextRef.current;
-
-    // Store active frames for playNextFrame to use
-    activeFramesRef.current = framesToPlay;
-
-    setIsPlaying(true);
-    frameIndexRef.current = 0;
-    playNextFrame();
+    if (animType === 'carousel') {
+      return isDark ? carouselFramesDarkRef.current : carouselFramesLightRef.current;
+    }
+    return isDark ? logoFramesDarkRef.current : logoFramesLightRef.current;
   };
 
   const playNextFrame = () => {
-    const frames = activeFramesRef.current;
+    // Dynamically get frames based on current darkMode (allows mid-animation switching)
+    const frames = getCurrentFrames();
+
     if (!canvasRef.current || frameIndexRef.current >= frames.length) {
       setIsPlaying(false);
+      playingAnimationTypeRef.current = null;
       return;
     }
 
@@ -90,6 +108,26 @@ export function DynamicLogo({ size = 40, className = '' }: DynamicLogoProps) {
       frameIndexRef.current++;
       playNextFrame();
     }, frame.delay);
+  };
+
+  const startAnimation = () => {
+    // Determine which animation type to use
+    const useCarousel = useCarouselNextRef.current;
+    const framesToCheck = useCarousel
+      ? (darkMode ? carouselFramesDarkRef.current : carouselFramesLightRef.current)
+      : (darkMode ? logoFramesDarkRef.current : logoFramesLightRef.current);
+
+    if (isPlaying || framesToCheck.length === 0) return;
+
+    // Toggle for next hover
+    useCarouselNextRef.current = !useCarouselNextRef.current;
+
+    // Store which animation type is playing
+    playingAnimationTypeRef.current = useCarousel ? 'carousel' : 'logo';
+
+    setIsPlaying(true);
+    frameIndexRef.current = 0;
+    playNextFrame();
   };
 
   useEffect(() => {

@@ -124,6 +124,12 @@
 /* Utility styles */
 @layer utilities {
 
+  /* Disable all transitions during theme switching for instant visual update */
+  .switching-theme,
+  .switching-theme * {
+    transition-duration: 0s !important;
+  }
+
   /* Hide scrollbar but keep functionality */
   .scrollbar-hide {
     -ms-overflow-style: none;
