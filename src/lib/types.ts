@@ -206,6 +206,24 @@ export interface HabitLog {
 }
 
 /**
+ * Mood log table row.
+ * Tracks daily mood with optional notes.
+ * Has UNIQUE constraint on (user_id, date).
+ */
+export interface MoodLog {
+  id: string;
+  user_id: string;
+  /** Date of the log entry in ISO format (YYYY-MM-DD) */
+  date: string;
+  /** Mood level from 1-5 (1=Bad, 2=Poor, 3=Okay, 4=Good, 5=Great) */
+  mood_level: 1 | 2 | 3 | 4 | 5;
+  /** Optional note about the mood */
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
  * Workout template table row.
  * Stores reusable workout routines with exercise definitions.
  */
@@ -274,6 +292,12 @@ export interface Database {
         Row: HabitLog;
         Insert: Omit<HabitLog, 'id' | 'created_at'>;
         Update: Partial<Omit<HabitLog, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      mood_logs: {
+        Row: MoodLog;
+        Insert: Omit<MoodLog, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<MoodLog, 'id' | 'created_at' | 'user_id'>>;
         Relationships: [];
       };
       workout_templates: {
@@ -348,6 +372,8 @@ export type HabitInsert = Database['public']['Tables']['habits']['Insert'];
 export type HabitUpdate = Database['public']['Tables']['habits']['Update'];
 export type HabitLogInsert = Database['public']['Tables']['habit_logs']['Insert'];
 export type HabitLogUpdate = Database['public']['Tables']['habit_logs']['Update'];
+export type MoodLogInsert = Database['public']['Tables']['mood_logs']['Insert'];
+export type MoodLogUpdate = Database['public']['Tables']['mood_logs']['Update'];
 export type WorkoutTemplateInsert = Database['public']['Tables']['workout_templates']['Insert'];
 export type WorkoutTemplateUpdate = Database['public']['Tables']['workout_templates']['Update'];
 export type WorkoutSessionInsert = Database['public']['Tables']['workout_sessions']['Insert'];

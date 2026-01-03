@@ -6,6 +6,7 @@ import { RankDisplay, SettingsMenu } from '@/features/gamification/components';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { DayOverview } from '@/components/DayOverview';
 import { DynamicLogo } from '@/components/ui/DynamicLogo';
+import { EditModeButton } from '@/features/homepage/components/EditModeButton';
 
 const RankOverview = lazy(() =>
   import('@/features/gamification/components/RankOverview').then((module) => ({
@@ -82,8 +83,11 @@ function HomePage() {
               <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-0.5">{userName}</p>
             </div>
           </div>
-          {/* MOBILE ONLY: Settings button here since Sidebar (which has settings) is hidden on mobile */}
-          <SettingsMenu />
+          {/* MOBILE ONLY: Edit and Settings buttons */}
+          <div className="flex items-center gap-2">
+            {!showRankOverview && <EditModeButton />}
+            <SettingsMenu />
+          </div>
         </div>
 
         {/* Rank Display */}
@@ -154,10 +158,11 @@ function HomePage() {
         {/* Right Panel - Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden bg-light-bg dark:bg-secondary-900">
           {/* Header */}
-          <div className="h-[60px] flex items-center px-6 border-b border-secondary-200 dark:border-secondary-800 bg-white dark:bg-secondary-900 flex-shrink-0">
+          <div className="h-[60px] flex items-center justify-between px-6 border-b border-secondary-200 dark:border-secondary-800 bg-white dark:bg-secondary-900 flex-shrink-0">
             <h2 className="text-lg font-semibold text-secondary-900 dark:text-white">
               {showRankOverview ? 'Rank Progress' : "Today's Overview"}
             </h2>
+            {!showRankOverview && <EditModeButton />}
           </div>
 
           {/* Content */}
