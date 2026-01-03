@@ -61,6 +61,52 @@ export function useAllHabitLogs(): UseAllHabitLogsReturn {
         fetchAllLogs();
     }, [fetchAllLogs]);
 
+    const upsertLog = useCallback((log: HabitLog) => {
+        setLogsByHabit((prev) => {
+            const next = { ...prev };
+            const list = next[log.habit_id] ? [...next[log.habit_id]] : [];
+            const existingIndex = list.findIndex((item) => item.id === log.id);
+            if (existingIndex === -1) {
+                list.push(log);
+            } else {
+                list[existingIndex] = log;
+            }
+            list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            next[log.habit_id] = list;
+            return next;
+        });
+    }, []);
+
+    const removeLog = useCallback((logId: string, habitId?: string) => {
+        setLogsByHabit((prev) => {
+            const next = { ...prev };
+            if (habitId && next[habitId]) {
+                const filtered = next[habitId].filter((log) => log.id !== logId);
+                if (filtered.length === 0) {
+                    delete next[habitId];
+                } else {
+                    next[habitId] = filtered;
+                }
+                return next;
+            }
+
+            let changed = false;
+            Object.keys(next).forEach((key) => {
+                const filtered = next[key].filter((log) => log.id !== logId);
+                if (filtered.length !== next[key].length) {
+                    changed = true;
+                    if (filtered.length === 0) {
+                        delete next[key];
+                    } else {
+                        next[key] = filtered;
+                    }
+                }
+            });
+
+            return changed ? next : prev;
+        });
+    }, []);
+
     // Subscribe to changes to ANY habit log for this user
     useEffect(() => {
         if (!user) return;
@@ -75,8 +121,21 @@ export function useAllHabitLogs(): UseAllHabitLogsReturn {
                     table: 'habit_logs',
                     filter: `user_id=eq.${user.id}`,
                 },
-                () => {
-                    fetchAllLogs();
+                (payload) => {
+                    if (payload.eventType === 'INSERT') {
+                        const newLog = payload.new as HabitLog;
+                        upsertLog(newLog);
+                    } else if (payload.eventType === 'UPDATE') {
+                        const updatedLog = payload.new as HabitLog;
+                        const previousHabitId = (payload.old as { habit_id?: string })?.habit_id;
+                        if (previousHabitId && previousHabitId !== updatedLog.habit_id) {
+                            removeLog(updatedLog.id, previousHabitId);
+                        }
+                        upsertLog(updatedLog);
+                    } else if (payload.eventType === 'DELETE') {
+                        const deleted = payload.old as { id: string; habit_id?: string };
+                        removeLog(deleted.id, deleted.habit_id);
+                    }
                 }
             )
             .subscribe();
@@ -84,7 +143,7 @@ export function useAllHabitLogs(): UseAllHabitLogsReturn {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user, fetchAllLogs]);
+    }, [user, upsertLog, removeLog]);
 
     return {
         logsByHabit,

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
+import { logger } from '@/lib/logger';
 import { getDailyTax } from '../utils';
 import type { UserXP } from '@/lib/types';
 
@@ -102,7 +103,7 @@ export function useRankDecay(): UseRankDecayReturn {
         // Update last decay date
         localStorage.setItem(LAST_DECAY_KEY, today);
 
-        console.log(`Applied ${actualTaxApplied} XP tax for ${daysMissed} missed days`);
+        logger.info(`Applied ${actualTaxApplied} XP tax for ${daysMissed} missed days`);
       } catch (err) {
         console.error('Error processing rank decay:', err);
         setError(err instanceof Error ? err.message : 'Failed to process rank decay');

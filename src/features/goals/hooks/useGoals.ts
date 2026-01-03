@@ -35,12 +35,35 @@ interface UseGoalsReturn {
   refetch: () => Promise<void>;
 }
 
-export function useGoals(filterType?: FilterType): UseGoalsReturn {
+interface UseGoalsOptions {
+  onlyActive?: boolean;
+  limit?: number;
+}
+
+export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {}): UseGoalsReturn {
+  const { onlyActive = false, limit } = options;
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [habitData, setHabitData] = useState<Map<string, HabitCompletionData>>(new Map());
   const { user } = useAuthStore();
+
+  function goalMatchesFilters(goal: Goal) {
+    if (onlyActive && goal.completed) return false;
+    if (filterType && filterType !== 'all' && goal.type !== filterType) return false;
+    return true;
+  }
+
+  const sortGoals = useCallback((goalsToSort: Goal[]) => {
+    return [...goalsToSort].sort((a, b) => {
+      if (!a.target_date && b.target_date) return 1;
+      if (a.target_date && !b.target_date) return -1;
+      if (a.target_date && b.target_date && a.target_date !== b.target_date) {
+        return new Date(a.target_date).getTime() - new Date(b.target_date).getTime();
+      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+  }, []);
 
   // Track goals currently being toggled to prevent double-toggling
   const togglingRef = useRef<Set<string>>(new Set());
@@ -51,12 +74,54 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
     new Map()
   );
 
+  const fetchHabitDataForIds = useCallback(
+    async (linkedHabitIds: string[]) => {
+      if (!user || linkedHabitIds.length === 0) {
+        return new Map<string, HabitCompletionData>();
+      }
+
+      // Fetch habit names
+      const { data: habits } = await supabase
+        .from('habits')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .in('id', linkedHabitIds);
+
+      // Fetch completion counts for each habit
+      const { data: logs } = await supabase
+        .from('habit_logs')
+        .select('habit_id')
+        .eq('user_id', user.id)
+        .eq('completed', true)
+        .in('habit_id', linkedHabitIds);
+
+      // Count completions per habit
+      const completionCounts = new Map<string, number>();
+      logs?.forEach((log: { habit_id: string }) => {
+        const current = completionCounts.get(log.habit_id) || 0;
+        completionCounts.set(log.habit_id, current + 1);
+      });
+
+      // Build habit data map
+      const newHabitData = new Map<string, HabitCompletionData>();
+      habits?.forEach((habit: { id: string; name: string }) => {
+        newHabitData.set(habit.id, {
+          habitId: habit.id,
+          habitName: habit.name,
+          completions: completionCounts.get(habit.id) || 0,
+        });
+      });
+
+      return newHabitData;
+    },
+    [user]
+  );
+
   // Fetch habit completion counts for linked goals
   const fetchHabitData = useCallback(
     async (goalsData: Goal[]) => {
       if (!user) return;
 
-      // Get unique habit IDs from goals
       const linkedHabitIds = [
         ...new Set(goalsData.filter((g) => g.linked_habit_id).map((g) => g.linked_habit_id!)),
       ];
@@ -67,43 +132,55 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
       }
 
       try {
-        // Fetch habit names
-        const { data: habits } = await supabase
-          .from('habits')
-          .select('id, name')
-          .in('id', linkedHabitIds);
-
-        // Fetch completion counts for each habit
-        const { data: logs } = await supabase
-          .from('habit_logs')
-          .select('habit_id')
-          .eq('user_id', user.id)
-          .eq('completed', true)
-          .in('habit_id', linkedHabitIds);
-
-        // Count completions per habit
-        const completionCounts = new Map<string, number>();
-        logs?.forEach((log: { habit_id: string }) => {
-          const current = completionCounts.get(log.habit_id) || 0;
-          completionCounts.set(log.habit_id, current + 1);
-        });
-
-        // Build habit data map
-        const newHabitData = new Map<string, HabitCompletionData>();
-        habits?.forEach((habit: { id: string; name: string }) => {
-          newHabitData.set(habit.id, {
-            habitId: habit.id,
-            habitName: habit.name,
-            completions: completionCounts.get(habit.id) || 0,
-          });
-        });
-
+        const newHabitData = await fetchHabitDataForIds(linkedHabitIds);
         setHabitData(newHabitData);
       } catch (err) {
         console.error('Failed to fetch habit data:', err);
       }
     },
-    [user]
+    [user, fetchHabitDataForIds]
+  );
+
+  const syncHabitDataForGoals = useCallback(
+    async (goalsData: Goal[]) => {
+      const linkedHabitIds = [
+        ...new Set(goalsData.filter((g) => g.linked_habit_id).map((g) => g.linked_habit_id!)),
+      ];
+
+      if (linkedHabitIds.length === 0) {
+        if (habitData.size > 0) setHabitData(new Map());
+        return;
+      }
+
+      const missingIds = linkedHabitIds.filter((id) => !habitData.has(id));
+      const removedIds = Array.from(habitData.keys()).filter(
+        (id) => !linkedHabitIds.includes(id)
+      );
+
+      if (removedIds.length > 0) {
+        setHabitData((prev) => {
+          const next = new Map(prev);
+          removedIds.forEach((id) => next.delete(id));
+          return next;
+        });
+      }
+
+      if (missingIds.length > 0) {
+        try {
+          const newHabitData = await fetchHabitDataForIds(missingIds);
+          setHabitData((prev) => {
+            const next = new Map(prev);
+            newHabitData.forEach((value, key) => {
+              next.set(key, value);
+            });
+            return next;
+          });
+        } catch (err) {
+          console.error('Failed to fetch habit data:', err);
+        }
+      }
+    },
+    [fetchHabitDataForIds, habitData]
   );
 
   // Fetch goals with optional filter
@@ -123,8 +200,16 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
         .order('target_date', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: false });
 
+      if (onlyActive) {
+        query = query.eq('completed', false);
+      }
+
       if (filterType && filterType !== 'all') {
         query = query.eq('type', filterType);
+      }
+
+      if (limit) {
+        query = query.limit(limit);
       }
 
       const { data, error: fetchError } = await query;
@@ -134,7 +219,7 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
         return;
       }
 
-      const goalsData = (data as Goal[]) || [];
+      const goalsData = sortGoals((data as Goal[]) || []);
       setGoals(goalsData);
 
       // Fetch habit data for linked goals
@@ -144,7 +229,7 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
     } finally {
       setLoading(false);
     }
-  }, [user, filterType, fetchHabitData]);
+  }, [user, filterType, fetchHabitData, onlyActive, limit, sortGoals]);
 
   // Add goal with optimistic update
   const addGoal = useCallback(
@@ -182,20 +267,19 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
         }
 
         const newGoal = data as Goal;
+        let didUpdate = false;
+        let nextGoalsSnapshot: Goal[] = [];
         setGoals((prev) => {
-          const newGoals = [newGoal, ...prev];
-          // Re-sort by target date
-          return newGoals.sort((a, b) => {
-            if (!a.target_date && !b.target_date) return 0;
-            if (!a.target_date) return 1;
-            if (!b.target_date) return -1;
-            return new Date(a.target_date).getTime() - new Date(b.target_date).getTime();
-          });
+          if (!goalMatchesFilters(newGoal)) return prev;
+          const sorted = sortGoals([...prev, newGoal]);
+          const limited = limit ? sorted.slice(0, limit) : sorted;
+          nextGoalsSnapshot = limited;
+          didUpdate = true;
+          return limited;
         });
 
-        // Refetch habit data if this goal is linked
-        if (newGoal.linked_habit_id) {
-          void fetchHabitData([...goals, newGoal]);
+        if (didUpdate) {
+          void syncHabitDataForGoals(nextGoalsSnapshot);
         }
 
         return newGoal;
@@ -204,7 +288,7 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
         return null;
       }
     },
-    [user, goals, fetchHabitData]
+    [user, filterType, onlyActive, limit, sortGoals, syncHabitDataForGoals]
   );
 
   // Update goal with optimistic update
@@ -214,11 +298,19 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
       const previousGoals = [...goals];
 
       // Optimistic update
-      setGoals((prev) =>
-        prev.map((g) =>
+      let didUpdate = false;
+      let nextGoalsSnapshot: Goal[] = [];
+      setGoals((prev) => {
+        const updated = prev.map((g) =>
           g.id === id ? { ...g, ...updates, updated_at: new Date().toISOString() } : g
-        )
-      );
+        );
+        const filtered = updated.filter(goalMatchesFilters);
+        const sorted = sortGoals(filtered);
+        const limited = limit ? sorted.slice(0, limit) : sorted;
+        nextGoalsSnapshot = limited;
+        didUpdate = true;
+        return limited;
+      });
 
       try {
         const { error: updateError } = await supabase.from('goals').update(updates).eq('id', id);
@@ -230,10 +322,11 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
           return false;
         }
 
-        // Refetch habit data if linked_habit_id changed
-        if ('linked_habit_id' in updates) {
-          const updatedGoals = goals.map((g) => (g.id === id ? { ...g, ...updates } : g));
-          void fetchHabitData(updatedGoals);
+        if (didUpdate) {
+          void syncHabitDataForGoals(nextGoalsSnapshot);
+          if (limit && nextGoalsSnapshot.length < limit) {
+            void fetchGoals();
+          }
         }
 
         return true;
@@ -244,7 +337,7 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
         return false;
       }
     },
-    [goals, fetchHabitData]
+    [goals, filterType, onlyActive, limit, sortGoals, syncHabitDataForGoals, fetchGoals]
   );
 
   // Update progress (quick action) with debouncing for database updates
@@ -253,13 +346,16 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
     const completed = clampedProgress >= 100;
 
     // Optimistic update immediately for responsive UI
-    setGoals((prev) =>
-      prev.map((g) =>
+    setGoals((prev) => {
+      const updated = prev.map((g) =>
         g.id === id
           ? { ...g, progress: clampedProgress, completed, updated_at: new Date().toISOString() }
           : g
-      )
-    );
+      );
+      const filtered = updated.filter(goalMatchesFilters);
+      const sorted = sortGoals(filtered);
+      return limit ? sorted.slice(0, limit) : sorted;
+    });
 
     // Store pending update
     pendingProgressRef.current.set(id, { progress: clampedProgress, completed });
@@ -291,7 +387,7 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
 
     progressDebounceRef.current.set(id, timer);
     return Promise.resolve(true);
-  }, []);
+  }, [filterType, onlyActive, limit, sortGoals]);
 
   // Toggle completion
   const toggleComplete = useCallback(
@@ -340,7 +436,16 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
       const previousGoals = [...goals];
 
       // Optimistic update
-      setGoals((prev) => prev.filter((g) => g.id !== id));
+      let didUpdate = false;
+      let nextGoalsSnapshot: Goal[] = [];
+      setGoals((prev) => {
+        const updated = prev.filter((g) => g.id !== id);
+        const sorted = sortGoals(updated);
+        const limited = limit ? sorted.slice(0, limit) : sorted;
+        nextGoalsSnapshot = limited;
+        didUpdate = true;
+        return limited;
+      });
 
       try {
         const { error: deleteError } = await supabase.from('goals').delete().eq('id', id);
@@ -352,6 +457,13 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
           return false;
         }
 
+        if (didUpdate) {
+          void syncHabitDataForGoals(nextGoalsSnapshot);
+          if (limit && nextGoalsSnapshot.length < limit) {
+            void fetchGoals();
+          }
+        }
+
         return true;
       } catch (err) {
         // Rollback on error
@@ -360,7 +472,7 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
         return false;
       }
     },
-    [goals]
+    [goals, limit, sortGoals, syncHabitDataForGoals, fetchGoals]
   );
 
   // Initial fetch
@@ -391,8 +503,60 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
           table: 'goals',
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
-          void fetchGoals();
+        (payload) => {
+          let didUpdate = false;
+          let nextGoalsSnapshot: Goal[] = [];
+
+            if (payload.eventType === 'INSERT') {
+              const newGoal = payload.new as Goal;
+              if (!goalMatchesFilters(newGoal)) return;
+              setGoals((prev) => {
+                if (prev.some((g) => g.id === newGoal.id)) return prev;
+                const sorted = sortGoals([...prev, newGoal]);
+                const limited = limit ? sorted.slice(0, limit) : sorted;
+                nextGoalsSnapshot = limited;
+                didUpdate = true;
+                return limited;
+              });
+            } else if (payload.eventType === 'UPDATE') {
+              const updatedGoal = payload.new as Goal;
+              setGoals((prev) => {
+                const exists = prev.some((g) => g.id === updatedGoal.id);
+                if (!goalMatchesFilters(updatedGoal)) {
+                  const filtered = prev.filter((g) => g.id !== updatedGoal.id);
+                  const sorted = sortGoals(filtered);
+                  const limited = limit ? sorted.slice(0, limit) : sorted;
+                  nextGoalsSnapshot = limited;
+                  didUpdate = true;
+                  return limited;
+                }
+                const merged = exists
+                  ? prev.map((g) => (g.id === updatedGoal.id ? updatedGoal : g))
+                  : [...prev, updatedGoal];
+                const sorted = sortGoals(merged);
+                const limited = limit ? sorted.slice(0, limit) : sorted;
+                nextGoalsSnapshot = limited;
+                didUpdate = true;
+                return limited;
+              });
+            } else if (payload.eventType === 'DELETE') {
+              const deletedId = (payload.old as { id: string }).id;
+              setGoals((prev) => {
+                const updated = prev.filter((g) => g.id !== deletedId);
+                const sorted = sortGoals(updated);
+                const limited = limit ? sorted.slice(0, limit) : sorted;
+                nextGoalsSnapshot = limited;
+                didUpdate = true;
+                return limited;
+              });
+            }
+
+          if (didUpdate) {
+            void syncHabitDataForGoals(nextGoalsSnapshot);
+            if (limit && nextGoalsSnapshot.length < limit) {
+              void fetchGoals();
+            }
+          }
         }
       )
       .subscribe();
@@ -400,15 +564,15 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [user, fetchGoals]);
+  }, [user, fetchGoals, filterType, onlyActive, limit, sortGoals, syncHabitDataForGoals]);
 
   // Real-time subscription for habit_logs (to update linked goal progress)
   useEffect(() => {
     if (!user) return;
 
     // Only subscribe if we have linked goals
-    const hasLinkedGoals = goals.some((g) => g.linked_habit_id);
-    if (!hasLinkedGoals) return;
+    const linkedHabitIds = Array.from(habitData.keys());
+    if (linkedHabitIds.length === 0) return;
 
     const channel = supabase
       .channel(`habit-logs-for-goals-${user.id}`)
@@ -420,8 +584,21 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
           table: 'habit_logs',
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
-          void fetchHabitData(goals);
+        (payload) => {
+          const habitId =
+            (payload.new as { habit_id?: string })?.habit_id ||
+            (payload.old as { habit_id?: string })?.habit_id;
+          if (!habitId || !linkedHabitIds.includes(habitId)) return;
+
+          void fetchHabitDataForIds([habitId]).then((updated) => {
+            const next = updated.get(habitId);
+            if (!next) return;
+            setHabitData((prev) => {
+              const nextMap = new Map(prev);
+              nextMap.set(habitId, next);
+              return nextMap;
+            });
+          });
         }
       )
       .subscribe();
@@ -429,7 +606,7 @@ export function useGoals(filterType?: FilterType): UseGoalsReturn {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [user, goals, fetchHabitData]);
+  }, [user, habitData, fetchHabitDataForIds]);
 
   return {
     goals,

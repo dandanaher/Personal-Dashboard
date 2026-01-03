@@ -6,6 +6,8 @@ import { useAuthStore } from '@/stores/authStore';
 import { useWorkoutSessionStore } from '@/stores/workoutSessionStore';
 import { useSidebarStore } from '@/stores/sidebarStore';
 import { useThemeStore } from '@/stores/themeStore';
+import { shallow } from 'zustand/shallow';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
 import TemplateList from './components/TemplateList';
 import TemplateBuilder from './components/TemplateBuilder';
 import WorkoutHistory from './components/WorkoutHistory';
@@ -123,7 +125,17 @@ function WorkoutPageContent() {
     activeTemplate,
     startWorkout: startWorkoutSession,
     resetSession,
-  } = useWorkoutSessionStore();
+  } = useStoreWithEqualityFn(
+    useWorkoutSessionStore,
+    (state) => ({
+      isActive: state.isActive,
+      isMinimized: state.isMinimized,
+      activeTemplate: state.activeTemplate,
+      startWorkout: state.startWorkout,
+      resetSession: state.resetSession,
+    }),
+    shallow
+  );
 
   // Handle template actions
   const handleCreateTemplate = async (

@@ -1,13 +1,14 @@
 /**
  * Development-only logging utility.
- * All log calls are no-ops in production builds.
+ * Set VITE_DEBUG_LOGS=true to enable verbose logs in dev.
  */
 
 const isDev = import.meta.env.DEV;
+const isDebugEnabled = isDev && import.meta.env.VITE_DEBUG_LOGS === 'true';
 
 export const logger = {
   log: (...args: unknown[]) => {
-    if (isDev) {
+    if (isDebugEnabled) {
       console.log(...args);
     }
   },
@@ -19,31 +20,31 @@ export const logger = {
   },
 
   warn: (...args: unknown[]) => {
-    if (isDev) {
+    if (isDebugEnabled) {
       console.warn(...args);
     }
   },
 
   info: (...args: unknown[]) => {
-    if (isDev) {
+    if (isDebugEnabled) {
       console.info(...args);
     }
   },
 
   debug: (...args: unknown[]) => {
-    if (isDev) {
+    if (isDebugEnabled) {
       console.debug(...args);
     }
   },
 
   group: (label: string) => {
-    if (isDev) {
+    if (isDebugEnabled) {
       console.group(label);
     }
   },
 
   groupEnd: () => {
-    if (isDev) {
+    if (isDebugEnabled) {
       console.groupEnd();
     }
   },

@@ -165,7 +165,7 @@ export const GoalCard = memo(function GoalCard({
     <Card
       variant="outlined"
       padding="md"
-      className={`transition-all duration-200 ${isOverdue
+      className={`transition-all duration-200 cv-item-md ${isOverdue
         ? 'border-l-4 border-l-red-500 dark:border-l-red-400'
         : goal.completed
           ? 'opacity-75'

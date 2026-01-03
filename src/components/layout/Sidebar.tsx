@@ -13,6 +13,8 @@
 import { useMemo, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { CheckSquare, Target, Grid, Dumbbell, Home, ChevronLeft, StickyNote } from 'lucide-react';
+import { shallow } from 'zustand/shallow';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { useThemeStore } from '@/stores/themeStore';
 import { useWorkoutSessionStore } from '@/stores/workoutSessionStore';
 import { useSidebarStore } from '@/stores/sidebarStore';
@@ -62,18 +64,34 @@ const navItems: NavItem[] = [
 
 function Sidebar() {
   const accentColor = useThemeStore((state) => state.accentColor);
-  const { isCollapsed, toggleSidebar } = useSidebarStore();
+  const { isCollapsed, toggleSidebar } = useStoreWithEqualityFn(
+    useSidebarStore,
+    (state) => ({
+      isCollapsed: state.isCollapsed,
+      toggleSidebar: state.toggleSidebar,
+    }),
+    shallow
+  );
   const location = useLocation();
   const navigate = useNavigate();
-  const { isActive, isMinimized, activeTemplate, elapsedSeconds, resumeWorkout } =
-    useWorkoutSessionStore();
+  const { showResume, resumeLabel, elapsedSeconds, resumeWorkout } = useStoreWithEqualityFn(
+    useWorkoutSessionStore,
+    (state) => {
+      const shouldShow = state.isActive && state.isMinimized && !!state.activeTemplate;
+      return {
+        showResume: shouldShow,
+        resumeLabel: shouldShow ? state.activeTemplate?.name || 'Workout' : null,
+        elapsedSeconds: shouldShow ? state.elapsedSeconds : 0,
+        resumeWorkout: state.resumeWorkout,
+      };
+    },
+    shallow
+  );
 
   const safeActiveIndex = useMemo(() => {
     const activeIndex = navItems.findIndex((item) => location.pathname.startsWith(item.path));
     return activeIndex === -1 ? 0 : activeIndex;
   }, [location.pathname]);
-
-  const showResume = isActive && isMinimized && !!activeTemplate;
 
   const handleResume = useCallback(() => {
     resumeWorkout();
@@ -166,12 +184,12 @@ function Sidebar() {
             onClick={handleResume}
             className={`w-full py-3 rounded-xl bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 shadow-sm text-sm font-medium flex items-center gap-2 hover:bg-secondary-50 dark:hover:bg-secondary-700 transition-all ${isCollapsed ? 'px-3 justify-center' : 'px-4 justify-center'
               }`}
-            title={isCollapsed ? `Resume: ${activeTemplate?.name || 'Workout'}` : undefined}
+            title={isCollapsed && resumeLabel ? `Resume: ${resumeLabel}` : undefined}
           >
             <Dumbbell className="h-4 w-4 flex-shrink-0" style={{ color: accentColor }} />
             {!isCollapsed && (
               <>
-                <span className="truncate">Resume: {activeTemplate?.name || 'Workout'}</span>
+                <span className="truncate">Resume: {resumeLabel || 'Workout'}</span>
                 <span className="text-secondary-500 flex-shrink-0">
                   ({formatTime(elapsedSeconds)})
                 </span>

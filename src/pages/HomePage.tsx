@@ -1,15 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useSidebarStore } from '@/stores/sidebarStore';
 import { useProfileStats, useProfile, useRankDecay } from '@/features/gamification/hooks';
-import { RankDisplay, SettingsMenu, RankOverview } from '@/features/gamification/components';
+import { RankDisplay, SettingsMenu } from '@/features/gamification/components';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { DayOverview } from '@/components/DayOverview';
 import { DynamicLogo } from '@/components/ui/DynamicLogo';
 
+const RankOverview = lazy(() =>
+  import('@/features/gamification/components/RankOverview').then((module) => ({
+    default: module.RankOverview,
+  }))
+);
+
 function HomePage() {
-  const { user } = useAuthStore();
-  const { isCollapsed } = useSidebarStore();
+  const user = useAuthStore((state) => state.user);
+  const isCollapsed = useSidebarStore((state) => state.isCollapsed);
   const { attributes, loading: statsLoading, error: statsError } = useProfileStats();
   const { profile, loading: profileLoading } = useProfile();
   const { processing: decayProcessing } = useRankDecay();
@@ -35,7 +41,10 @@ function HomePage() {
   }
 
   // Calculate total XP for rank system (future-proof: sums ALL attributes)
-  const totalXP = attributes.reduce((sum, attr) => sum + attr.current_xp, 0);
+  const totalXP = useMemo(
+    () => attributes.reduce((sum, attr) => sum + attr.current_xp, 0),
+    [attributes]
+  );
 
   // Desktop layout classes
   const desktopPageClasses = `hidden lg:flex fixed inset-0 ${isCollapsed ? 'lg:left-20' : 'lg:left-64'} transition-all duration-300`;
@@ -88,7 +97,19 @@ function HomePage() {
         </div>
 
         {/* Conditional View */}
-        {showRankOverview ? <RankOverview totalXP={totalXP} /> : <DayOverview />}
+        {showRankOverview ? (
+          <Suspense
+            fallback={
+              <div className="py-4">
+                <LoadingSpinner />
+              </div>
+            }
+          >
+            <RankOverview totalXP={totalXP} />
+          </Suspense>
+        ) : (
+          <DayOverview />
+        )}
       </div>
 
       {/* Desktop View - two-panel layout */}
@@ -116,7 +137,15 @@ function HomePage() {
             {/* Rank Overview in sidebar when active */}
             {showRankOverview && (
               <div className="mt-4">
-                <RankOverview totalXP={totalXP} />
+                <Suspense
+                  fallback={
+                    <div className="py-4">
+                      <LoadingSpinner />
+                    </div>
+                  }
+                >
+                  <RankOverview totalXP={totalXP} />
+                </Suspense>
               </div>
             )}
           </div>

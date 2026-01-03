@@ -174,7 +174,7 @@ export const TaskItem = memo(function TaskItem({
   }
 
   return (
-    <div className="relative overflow-hidden rounded-lg">
+    <div className="relative overflow-hidden rounded-lg cv-item-sm">
       {/* Action buttons revealed on swipe */}
       <div className="absolute inset-y-0 right-0 flex items-center">
         {(onEditClick || onEdit) && (

@@ -148,6 +148,7 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
       } else {
         set((prev) => {
           if (prev.phase.type !== 'resting') return prev;
+          if (prev.phase.remainingSeconds === remaining) return prev;
           return {
             ...prev,
             phase: { ...prev.phase, remainingSeconds: remaining },
@@ -190,6 +191,7 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
       } else {
         set((prev) => {
           if (prev.phase.type !== 'resting_for_failure') return prev;
+          if (prev.phase.remainingSeconds === remaining) return prev;
           return {
             ...prev,
             phase: { ...prev.phase, remainingSeconds: remaining },
@@ -228,6 +230,7 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
       } else {
         set((prev) => {
           if (prev.phase.type !== 'resting_between_exercises') return prev;
+          if (prev.phase.remainingSeconds === remaining) return prev;
           return {
             ...prev,
             phase: { ...prev.phase, remainingSeconds: remaining },

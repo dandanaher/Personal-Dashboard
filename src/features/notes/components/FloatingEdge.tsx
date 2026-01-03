@@ -7,9 +7,12 @@ import {
   BaseEdge,
   useReactFlow,
   useViewport,
-  useStore,
+  useStoreApi,
   Position,
 } from 'reactflow';
+import type { ReactFlowState } from 'reactflow';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
+import type { StoreApi } from 'zustand/vanilla';
 import { useNotesStore } from '@/stores/notesStore';
 import { FloatingToolbar } from './FloatingToolbar';
 
@@ -27,7 +30,15 @@ export default function FloatingEdge({
 }: EdgeProps) {
   const { updateEdge, deleteEdge } = useNotesStore();
   const { zoom, x: viewportX, y: viewportY } = useViewport();
-  const domNode = useStore((state) => state.domNode);
+  const store = useStoreApi();
+  const storeApi = useMemo<StoreApi<ReactFlowState>>(
+    () => ({
+      ...store,
+      getInitialState: store.getState,
+    }),
+    [store]
+  );
+  const domNode = useStoreWithEqualityFn(storeApi, (state) => state.domNode);
   const [showToolbar, setShowToolbar] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const labelInputRef = useRef<HTMLInputElement>(null);

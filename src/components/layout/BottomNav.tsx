@@ -14,6 +14,8 @@
 import { useMemo, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { CheckSquare, Target, Grid, Dumbbell, Home, StickyNote } from 'lucide-react';
+import { shallow } from 'zustand/shallow';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { useThemeStore } from '@/stores/themeStore';
 import { useWorkoutSessionStore } from '@/stores/workoutSessionStore';
 import { formatTime } from '@/features/workout/lib/workoutEngine';
@@ -65,16 +67,25 @@ function BottomNav() {
   const accentColor = useThemeStore((state) => state.accentColor);
   const location = useLocation();
   const navigate = useNavigate();
-  const { isActive, isMinimized, activeTemplate, elapsedSeconds, resumeWorkout } =
-    useWorkoutSessionStore();
+  const { showResume, resumeLabel, elapsedSeconds, resumeWorkout } = useStoreWithEqualityFn(
+    useWorkoutSessionStore,
+    (state) => {
+      const shouldShow = state.isActive && state.isMinimized && !!state.activeTemplate;
+      return {
+        showResume: shouldShow,
+        resumeLabel: shouldShow ? state.activeTemplate?.name || 'Workout' : null,
+        elapsedSeconds: shouldShow ? state.elapsedSeconds : 0,
+        resumeWorkout: state.resumeWorkout,
+      };
+    },
+    shallow
+  );
 
   // Find the active index - memoized
   const safeActiveIndex = useMemo(() => {
     const activeIndex = navItems.findIndex((item) => location.pathname.startsWith(item.path));
     return activeIndex === -1 ? 0 : activeIndex;
   }, [location.pathname]);
-
-  const showResume = isActive && isMinimized && !!activeTemplate;
 
   const handleResume = useCallback(() => {
     resumeWorkout();
@@ -93,7 +104,7 @@ function BottomNav() {
               onClick={handleResume}
               className="px-4 py-2 rounded-full bg-white text-secondary-900 border border-secondary-200 dark:bg-secondary-800 dark:text-secondary-100 dark:border-secondary-700 shadow-lg shadow-black/10 text-sm font-medium flex items-center gap-2"
             >
-              Resume: {activeTemplate?.name || 'Workout'} ({formatTime(elapsedSeconds)})
+              Resume: {resumeLabel || 'Workout'} ({formatTime(elapsedSeconds)})
             </button>
           </div>
         )}

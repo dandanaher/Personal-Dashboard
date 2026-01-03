@@ -45,7 +45,7 @@ export function HabitCard({ habit, onEdit, onDelete, onCompletionChange, initial
       <Card
         variant="outlined"
         padding="md"
-        className="overflow-hidden cursor-pointer hover:bg-secondary-50 dark:hover:bg-secondary-800/50 transition-colors"
+        className="overflow-hidden cursor-pointer hover:bg-secondary-50 dark:hover:bg-secondary-800/50 transition-colors cv-item-lg"
         onClick={handleCardClick}
       >
         {/* Header */}

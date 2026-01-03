@@ -156,6 +156,22 @@
     -webkit-overflow-scrolling: touch;
   }
 
+  /* Lightweight list virtualization */
+  .cv-item-sm {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 80px;
+  }
+
+  .cv-item-md {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 180px;
+  }
+
+  .cv-item-lg {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 320px;
+  }
+
   /* Custom animations for gamification */
   .animate-pulse-slow {
     animation: pulse-slow 3s ease-in-out infinite;
