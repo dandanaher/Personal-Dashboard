@@ -3,8 +3,6 @@ import { format } from 'date-fns';
 import supabase from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { MoodLog } from '@/lib/types';
-import { incrementXP } from '@/features/gamification/hooks/useProfileStats';
-import { XP_REWARDS } from '@/features/gamification/utils';
 
 interface UseTodayMoodReturn {
   todayMood: MoodLog | null;
@@ -117,9 +115,6 @@ export function useTodayMood(): UseTodayMoodReturn {
 
         // Replace temp with real
         setTodayMood(data);
-
-        // Award XP for logging mood (Consistency)
-        await incrementXP(user.id, 'consistency', XP_REWARDS.HABIT_COMPLETE);
 
         return true;
       } catch (err) {

@@ -4,8 +4,6 @@ import supabase from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { logger } from '@/lib/logger';
 import type { Task, TaskUpdate } from '@/lib/types';
-import { incrementXP } from '@/features/gamification/hooks/useProfileStats';
-import { XP_REWARDS } from '@/features/gamification/utils';
 
 interface UseAllTasksReturn {
   /** All tasks for the user */
@@ -215,10 +213,6 @@ export function useAllTasks(): UseAllTasksReturn {
           throw updateError;
         }
 
-        // Award XP for completing a task (Focus)
-        if (newCompleted && user) {
-          await incrementXP(user.id, 'focus', XP_REWARDS.TASK_COMPLETE);
-        }
       } catch (err) {
         // Rollback optimistic update
         setAllTasks((prev) =>

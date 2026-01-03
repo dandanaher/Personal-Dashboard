@@ -3,8 +3,6 @@ import { format, subDays, parseISO, differenceInDays, startOfDay } from 'date-fn
 import supabase from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { HabitLog } from '@/lib/types';
-import { incrementXP } from '@/features/gamification/hooks/useProfileStats';
-import { XP_REWARDS } from '@/features/gamification/utils';
 
 export interface HabitStats {
   currentStreak: number;
@@ -199,9 +197,6 @@ export function useHabitLogs(habitId: string, initialLogs?: HabitLog[]): UseHabi
 
           // Replace temp with real
           setLogs((prev) => prev.map((log) => (log.id === tempId ? data : log)));
-
-          // Award XP for completing a habit (Consistency)
-          await incrementXP(user.id, 'consistency', XP_REWARDS.HABIT_COMPLETE);
 
           return true;
         } catch (err) {

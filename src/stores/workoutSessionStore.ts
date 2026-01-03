@@ -18,8 +18,6 @@ import {
   addSetToExercise,
   addFailureSetToExercise,
 } from '@/features/workout/lib/workoutEngine';
-import { incrementXP } from '@/features/gamification/hooks/useProfileStats';
-import { XP_REWARDS } from '@/features/gamification/utils';
 
 interface WorkoutSessionStoreState {
   activeTemplate: WorkoutTemplate | null;
@@ -549,8 +547,6 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
 
         if (error) throw error;
 
-        await incrementXP(user.id, 'vitality', XP_REWARDS.WORKOUT_COMPLETE);
-
         if (activeTemplate.linked_habit_id) {
           const today = new Date().toISOString().slice(0, 10);
           const { data: existingLog } = await supabase
@@ -568,9 +564,8 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
               date: today,
               completed: true,
             });
-
-            if (!habitError) {
-              await incrementXP(user.id, 'consistency', XP_REWARDS.HABIT_COMPLETE);
+            if (habitError) {
+              console.error('Error logging linked habit completion:', habitError);
             }
           }
         }

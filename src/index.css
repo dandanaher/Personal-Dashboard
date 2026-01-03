@@ -167,11 +167,6 @@
     contain-intrinsic-size: 1px 320px;
   }
 
-  /* Custom animations for gamification */
-  .animate-pulse-slow {
-    animation: pulse-slow 3s ease-in-out infinite;
-  }
-
   /* Force crosshair over React Flow while selection tool is active */
   .canvas-selecting .react-flow__pane,
   .canvas-selecting .react-flow__pane.selection,
@@ -184,17 +179,3 @@
   }
 }
 
-/* Custom keyframes */
-@keyframes pulse-slow {
-
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-
-  50% {
-    transform: scale(1.05);
-    opacity: 0.9;
-  }
-}

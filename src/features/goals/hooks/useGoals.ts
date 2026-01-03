@@ -2,8 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Goal } from '@/lib/types';
 import { useAuthStore } from '@/stores/authStore';
-import { incrementXP } from '@/features/gamification/hooks/useProfileStats';
-import { XP_REWARDS } from '@/features/gamification/utils';
 
 export type GoalType = Goal['type'];
 export type FilterType = 'all' | GoalType;
@@ -412,11 +410,6 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
           completed: newCompleted,
           progress: newProgress,
         });
-
-        // Award XP for completing a goal (Drive)
-        if (result && newCompleted && user) {
-          await incrementXP(user.id, 'drive', XP_REWARDS.GOAL_COMPLETE);
-        }
 
         return result;
       } finally {
