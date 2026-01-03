@@ -58,8 +58,8 @@ const MODERN_VARS = {
   '--radius-3xl': '0.75rem',
   '--radius-full': '9999px',
   '--font-sans': 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
-  '--color-light-bg': '#FAF8F5',
-  // Slate Colors
+  '--color-light-bg': '#FAF9F4',
+  // Secondary Colors (controlled by theme, not style)
   '--color-secondary-50': '250 250 250',
   '--color-secondary-100': '240 240 240',
   '--color-secondary-200': '224 224 224',
@@ -69,11 +69,12 @@ const MODERN_VARS = {
   '--color-secondary-600': '100 100 100',
   '--color-secondary-700': '75 75 75',
   '--color-secondary-800': '50 50 50',
-  '--color-secondary-900': '33 33 33',
+  '--color-secondary-900': '49 49 49',
   '--color-secondary-950': '18 18 18',
 };
 
 const RETRO_VARS = {
+  // Retro style only changes border radius and font, not colors
   '--radius-none': '0px',
   '--radius-sm': '0px',
   '--radius-default': '0px',
@@ -84,19 +85,20 @@ const RETRO_VARS = {
   '--radius-3xl': '0px',
   '--radius-full': '0px',
   '--font-sans': '"Courier New", Courier, "Lucida Sans Typewriter", "Lucida Console", monospace',
-  '--color-light-bg': 'rgb(245, 245, 245)',
-  // High Contrast Grayscale
-  '--color-secondary-50': '255 255 255',
-  '--color-secondary-100': '245 245 245',
-  '--color-secondary-200': '220 220 220',
-  '--color-secondary-300': '190 190 190',
+  // Colors are controlled by theme (light/dark mode), not style
+  // Use same values as MODERN_VARS to ensure consistency
+  '--color-light-bg': '#FAF9F4',
+  '--color-secondary-50': '250 250 250',
+  '--color-secondary-100': '240 240 240',
+  '--color-secondary-200': '224 224 224',
+  '--color-secondary-300': '192 192 192',
   '--color-secondary-400': '160 160 160',
   '--color-secondary-500': '128 128 128',
-  '--color-secondary-600': '96 96 96',
-  '--color-secondary-700': '64 64 64',
-  '--color-secondary-800': '32 32 32',
-  '--color-secondary-900': '16 16 16',
-  '--color-secondary-950': '0 0 0',
+  '--color-secondary-600': '100 100 100',
+  '--color-secondary-700': '75 75 75',
+  '--color-secondary-800': '50 50 50',
+  '--color-secondary-900': '49 49 49',
+  '--color-secondary-950': '18 18 18',
 };
 
 function applyThemeVariables(style: 'modern' | 'retro') {

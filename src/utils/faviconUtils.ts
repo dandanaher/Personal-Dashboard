@@ -3,16 +3,11 @@
 // Import the logo directly - Vite handles path resolution in both dev and prod
 import logoSrc from '../assets/mydash-logo.png';
 
-// Background colors for each theme/style combination
+// Background colors for theme (style does not affect background color)
+// Light mode: #FAF9F4, Dark mode: #313131
 const BACKGROUND_COLORS = {
-  modern: {
-    light: '#FAF8F5',
-    dark: '#212121', // rgb(33, 33, 33)
-  },
-  retro: {
-    light: '#F5F5F5', // rgb(245, 245, 245)
-    dark: '#101010', // rgb(16, 16, 16)
-  },
+  light: '#FAF9F4',
+  dark: '#313131', // rgb(49, 49, 49)
 };
 
 // Cache the base image and loading promise to avoid race conditions
@@ -67,10 +62,11 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 
 export function getBackgroundColor(
   darkMode: boolean,
-  stylePreset: 'modern' | 'retro'
+  _stylePreset?: 'modern' | 'retro'
 ): string {
+  // Style does not affect background color - only theme (dark/light mode) does
   const mode = darkMode ? 'dark' : 'light';
-  return BACKGROUND_COLORS[stylePreset][mode];
+  return BACKGROUND_COLORS[mode];
 }
 
 /**
