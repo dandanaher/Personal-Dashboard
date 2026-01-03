@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import { Circle, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Card from '@/components/ui/Card';
@@ -14,11 +14,6 @@ export const TasksCard = memo(function TasksCard({ className = '' }: TasksCardPr
   const today = new Date();
   const accentColor = useThemeStore((state) => state.accentColor);
   const { tasks, loading } = useTasks(today, { includeCompleted: false });
-
-  const incompleteTasks = useMemo(
-    () => tasks.filter((task) => !task.completed),
-    [tasks]
-  );
 
   if (loading) {
     return (
@@ -37,7 +32,7 @@ export const TasksCard = memo(function TasksCard({ className = '' }: TasksCardPr
     <Card padding="none" variant="outlined" className={`overflow-hidden ${className}`}>
       <div className="px-3 py-2 border-b border-secondary-200 dark:border-secondary-700 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-secondary-900 dark:text-white">
-          Tasks Today ({incompleteTasks.length})
+          Tasks Today ({tasks.length})
         </h3>
         <Link
           to="/tasks"
@@ -49,13 +44,13 @@ export const TasksCard = memo(function TasksCard({ className = '' }: TasksCardPr
         </Link>
       </div>
       <div className="p-3">
-        {incompleteTasks.length === 0 ? (
+        {tasks.length === 0 ? (
           <p className="text-xs text-secondary-500 dark:text-secondary-400 text-center py-1">
             No tasks for today. You're all clear!
           </p>
         ) : (
           <ul className="space-y-1.5">
-            {incompleteTasks.slice(0, 3).map((task) => (
+            {tasks.slice(0, 3).map((task) => (
               <li
                 key={task.id}
                 className="flex items-start gap-2 text-sm text-secondary-700 dark:text-secondary-300"
@@ -64,9 +59,9 @@ export const TasksCard = memo(function TasksCard({ className = '' }: TasksCardPr
                 <span className="line-clamp-1">{task.title}</span>
               </li>
             ))}
-            {incompleteTasks.length > 3 && (
+            {tasks.length > 3 && (
               <li className="text-xs text-secondary-500 dark:text-secondary-400 text-center pt-0.5">
-                +{incompleteTasks.length - 3} more tasks
+                +{tasks.length - 3} more tasks
               </li>
             )}
           </ul>

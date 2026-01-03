@@ -4,14 +4,8 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import { useTodayMood } from '../hooks/useTodayMood';
 import { MoodPicker, getMoodInfo, type MoodLevel } from './MoodPicker';
-import { MOOD_UPDATED_EVENT } from './MoodYearlyReviewCard';
 import { useThemeStore } from '@/stores/themeStore';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-
-// Helper to notify other mood components of updates
-const notifyMoodUpdate = () => {
-  window.dispatchEvent(new CustomEvent(MOOD_UPDATED_EVENT));
-};
 
 interface MoodTrackerCardProps {
   className?: string;
@@ -25,10 +19,7 @@ export const MoodTrackerCard = memo(function MoodTrackerCard({ className = '' }:
   const [isSavingNote, setIsSavingNote] = useState(false);
 
   const handleMoodSelect = async (level: MoodLevel) => {
-    const success = await setMood(level);
-    if (success) {
-      notifyMoodUpdate();
-    }
+    await setMood(level);
   };
 
   const handleSaveNote = async () => {
@@ -43,7 +34,6 @@ export const MoodTrackerCard = memo(function MoodTrackerCard({ className = '' }:
 
     if (success) {
       setShowNoteInput(false);
-      notifyMoodUpdate();
     }
   };
 

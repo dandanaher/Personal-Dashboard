@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Card from '@/components/ui/Card';
@@ -18,11 +18,6 @@ export const GoalsCard = memo(function GoalsCard({ className = '' }: GoalsCardPr
     limit: 3,
   });
 
-  const activeGoals = useMemo(
-    () => goals.filter((goal) => !goal.completed).slice(0, 3),
-    [goals]
-  );
-
   if (loading) {
     return (
       <Card padding="none" variant="outlined" className={`overflow-hidden ${className}`}>
@@ -40,7 +35,7 @@ export const GoalsCard = memo(function GoalsCard({ className = '' }: GoalsCardPr
     <Card padding="none" variant="outlined" className={`overflow-hidden ${className}`}>
       <div className="px-3 py-2 border-b border-secondary-200 dark:border-secondary-700 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-secondary-900 dark:text-white">
-          Active Goals ({activeGoals.length})
+          Active Goals ({goals.length})
         </h3>
         <Link
           to="/goals"
@@ -52,13 +47,13 @@ export const GoalsCard = memo(function GoalsCard({ className = '' }: GoalsCardPr
         </Link>
       </div>
       <div className="p-3">
-        {activeGoals.length === 0 ? (
+        {goals.length === 0 ? (
           <p className="text-xs text-secondary-500 dark:text-secondary-400 text-center py-1">
             No active goals. Set one to get started!
           </p>
         ) : (
           <ul className="space-y-2">
-            {activeGoals.map((goal) => {
+            {goals.map((goal) => {
               // Calculate display progress (same logic as GoalCard)
               const hData = goal.linked_habit_id
                 ? habitData.get(goal.linked_habit_id)

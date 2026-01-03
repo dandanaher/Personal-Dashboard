@@ -8,9 +8,6 @@ import { useThemeStore } from '@/stores/themeStore';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import type { MoodLog } from '@/lib/types';
 
-// Custom event name for mood updates
-export const MOOD_UPDATED_EVENT = 'mood-updated';
-
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -135,7 +132,7 @@ const MoodEntryModal = memo(function MoodEntryModal({
 export const MoodYearlyReviewCard = memo(function MoodYearlyReviewCard({
   className = '',
 }: MoodYearlyReviewCardProps) {
-  const { logs, stats, loading, refetch, addMoodLog, updateMoodLog } = useMoodLogs();
+  const { logs, stats, loading, addMoodLog, updateMoodLog } = useMoodLogs();
   const accentColor = useThemeStore((state) => state.accentColor);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -147,17 +144,6 @@ export const MoodYearlyReviewCard = memo(function MoodYearlyReviewCard({
       scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
     }
   }, [loading]);
-
-  // Listen for mood updates from MoodTrackerCard
-  useEffect(() => {
-    const handleMoodUpdate = () => {
-      refetch();
-    };
-    window.addEventListener(MOOD_UPDATED_EVENT, handleMoodUpdate);
-    return () => {
-      window.removeEventListener(MOOD_UPDATED_EVENT, handleMoodUpdate);
-    };
-  }, [refetch]);
 
   // Create a map of date -> mood log for quick lookup
   const logsMap = useMemo(() => {
@@ -247,8 +233,6 @@ export const MoodYearlyReviewCard = memo(function MoodYearlyReviewCard({
 
     if (success) {
       setSelectedDate(null);
-      // Notify other components of the update
-      window.dispatchEvent(new CustomEvent(MOOD_UPDATED_EVENT));
     }
   }, [selectedDate, logsMap, addMoodLog, updateMoodLog]);
 
