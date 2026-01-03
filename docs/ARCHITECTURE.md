@@ -13,6 +13,7 @@ src/
 │   ├── ui/               # UI primitives (Button, Input, Card, etc.)
 │   │   ├── Button.tsx
 │   │   ├── Card.tsx
+│   │   ├── DynamicLogo.tsx  # Animated logo with theme-aware colors
 │   │   ├── Input.tsx
 │   │   ├── LoadingSpinner.tsx
 │   │   └── index.ts
@@ -142,8 +143,8 @@ src/
 │   └── dateUtils.ts     # Date formatting helpers
 │
 ├── utils/               # Utility functions
-│   ├── faviconUtils.ts  # Dynamic favicon utilities
-│   └── gifUtils.ts      # GIF processing utilities
+│   ├── faviconUtils.ts  # Dynamic favicon with theme colors
+│   └── gifUtils.ts      # GIF frame extraction and recoloring
 │
 ├── pages/               # Page-level components
 │   ├── HomePage.tsx     # Dashboard home page
@@ -298,6 +299,43 @@ const TasksPage = lazy(() => import('@/features/todos/TasksPage'));
 
 Route preloading is available via `preloadRoute()` for instant navigation on hover/focus.
 
+## Theming Architecture
+
+The app separates **theme** (light/dark mode) from **style** (modern/retro):
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      themeStore.ts                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │   darkMode   │  │  stylePreset │  │  accentColor │      │
+│  │  (boolean)   │  │ modern/retro │  │   (hex)      │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+└─────────────────────────────────────────────────────────────┘
+         │                   │                  │
+         ▼                   ▼                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      CSS Variables                          │
+│  Theme Controls:        Style Controls:     Accent:         │
+│  - Background color     - Border radius     - --accent-color│
+│  - Secondary colors     - Font family                       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Instant Theme Switching
+
+To prevent visual lag when switching themes:
+1. `switching-theme` CSS class disables all transitions
+2. Theme change is applied
+3. Class is removed after `requestAnimationFrame`
+
+This ensures all elements switch colors in the same frame.
+
+### Dynamic Logo
+
+The `DynamicLogo` component pre-loads both light and dark GIF frame sets:
+- Theme can be switched mid-animation without visual glitches
+- Single animation loop reads from the active frame set based on current `darkMode`
+
 ---
 
-*Last updated: 2025-12-31*
+*Last updated: 2026-01-03*

@@ -98,6 +98,10 @@
 
 ## Completed Recently
 
+- [x] **Decoupled theme and style systems** - Theme (light/dark) controls colors only, style (modern/retro) controls visual appearance only
+- [x] **Instant theme switching** - Added `switching-theme` CSS class to disable transitions during theme toggle
+- [x] **Dynamic logo improvements** - Pre-loads both light/dark GIF frames for seamless mid-animation theme switching
+- [x] **Unified color palette** - Single light (#FAF9F4) and dark (#202021) background colors for both styles
 - [x] Animated sidebar logo with theme-aware variants
 - [x] Mobile canvas bug fixes (background gap, edit button)
 - [x] Tasks QOL improvements
@@ -132,4 +136,4 @@ When updating Supabase schema:
 
 ---
 
-*Last updated: 2025-12-31*
+*Last updated: 2026-01-03*

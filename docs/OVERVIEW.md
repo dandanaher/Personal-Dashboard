@@ -77,10 +77,17 @@ MyDash is a mobile-first personal dashboard web application designed to help use
 - Bottom navigation for thumb accessibility
 - Responsive breakpoints: xs (375px), sm (640px), md (768px), lg (1024px)
 
-### Dark Mode
-- Full dark mode support
-- Respects system preferences
-- Class-based theme switching
+### Theming System
+- **Theme** (light/dark mode): Controls background colors only
+  - Light mode: `#FAF9F4`
+  - Dark mode: `#202021`
+- **Style** (modern/retro): Controls visual style only
+  - Modern: Rounded corners, system fonts
+  - Retro: Sharp corners, monospace fonts
+- **Accent Color**: User-selectable from 20 color options
+- Respects system dark mode preference
+- Class-based theme switching with instant transitions
+- Theme and style are fully decoupled
 
 ### Progressive Web App
 - Installable on mobile devices
@@ -89,4 +96,4 @@ MyDash is a mobile-first personal dashboard web application designed to help use
 
 ---
 
-*Last updated: 2025-12-31*
+*Last updated: 2026-01-03*

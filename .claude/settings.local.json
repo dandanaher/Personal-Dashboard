@@ -18,7 +18,8 @@
       "Skill(cleanup)",
       "Bash(dir:*)",
       "Bash(findstr:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Skill(docs)"
     ],
     "deny": [],
     "ask": []

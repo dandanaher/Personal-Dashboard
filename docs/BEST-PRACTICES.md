@@ -205,9 +205,49 @@ Theme values are defined as CSS variables in `index.css`:
 
 ```css
 :root {
-  --color-light-bg: #f8fafc;
-  --radius-default: 0.5rem;
-  --font-sans: 'Inter', sans-serif;
+  /* Theme colors (controlled by theme, not style) */
+  --color-light-bg: #FAF9F4;
+  --color-secondary-900: 32 32 33;  /* Dark mode background */
+
+  /* Style variables (controlled by style, not theme) */
+  --radius-default: 0.5rem;  /* Modern: rounded, Retro: 0 */
+  --font-sans: 'Inter', sans-serif;  /* Modern: system, Retro: monospace */
+}
+```
+
+### Theme vs Style Separation
+
+**Theme** (light/dark) controls colors only:
+- Background colors
+- Text colors
+- Border colors
+
+**Style** (modern/retro) controls visual appearance only:
+- Border radius (rounded vs sharp)
+- Font family (system vs monospace)
+
+This separation ensures changing style doesn't affect theme and vice versa.
+
+### Instant Theme Switching
+
+To avoid visual lag when toggling themes, use the `switching-theme` class:
+
+```typescript
+// In themeStore.ts
+toggleDarkMode: () => {
+  document.documentElement.classList.add('switching-theme');
+  // Apply theme change...
+  requestAnimationFrame(() => {
+    document.documentElement.classList.remove('switching-theme');
+  });
+}
+```
+
+The CSS disables transitions during the switch:
+```css
+.switching-theme,
+.switching-theme * {
+  transition-duration: 0s !important;
 }
 ```
 
@@ -360,4 +400,4 @@ Minimum 44x44px for interactive elements:
 
 ---
 
-*Last updated: 2025-12-31*
+*Last updated: 2026-01-03*
