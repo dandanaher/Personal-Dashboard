@@ -25,6 +25,8 @@ import { CardWrapper } from '@/features/homepage/components/CardWrapper';
 import { AddCardModal } from '@/features/homepage/components/AddCardModal';
 import { SettingsMenu } from '@/components/layout/SettingsMenu';
 import { StaticLogo } from '@/components/ui/StaticLogo';
+import { PixelClock } from '@/components/ui/PixelClock';
+import { WeatherWidget } from '@/components/ui/WeatherWidget';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 // Memoized greeting calculation
@@ -130,7 +132,7 @@ const CardGrid = memo(function CardGrid() {
 
 function HomePage() {
   const user = useAuthStore((state) => state.user);
-  const { profile, loading: profileLoading, error: profileError } = useProfile();
+  const { profile, loading: profileLoading } = useProfile();
   const { isEditMode, setEditMode } = useHomepageStore();
   const accentColor = useThemeStore((state) => state.accentColor);
   const { isCollapsed } = useSidebarStore();
@@ -160,20 +162,12 @@ function HomePage() {
           <div className="flex items-center gap-3">
             <StaticLogo size={40} />
             <div>
-              <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">
-                {greeting}
+              <h1 className="text-xl font-semibold text-secondary-900 dark:text-white whitespace-nowrap">
+                {greeting}, {userName}
+                {profileLoading && <LoadingSpinner size="sm" className="inline-block ml-2" />}
               </h1>
-              <div className="flex items-center gap-2 mt-0.5">
-                <p className="text-sm text-secondary-600 dark:text-secondary-400">
-                  {userName}
-                </p>
-                {profileLoading && <LoadingSpinner size="sm" />}
-              </div>
-              {profileError && (
-                <p className="text-xs text-red-500 dark:text-red-400 mt-1">
-                  Failed to load profile.
-                </p>
-              )}
+              <PixelClock pixelSize={4} gap={1} className="mt-2" />
+              <WeatherWidget compact className="mt-2" />
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -225,25 +219,24 @@ function HomePage() {
             </button>
           </div>
 
-          {/* User Info */}
+          {/* User Info & Clock */}
           <div className="flex-1 overflow-y-auto p-4">
-            <div className="space-y-4">
-              <div className="text-center py-4">
-                <p className="text-lg font-semibold text-secondary-900 dark:text-white">
-                  {greeting}
+            <div className="space-y-6">
+              {/* Greeting */}
+              <div className="text-center">
+                <p className="text-lg font-semibold text-secondary-900 dark:text-white whitespace-nowrap">
+                  {greeting}, {userName}
+                  {profileLoading && <LoadingSpinner size="sm" className="inline-block ml-2" />}
                 </p>
-                <div className="flex items-center justify-center gap-2 mt-1">
-                  <p className="text-secondary-600 dark:text-secondary-400">
-                    {userName}
-                  </p>
-                  {profileLoading && <LoadingSpinner size="sm" />}
-                </div>
-                {profileError && (
-                  <p className="text-xs text-red-500 dark:text-red-400 mt-2">
-                    Failed to load profile.
-                  </p>
-                )}
               </div>
+
+              {/* Pixel Clock */}
+              <div className="flex justify-center">
+                <PixelClock pixelSize={5} gap={2} />
+              </div>
+
+              {/* Weather */}
+              <WeatherWidget />
 
               {isEditMode && (
                 <div className="p-3 rounded-lg bg-secondary-50 dark:bg-secondary-800 text-sm text-secondary-600 dark:text-secondary-400">

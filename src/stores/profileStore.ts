@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/lib/types';
@@ -17,95 +18,107 @@ interface ProfileActions {
 
 type ProfileStore = ProfileState & ProfileActions;
 
-export const useProfileStore = create<ProfileStore>((set, get) => ({
-  // State
-  profile: null,
-  loading: true, // Start true since profile hasn't been fetched yet
-  error: null,
+export const useProfileStore = create<ProfileStore>()(
+  persist(
+    (set, get) => ({
+      // State
+      profile: null,
+      loading: false, // Start false since we may have cached profile
+      error: null,
 
-  // Actions
-  fetchProfile: async (userId: string) => {
-    if (!userId) {
-      set({ profile: null, loading: false });
-      return;
-    }
+      // Actions
+      fetchProfile: async (userId: string) => {
+        if (!userId) {
+          set({ profile: null, loading: false });
+          return;
+        }
 
-    set({ loading: true, error: null });
+        // Only show loading if we don't have a cached profile
+        const currentProfile = get().profile;
+        if (!currentProfile) {
+          set({ loading: true, error: null });
+        }
 
-    try {
-      const {
-        data,
-        error: fetchError,
-      }: { data: Profile | null; error: PostgrestError | null } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (fetchError) {
-        // Profile might not exist yet for older users
-        if (fetchError.code === 'PGRST116') {
-          // No rows returned - create a default profile
+        try {
           const {
-            data: newProfile,
-            error: insertError,
+            data,
+            error: fetchError,
           }: { data: Profile | null; error: PostgrestError | null } = await supabase
             .from('profiles')
-            .insert({
-              id: userId,
-              username: null,
-            })
-            .select()
+            .select('*')
+            .eq('id', userId)
             .single();
 
-          if (insertError) {
-            throw insertError;
-          }
+          if (fetchError) {
+            // Profile might not exist yet for older users
+            if (fetchError.code === 'PGRST116') {
+              // No rows returned - create a default profile
+              const {
+                data: newProfile,
+                error: insertError,
+              }: { data: Profile | null; error: PostgrestError | null } = await supabase
+                .from('profiles')
+                .insert({
+                  id: userId,
+                  username: null,
+                })
+                .select()
+                .single();
 
-          if (!newProfile) {
-            throw new Error('Failed to create profile');
-          }
+              if (insertError) {
+                throw insertError;
+              }
 
-          set({ profile: newProfile, loading: false, error: null });
-        } else {
-          throw fetchError;
+              if (!newProfile) {
+                throw new Error('Failed to create profile');
+              }
+
+              set({ profile: newProfile, loading: false, error: null });
+            } else {
+              throw fetchError;
+            }
+          } else {
+            set({ profile: data, loading: false, error: null });
+          }
+        } catch (err) {
+          console.error('Error fetching profile:', err);
+          set({
+            error: err instanceof Error ? err.message : 'Failed to fetch profile',
+            loading: false,
+          });
         }
-      } else {
-        set({ profile: data, loading: false, error: null });
-      }
-    } catch (err) {
-      console.error('Error fetching profile:', err);
-      set({
-        error: err instanceof Error ? err.message : 'Failed to fetch profile',
-        loading: false,
-      });
+      },
+
+      updateProfile: async (userId: string, updates: Partial<Profile>) => {
+        if (!userId) return;
+
+        try {
+          const { error } = await supabase.from('profiles').update(updates).eq('id', userId);
+
+          if (error) throw error;
+
+          // Update local state immediately
+          const currentProfile = get().profile;
+          if (currentProfile) {
+            set({
+              profile: { ...currentProfile, ...updates },
+            });
+          }
+        } catch (err) {
+          console.error('Error updating profile:', err);
+          throw err;
+        }
+      },
+
+      clearProfile: () => {
+        set({ profile: null, loading: false, error: null });
+      },
+    }),
+    {
+      name: 'mydash-profile',
+      partialize: (state) => ({ profile: state.profile }), // Only persist profile, not loading/error
     }
-  },
-
-  updateProfile: async (userId: string, updates: Partial<Profile>) => {
-    if (!userId) return;
-
-    try {
-      const { error } = await supabase.from('profiles').update(updates).eq('id', userId);
-
-      if (error) throw error;
-
-      // Update local state immediately
-      const currentProfile = get().profile;
-      if (currentProfile) {
-        set({
-          profile: { ...currentProfile, ...updates },
-        });
-      }
-    } catch (err) {
-      console.error('Error updating profile:', err);
-      throw err;
-    }
-  },
-
-  clearProfile: () => {
-    set({ profile: null, loading: false, error: null });
-  },
-}));
+  )
+);
 
 export default useProfileStore;

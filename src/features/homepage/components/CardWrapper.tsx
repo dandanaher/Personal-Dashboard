@@ -1,7 +1,7 @@
 import { memo, type ReactNode } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import type { CardId, CardSize } from '@/stores/homepageStore';
 
 interface CardWrapperProps {
@@ -41,25 +41,22 @@ export const CardWrapper = memo(function CardWrapper({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative h-full ${colSpanClass} ${isEditMode ? 'group' : ''} [&>*:first-child]:h-full`}
+      className={`relative h-full ${colSpanClass} ${isEditMode ? 'group cursor-grab active:cursor-grabbing' : ''} [&>*:first-child]:h-full`}
+      {...(isEditMode ? { ...attributes, ...listeners } : {})}
     >
+      {children}
+
       {/* Edit mode overlay controls */}
       {isEditMode && (
         <>
-          {/* Drag handle */}
-          <div
-            {...attributes}
-            {...listeners}
-            className="absolute -left-1 top-1/2 -translate-y-1/2 z-10 cursor-grab active:cursor-grabbing p-1 rounded bg-secondary-100 dark:bg-secondary-800 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-          >
-            <GripVertical size={16} className="text-secondary-500 dark:text-secondary-400" />
-          </div>
-
           {/* Remove button */}
           <button
             type="button"
-            onClick={() => onRemove(id)}
-            className="absolute -top-2 -right-2 z-10 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(id);
+            }}
+            className="absolute -top-2 -right-2 z-10 w-6 h-6 flex items-center justify-center rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600"
           >
             <X size={14} />
           </button>
@@ -68,8 +65,6 @@ export const CardWrapper = memo(function CardWrapper({
           <div className="absolute inset-0 rounded-3xl border-2 border-dashed border-secondary-300 dark:border-secondary-600 pointer-events-none" />
         </>
       )}
-
-      {children}
     </div>
   );
 });
