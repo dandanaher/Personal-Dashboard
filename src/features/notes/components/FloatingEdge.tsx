@@ -233,7 +233,7 @@ export default function FloatingEdge({
           onColor={handleColor}
           onFocus={handleFocusEdge}
           onDelete={handleDelete}
-          color={data?.color}
+          color={data?.color ?? undefined}
         />
       </div>
     </div>

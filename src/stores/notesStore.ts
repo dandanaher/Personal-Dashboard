@@ -1448,7 +1448,7 @@ export const useNotesStore = create<NotesStore>()(
       },
 
       onNodesChange: (changes: NodeChange[]) => {
-        const nextNodes = applyNodeChanges<NotesNode>(changes, get().nodes);
+        const nextNodes = applyNodeChanges<NotesNodeData>(changes, get().nodes);
         set({ nodes: nextNodes });
 
         changes.forEach((change: NodeChange) => {
@@ -1563,7 +1563,7 @@ export const useNotesStore = create<NotesStore>()(
 
       onEdgesChange: (changes: EdgeChange[]) => {
         set((state) => ({
-          edges: applyEdgeChanges<NotesEdge>(changes, state.edges),
+          edges: applyEdgeChanges<NotesEdgeData>(changes, state.edges),
         }));
 
         // Handle edge removals

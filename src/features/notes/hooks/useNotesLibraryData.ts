@@ -21,8 +21,6 @@ interface UseNotesLibraryDataReturn {
     deleteFolder: (id: string) => Promise<boolean>;
 }
 
-type SupabaseResult<T> = { data: T | null; error: PostgrestError | null };
-
 /**
  * Combined hook that fetches all notes library data in parallel
  * This improves performance by eliminating the waterfall of sequential fetches
@@ -49,32 +47,27 @@ export function useNotesLibraryData(): UseNotesLibraryDataReturn {
         setLoading(true);
         try {
             // Fetch all data in parallel
-            const notesPromise = supabase
-                .from('notes')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('updated_at', { ascending: false }) as Promise<SupabaseResult<Note[]>>;
-            const canvasesPromise = supabase
-                .from('canvases')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('last_accessed_at', { ascending: false }) as Promise<SupabaseResult<Canvas[]>>;
-            const foldersPromise = supabase
-                .from('folders')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('name', { ascending: true }) as Promise<SupabaseResult<Folder[]>>;
-            const groupsPromise = supabase
-                .from('canvas_groups')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: true }) as Promise<SupabaseResult<CanvasGroup[]>>;
-
             const [notesResult, canvasesResult, foldersResult, groupsResult] = await Promise.all([
-                notesPromise,
-                canvasesPromise,
-                foldersPromise,
-                groupsPromise,
+                supabase
+                    .from('notes')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('updated_at', { ascending: false }),
+                supabase
+                    .from('canvases')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('last_accessed_at', { ascending: false }),
+                supabase
+                    .from('folders')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('name', { ascending: true }),
+                supabase
+                    .from('canvas_groups')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: true }),
             ]);
 
             if (notesResult.error) throw notesResult.error;
@@ -82,10 +75,10 @@ export function useNotesLibraryData(): UseNotesLibraryDataReturn {
             if (foldersResult.error) throw foldersResult.error;
             if (groupsResult.error) throw groupsResult.error;
 
-            setNotes(notesResult.data ?? []);
-            setCanvases(canvasesResult.data ?? []);
-            setFolders(foldersResult.data ?? []);
-            setGroups(groupsResult.data ?? []);
+            setNotes((notesResult.data as Note[]) ?? []);
+            setCanvases((canvasesResult.data as Canvas[]) ?? []);
+            setFolders((foldersResult.data as Folder[]) ?? []);
+            setGroups((groupsResult.data as CanvasGroup[]) ?? []);
             setError(null);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to fetch library data');

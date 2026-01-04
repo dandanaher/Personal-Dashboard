@@ -158,7 +158,7 @@ const GroupNode = memo(({ data, selected, id }: NodeProps<GroupNodeData>) => {
           <input
             autoFocus
             className="px-2 py-1 rounded bg-white dark:bg-secondary-800 border shadow-sm text-sm outline-none"
-            defaultValue={data.label}
+            defaultValue={data.label ?? ''}
             onBlur={(e) => {
               void updateGroup(id, { label: e.target.value });
               setIsEditingLabel(false);
