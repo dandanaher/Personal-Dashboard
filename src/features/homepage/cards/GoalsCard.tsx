@@ -1,10 +1,13 @@
-import { memo } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Card from '@/components/ui/Card';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useGoals } from '@/features/goals/hooks/useGoals';
 import { getGoalDisplayProgress } from '@/features/goals/lib/progress';
+import { HOME_CACHE_TTL_MS, readCache, writeCache } from '@/lib/cache';
+import type { Goal } from '@/lib/types';
+import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
 
 interface GoalsCardProps {
@@ -12,13 +15,62 @@ interface GoalsCardProps {
 }
 
 export const GoalsCard = memo(function GoalsCard({ className = '' }: GoalsCardProps) {
+  const user = useAuthStore((state) => state.user);
   const accentColor = useThemeStore((state) => state.accentColor);
   const { goals, loading, habitData } = useGoals(undefined, {
     onlyActive: true,
     limit: 3,
+    deferHabitData: true,
   });
 
-  if (loading) {
+  const cacheKey = user ? `home:goals:${user.id}:active:3` : null;
+  const cachedGoals = useMemo(
+    () => (cacheKey ? readCache<Goal[]>(cacheKey, HOME_CACHE_TTL_MS) : null),
+    [cacheKey]
+  );
+  const hasCachedGoals = cachedGoals !== null;
+  const goalsToRender = loading && cachedGoals ? cachedGoals : goals;
+
+  const habitCacheKey = user ? `home:goal-habit-completions:${user.id}` : null;
+  const cachedHabitCompletions = useMemo(
+    () =>
+      habitCacheKey
+        ? readCache<Record<string, number>>(habitCacheKey, HOME_CACHE_TTL_MS)
+        : null,
+    [habitCacheKey]
+  );
+
+  const habitCompletionsMap = useMemo(() => {
+    if (habitData.size > 0) {
+      const next = new Map<string, number>();
+      habitData.forEach((value, key) => {
+        next.set(key, value.completions);
+      });
+      return next;
+    }
+    if (cachedHabitCompletions) {
+      return new Map(
+        Object.entries(cachedHabitCompletions).map(([id, count]) => [id, Number(count)])
+      );
+    }
+    return new Map<string, number>();
+  }, [habitData, cachedHabitCompletions]);
+
+  useEffect(() => {
+    if (!cacheKey || loading) return;
+    writeCache(cacheKey, goals);
+  }, [cacheKey, goals, loading]);
+
+  useEffect(() => {
+    if (!habitCacheKey || habitData.size === 0) return;
+    const next: Record<string, number> = {};
+    habitData.forEach((value, key) => {
+      next[key] = value.completions;
+    });
+    writeCache(habitCacheKey, next);
+  }, [habitCacheKey, habitData]);
+
+  if (loading && !hasCachedGoals) {
     return (
       <Card padding="none" variant="outlined" className={`overflow-hidden ${className}`}>
         <div className="px-3 py-2 border-b border-secondary-200 dark:border-secondary-700">
@@ -35,7 +87,7 @@ export const GoalsCard = memo(function GoalsCard({ className = '' }: GoalsCardPr
     <Card padding="none" variant="outlined" className={`overflow-hidden ${className}`}>
       <div className="px-3 py-2 border-b border-secondary-200 dark:border-secondary-700 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-secondary-900 dark:text-white">
-          Active Goals ({goals.length})
+          Active Goals ({goalsToRender.length})
         </h3>
         <Link
           to="/goals"
@@ -47,19 +99,24 @@ export const GoalsCard = memo(function GoalsCard({ className = '' }: GoalsCardPr
         </Link>
       </div>
       <div className="p-3">
-        {goals.length === 0 ? (
+        {goalsToRender.length === 0 ? (
           <p className="text-xs text-secondary-500 dark:text-secondary-400 text-center py-1">
             No active goals. Set one to get started!
           </p>
         ) : (
           <ul className="space-y-2">
-            {goals.map((goal) => {
+            {goalsToRender.map((goal) => {
               // Calculate display progress (same logic as GoalCard)
               const hData = goal.linked_habit_id
-                ? habitData.get(goal.linked_habit_id)
+                ? habitCompletionsMap.get(goal.linked_habit_id)
                 : undefined;
-              const habitCompletions = hData?.completions || 0;
-              const displayProgress = getGoalDisplayProgress(goal, habitCompletions);
+              const habitCompletions = hData;
+              const displayProgress =
+                habitCompletions !== undefined
+                  ? getGoalDisplayProgress(goal, habitCompletions)
+                  : goal.completed
+                    ? 100
+                    : goal.progress;
 
               return (
                 <li key={goal.id} className="space-y-0.5">

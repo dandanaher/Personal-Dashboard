@@ -30,25 +30,6 @@ function HomePage() {
     return 'Good evening';
   }
 
-  if (profileLoading) {
-    return (
-      <div className="min-h-full flex items-center justify-center">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
-  if (profileError) {
-    return (
-      <div className="min-h-full flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-500 dark:text-red-400 mb-2">Failed to load profile</p>
-          <p className="text-sm text-secondary-500 dark:text-secondary-400">{profileError}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-full">
       <div className="flex items-start justify-between mb-4">
@@ -59,7 +40,15 @@ function HomePage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">{greeting}</h1>
-            <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-0.5">{userName}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-sm text-secondary-600 dark:text-secondary-400">{userName}</p>
+              {profileLoading && <LoadingSpinner size="sm" />}
+            </div>
+            {profileError && (
+              <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                Failed to load profile.
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">

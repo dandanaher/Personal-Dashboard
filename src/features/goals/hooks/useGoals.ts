@@ -39,10 +39,12 @@ interface UseGoalsReturn {
 interface UseGoalsOptions {
   onlyActive?: boolean;
   limit?: number;
+  deferHabitData?: boolean;
+  includeHabitData?: boolean;
 }
 
 export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {}): UseGoalsReturn {
-  const { onlyActive = false, limit } = options;
+  const { onlyActive = false, limit, deferHabitData = false, includeHabitData = true } = options;
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -130,6 +132,10 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
     async (goalsData: Goal[]) => {
       if (!user) return;
 
+      if (!includeHabitData) {
+        return;
+      }
+
       const linkedHabitIds = Array.from(
         new Set(
           goalsData.flatMap((goal) => (goal.linked_habit_id ? [goal.linked_habit_id] : []))
@@ -148,11 +154,13 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
         console.error('Failed to fetch habit data:', err);
       }
     },
-    [user, fetchHabitDataForIds]
+    [user, fetchHabitDataForIds, includeHabitData]
   );
 
   const syncHabitDataForGoals = useCallback(
     async (goalsData: Goal[]) => {
+      if (!includeHabitData) return;
+
       const linkedHabitIds = Array.from(
         new Set(
           goalsData.flatMap((goal) => (goal.linked_habit_id ? [goal.linked_habit_id] : []))
@@ -192,7 +200,7 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
         }
       }
     },
-    [fetchHabitDataForIds, habitData]
+    [fetchHabitDataForIds, habitData, includeHabitData]
   );
 
   // Fetch goals with optional filter
@@ -235,13 +243,28 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
       setGoals(goalsData);
 
       // Fetch habit data for linked goals
-      await fetchHabitData(goalsData);
+      if (includeHabitData) {
+        if (deferHabitData) {
+          void fetchHabitData(goalsData);
+        } else {
+          await fetchHabitData(goalsData);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch goals');
     } finally {
       setLoading(false);
     }
-  }, [user, filterType, fetchHabitData, onlyActive, limit, sortGoals]);
+  }, [
+    user,
+    filterType,
+    fetchHabitData,
+    onlyActive,
+    limit,
+    sortGoals,
+    deferHabitData,
+    includeHabitData,
+  ]);
 
   // Add goal with optimistic update
   const addGoal = useCallback(
@@ -295,7 +318,7 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
           return limited;
         });
 
-        if (didUpdate) {
+        if (didUpdate && includeHabitData) {
           void syncHabitDataForGoals(nextGoalsSnapshot);
         }
 
@@ -343,7 +366,9 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
         }
 
         if (didUpdate) {
-          void syncHabitDataForGoals(nextGoalsSnapshot);
+          if (includeHabitData) {
+            void syncHabitDataForGoals(nextGoalsSnapshot);
+          }
           if (limit && nextGoalsSnapshot.length < limit) {
             void fetchGoals();
           }
@@ -476,7 +501,9 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
         }
 
         if (didUpdate) {
-          void syncHabitDataForGoals(nextGoalsSnapshot);
+          if (includeHabitData) {
+            void syncHabitDataForGoals(nextGoalsSnapshot);
+          }
           if (limit && nextGoalsSnapshot.length < limit) {
             void fetchGoals();
           }
@@ -572,7 +599,9 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
             }
 
           if (didUpdate) {
-            void syncHabitDataForGoals(nextGoalsSnapshot);
+            if (includeHabitData) {
+              void syncHabitDataForGoals(nextGoalsSnapshot);
+            }
             if (limit && nextGoalsSnapshot.length < limit) {
               void fetchGoals();
             }
@@ -588,7 +617,7 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
 
   // Real-time subscription for habit_logs (to update linked goal progress)
   useEffect(() => {
-    if (!user) return;
+    if (!user || !includeHabitData) return;
 
     // Only subscribe if we have linked goals
     const linkedHabitIds = Array.from(habitData.keys());
@@ -626,7 +655,7 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [user, habitData, fetchHabitDataForIds]);
+  }, [user, habitData, fetchHabitDataForIds, includeHabitData]);
 
   return {
     goals,
