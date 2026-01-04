@@ -60,7 +60,7 @@ export const MoodTrackerCard = memo(function MoodTrackerCard({ className = '' }:
     return (
       <Card padding="none" variant="outlined" className={`overflow-hidden ${className}`}>
         <div className="px-3 py-2 border-b border-secondary-200 dark:border-secondary-700">
-          <h3 className="text-sm font-semibold text-secondary-900 dark:text-white">Mood Tracker</h3>
+          <h3 className="text-sm font-semibold text-secondary-900 dark:text-white">Mood Logger</h3>
         </div>
         <div className="p-4 flex items-center justify-center">
           <LoadingSpinner />
@@ -75,7 +75,7 @@ export const MoodTrackerCard = memo(function MoodTrackerCard({ className = '' }:
   return (
     <Card padding="none" variant="outlined" className={`overflow-hidden ${className}`}>
       <div className="px-3 py-2 border-b border-secondary-200 dark:border-secondary-700 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-secondary-900 dark:text-white">Mood Tracker</h3>
+        <h3 className="text-sm font-semibold text-secondary-900 dark:text-white">Mood Logger</h3>
         <span className="text-xs font-medium" style={{ color: accentColor }}>{todayDate}</span>
       </div>
 

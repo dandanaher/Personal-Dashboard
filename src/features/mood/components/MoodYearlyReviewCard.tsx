@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import { useMoodLogs } from '../hooks/useMoodLogs';
 import { MoodPicker } from './MoodPicker';
-import { getMoodColor, getMoodInfo, MOOD_LEVELS, type MoodLevel } from './moodLevels';
+import { getMoodColor, getMoodInfo, type MoodLevel } from './moodLevels';
 import { useThemeStore } from '@/stores/themeStore';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import type { MoodLog } from '@/lib/types';
@@ -242,7 +242,7 @@ export const MoodYearlyReviewCard = memo(function MoodYearlyReviewCard({
       <Card padding="none" variant="outlined" className={`overflow-hidden ${className}`}>
         <div className="px-3 py-2 border-b border-secondary-200 dark:border-secondary-700">
           <h3 className="text-sm font-semibold text-secondary-900 dark:text-white">
-            Yearly Mood Review
+            Mood review
           </h3>
         </div>
         <div className="p-8 flex items-center justify-center">
@@ -257,7 +257,7 @@ export const MoodYearlyReviewCard = memo(function MoodYearlyReviewCard({
       <Card padding="none" variant="outlined" className={`overflow-hidden ${className}`}>
         <div className="px-3 py-2 border-b border-secondary-200 dark:border-secondary-700 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-secondary-900 dark:text-white">
-            Yearly Mood Review
+            Mood review
           </h3>
           <div className="flex items-center gap-3 text-xs font-medium" style={{ color: accentColor }}>
             <span>Avg: {stats.averageMood.toFixed(1)}</span>
@@ -267,22 +267,6 @@ export const MoodYearlyReviewCard = memo(function MoodYearlyReviewCard({
         </div>
 
         <div className="p-3">
-          {/* Legend */}
-          <div className="flex items-center justify-end gap-2 mb-3">
-            <span className="text-xs text-secondary-500 dark:text-secondary-400">Mood:</span>
-            {MOOD_LEVELS.map(({ level, label, color }) => (
-              <div key={level} className="flex items-center gap-1" title={label}>
-                <div
-                  className="w-3 h-3 rounded-sm"
-                  style={{ backgroundColor: color }}
-                />
-                <span className="text-xs text-secondary-500 dark:text-secondary-400 hidden sm:inline">
-                  {label}
-                </span>
-              </div>
-            ))}
-          </div>
-
           {/* Contribution Graph */}
           <div className="relative">
             <div className="flex">
