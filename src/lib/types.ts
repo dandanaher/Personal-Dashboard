@@ -481,3 +481,77 @@ export type CanvasUpdate = Partial<Omit<Canvas, 'id' | 'created_at' | 'user_id'>
 // Type aliases for Folder operations
 export type FolderInsert = Omit<Folder, 'id' | 'created_at'>;
 export type FolderUpdate = Partial<Omit<Folder, 'id' | 'created_at' | 'user_id'>>;
+
+// =============================================================================
+// Push Notification Types
+// =============================================================================
+
+/**
+ * Push subscription stored in database.
+ * Contains Web Push API subscription details for a user's device.
+ */
+export interface PushSubscription {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh_key: string;
+  auth_key: string;
+  device_name: string | null;
+  user_agent: string | null;
+  created_at: string;
+  updated_at: string;
+  last_used_at: string | null;
+}
+
+/**
+ * User notification preferences.
+ * Controls when and how notifications are sent.
+ */
+export interface NotificationPreferences {
+  id: string;
+  user_id: string;
+  habit_reminders_enabled: boolean;
+  /** Time in HH:MM:SS format */
+  reminder_time: string;
+  /** IANA timezone (e.g., 'America/New_York') */
+  timezone: string;
+  weekly_summary_enabled: boolean;
+  streak_milestone_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Notification log entry for debugging and analytics.
+ */
+export interface NotificationLogEntry {
+  id: string;
+  user_id: string;
+  subscription_id: string | null;
+  notification_type: 'habit_reminder' | 'streak_milestone' | 'weekly_summary';
+  title: string;
+  body: string | null;
+  status: 'pending' | 'sent' | 'failed' | 'clicked';
+  error_message: string | null;
+  created_at: string;
+  sent_at: string | null;
+  clicked_at: string | null;
+}
+
+// Type aliases for Push Subscription operations
+export type PushSubscriptionInsert = Omit<
+  PushSubscription,
+  'id' | 'created_at' | 'updated_at' | 'last_used_at'
+>;
+export type PushSubscriptionUpdate = Partial<
+  Omit<PushSubscription, 'id' | 'created_at' | 'user_id'>
+>;
+
+// Type aliases for Notification Preferences operations
+export type NotificationPreferencesInsert = Omit<
+  NotificationPreferences,
+  'id' | 'created_at' | 'updated_at'
+>;
+export type NotificationPreferencesUpdate = Partial<
+  Omit<NotificationPreferences, 'id' | 'user_id' | 'created_at'>
+>;

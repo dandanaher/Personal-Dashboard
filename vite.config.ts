@@ -41,6 +41,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Import custom push notification handler
+        importScripts: ['sw-push-handler.js'],
       },
     }),
   ],

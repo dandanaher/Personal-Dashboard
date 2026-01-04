@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { Settings, LogOut, Sun, Moon, Check, Palette, User, Pencil, Layers } from 'lucide-react';
+import { Settings, LogOut, Sun, Moon, Check, Palette, User, Pencil, Layers, Bell } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore, APP_COLORS } from '@/stores/themeStore';
 import { useProfileStore } from '@/stores/profileStore';
+import { NotificationSettings } from '@/features/notifications';
 
 interface SettingsMenuProps {
   isSidebar?: boolean;
@@ -277,6 +278,17 @@ export function SettingsMenu({ isSidebar = false, isCollapsed = false }: Setting
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Notifications */}
+          <div className="p-3 border-b border-white/30 dark:border-white/10">
+            <div className="flex items-center gap-2 mb-2">
+              <Bell className="h-3.5 w-3.5 text-secondary-500" />
+              <span className="text-xs font-medium text-secondary-700 dark:text-secondary-300">
+                Notifications
+              </span>
+            </div>
+            <NotificationSettings compact />
           </div>
 
           {/* Sign Out */}
