@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { temporal } from 'zundo';
+import type { PostgrestError } from '@supabase/supabase-js';
 import {
   Node,
   Edge,
@@ -15,7 +16,7 @@ import imageCompression from 'browser-image-compression';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
-import type { Note, NoteEdge, CanvasGroup } from '@/lib/types';
+import type { Note, NoteEdge, CanvasGroup, NoteEdgeUpdate } from '@/lib/types';
 
 // Per-key debounce utility
 function debounceMap(
@@ -49,9 +50,25 @@ export interface NoteNodeData {
   onDoubleClick: (noteId: string) => void;
 }
 
+interface GroupNodeData {
+  label: string | null;
+  color: string;
+}
+
+interface NotesEdgeData {
+  label?: string | null;
+  color?: string | null;
+}
+
+type NotesNodeData = NoteNodeData | GroupNodeData;
+type NotesNode = Node<NotesNodeData>;
+type NoteCanvasNode = Node<NoteNodeData>;
+type GroupCanvasNode = Node<GroupNodeData>;
+type NotesEdge = Edge<NotesEdgeData>;
+
 interface NotesState {
-  nodes: Node<NoteNodeData | any>[];
-  edges: Edge[];
+  nodes: NotesNode[];
+  edges: NotesEdge[];
   groups: CanvasGroup[];
   selectedNoteId: string | null;
   loading: boolean;
@@ -135,8 +152,18 @@ function isNodeInsideGroup(
   );
 }
 
+const NOTE_NODE_TYPES = new Set(['noteNode', 'linkNode', 'imageNode']);
+
+function isNoteNode(node: NotesNode): node is NoteCanvasNode {
+  return NOTE_NODE_TYPES.has(node.type ?? '');
+}
+
+function isGroupNode(node: NotesNode): node is GroupCanvasNode {
+  return node.type === 'groupNode';
+}
+
 // Convert database note to ReactFlow node
-function noteToNode(note: Note, onDoubleClick: (noteId: string) => void): Node<NoteNodeData> {
+function noteToNode(note: Note, onDoubleClick: (noteId: string) => void): NoteCanvasNode {
   let nodeType: string;
   if (note.type === 'link') {
     nodeType = 'linkNode';
@@ -165,18 +192,22 @@ function noteToNode(note: Note, onDoubleClick: (noteId: string) => void): Node<N
 }
 
 // Convert database edge to ReactFlow edge
-function noteEdgeToEdge(noteEdge: NoteEdge): Edge {
-  const edge: Edge = {
+function noteEdgeToEdge(noteEdge: NoteEdge): NotesEdge | null {
+  const sourceId = noteEdge.source_note_id ?? noteEdge.source_group_id;
+  const targetId = noteEdge.target_note_id ?? noteEdge.target_group_id;
+  if (!sourceId || !targetId) return null;
+
+  const edge: NotesEdge = {
     id: noteEdge.id,
-    source: (noteEdge.source_note_id || noteEdge.source_group_id)!,
-    target: (noteEdge.target_note_id || noteEdge.target_group_id)!,
-    sourceHandle: noteEdge.source_handle || undefined,
-    targetHandle: noteEdge.target_handle || undefined,
+    source: sourceId,
+    target: targetId,
+    sourceHandle: noteEdge.source_handle ?? undefined,
+    targetHandle: noteEdge.target_handle ?? undefined,
     type: 'floatingEdge',
     animated: true,
     data: {
-      label: noteEdge.label,
-      color: noteEdge.color,
+      label: noteEdge.label ?? undefined,
+      color: noteEdge.color ?? undefined,
     },
   };
 
@@ -220,7 +251,10 @@ export const useNotesStore = create<NotesStore>()(
 
         try {
           // Fetch notes
-          const { data: notes, error: notesError } = await supabase
+          const {
+            data: notes,
+            error: notesError,
+          }: { data: Note[] | null; error: PostgrestError | null } = await supabase
             .from('notes')
             .select('*')
             .eq('user_id', user.id)
@@ -230,7 +264,10 @@ export const useNotesStore = create<NotesStore>()(
           if (notesError) throw notesError;
 
           // Fetch groups
-          const { data: groups, error: groupsError } = await supabase
+          const {
+            data: groups,
+            error: groupsError,
+          }: { data: CanvasGroup[] | null; error: PostgrestError | null } = await supabase
             .from('canvas_groups')
             .select('*')
             .eq('user_id', user.id)
@@ -240,49 +277,59 @@ export const useNotesStore = create<NotesStore>()(
 
           // Fetch edges - fetch all for user to support group/note connections
           // We do this to ensure we catch edges between groups and notes even if filtering is complex
-          const { data: edgesData, error: edgesError } = await supabase
+          const {
+            data: edgesData,
+            error: edgesError,
+          }: { data: NoteEdge[] | null; error: PostgrestError | null } = await supabase
             .from('note_edges')
             .select('*')
             .eq('user_id', user.id);
 
           if (edgesError) throw edgesError;
-          const noteEdges = (edgesData || []) as NoteEdge[];
+          const noteEdges = edgesData ?? [];
 
           const onDoubleClick = (noteId: string) => {
             get().setSelectedNoteId(noteId);
           };
 
           // Process nodes
-          const flowNodes = (notes || []).map((note) => {
-            const node = noteToNode(note as Note, onDoubleClick);
+          const flowNodes = (notes ?? []).map((note) => {
+            const node = noteToNode(note, onDoubleClick);
             node.zIndex = 10; // Ensure notes are above groups
 
             if (note.group_id) {
-              const parentGroup = groups?.find(g => g.id === note.group_id);
+              const parentGroup = groups?.find((group) => group.id === note.group_id);
               if (parentGroup) {
                 node.parentNode = note.group_id;
                 // Calculate relative position
                 node.position = {
                   x: note.position_x - parentGroup.position_x,
-                  y: note.position_y - parentGroup.position_y
+                  y: note.position_y - parentGroup.position_y,
                 };
               }
             }
             return node;
           });
 
-          const groupNodes = (groups || []).map(group => ({
+          const groupNodes: GroupCanvasNode[] = (groups ?? []).map((group) => ({
             id: group.id,
             type: 'groupNode',
             position: { x: group.position_x, y: group.position_y },
             style: { width: group.width, height: group.height },
             data: { label: group.label, color: group.color },
-            zIndex: -1
+            zIndex: -1,
           }));
 
-          const edges = noteEdges.map((edge) => noteEdgeToEdge(edge));
+          const edges = noteEdges
+            .map((edge) => noteEdgeToEdge(edge))
+            .filter((edge): edge is NotesEdge => edge !== null);
 
-          set({ nodes: [...groupNodes, ...flowNodes], edges, groups: (groups || []) as CanvasGroup[], loading: false });
+          set({
+            nodes: [...groupNodes, ...flowNodes],
+            edges,
+            groups: groups ?? [],
+            loading: false,
+          });
 
           // Clear any stale history - resume will happen in CanvasViewInner after mount
           useNotesStore.temporal.getState().clear();
@@ -302,7 +349,10 @@ export const useNotesStore = create<NotesStore>()(
 
         try {
           // Fetch all notes (for library sidebar display)
-          const { data: notes, error: notesError } = await supabase
+          const {
+            data: notes,
+            error: notesError,
+          }: { data: Note[] | null; error: PostgrestError | null } = await supabase
             .from('notes')
             .select('*')
             .eq('user_id', user.id)
@@ -310,7 +360,7 @@ export const useNotesStore = create<NotesStore>()(
 
           if (notesError) throw notesError;
 
-          set({ libraryNotes: (notes || []) as Note[] });
+          set({ libraryNotes: notes ?? [] });
         } catch (error) {
           console.error('Failed to fetch library notes:', error);
         }
@@ -321,7 +371,10 @@ export const useNotesStore = create<NotesStore>()(
         if (!user) return null;
 
         try {
-          const { data, error } = await supabase
+          const {
+            data,
+            error,
+          }: { data: Note | null; error: PostgrestError | null } = await supabase
             .from('notes')
             .select('*')
             .eq('id', noteId)
@@ -329,7 +382,7 @@ export const useNotesStore = create<NotesStore>()(
             .single();
 
           if (error) throw error;
-          return data as Note;
+          return data ?? null;
         } catch (error) {
           console.error('Failed to fetch note:', error);
           return null;
@@ -344,7 +397,10 @@ export const useNotesStore = create<NotesStore>()(
 
         try {
           // Fetch notes
-          const { data: notes, error: notesError } = await supabase
+          const {
+            data: notes,
+            error: notesError,
+          }: { data: Note[] | null; error: PostgrestError | null } = await supabase
             .from('notes')
             .select('*')
             .eq('user_id', user.id)
@@ -353,7 +409,10 @@ export const useNotesStore = create<NotesStore>()(
           if (notesError) throw notesError;
 
           // Fetch edges
-          const { data: noteEdges, error: edgesError } = await supabase
+          const {
+            data: noteEdges,
+            error: edgesError,
+          }: { data: NoteEdge[] | null; error: PostgrestError | null } = await supabase
             .from('note_edges')
             .select('*')
             .eq('user_id', user.id);
@@ -364,8 +423,10 @@ export const useNotesStore = create<NotesStore>()(
             get().setSelectedNoteId(noteId);
           };
 
-          const nodes = (notes || []).map((note) => noteToNode(note as Note, onDoubleClick));
-          const edges = (noteEdges || []).map((edge) => noteEdgeToEdge(edge as NoteEdge));
+          const nodes = (notes ?? []).map((note) => noteToNode(note, onDoubleClick));
+          const edges = (noteEdges ?? [])
+            .map((edge) => noteEdgeToEdge(edge))
+            .filter((edge): edge is NotesEdge => edge !== null);
 
           set({ nodes, edges, loading: false });
         } catch (error) {
@@ -415,7 +476,14 @@ export const useNotesStore = create<NotesStore>()(
             ...(height !== undefined ? { height } : {}),
           };
 
-          let { data, error } = await supabase.from('notes').insert(newNote).select().single();
+          let {
+            data,
+            error,
+          }: { data: Note | null; error: PostgrestError | null } = await supabase
+            .from('notes')
+            .insert(newNote)
+            .select()
+            .single();
 
           // Backwards-compatible insert for older schemas that require a per-note color column.
           if (error?.code === '23502' && /column "color"/i.test(error.message)) {
@@ -427,8 +495,9 @@ export const useNotesStore = create<NotesStore>()(
           }
 
           if (error) throw error;
+          if (!data) throw new Error('Failed to create note');
 
-          const createdNote = data as Note;
+          const createdNote = data;
 
           // If the note is on the current canvas, add it to the ReactFlow nodes
           if (effectiveCanvasId && effectiveCanvasId === currentCanvasId) {
@@ -563,7 +632,9 @@ export const useNotesStore = create<NotesStore>()(
         // Optimistic update for both nodes and library notes
         set((state) => ({
           nodes: state.nodes.map((node) =>
-            node.id === noteId ? { ...node, data: { ...node.data, title, content } } : node
+            node.id === noteId && isNoteNode(node)
+              ? { ...node, data: { ...node.data, title, content } }
+              : node
           ),
           libraryNotes: state.libraryNotes.map((note) =>
             note.id === noteId ? { ...note, title, content, updated_at: updatedAt } : note
@@ -598,7 +669,9 @@ export const useNotesStore = create<NotesStore>()(
         // Optimistic update
         set((state) => ({
           nodes: state.nodes.map((node) =>
-            node.id === noteId ? { ...node, data: { ...node.data, color } } : node
+            node.id === noteId && isNoteNode(node)
+              ? { ...node, data: { ...node.data, color } }
+              : node
           ),
           libraryNotes: state.libraryNotes.map((note) =>
             note.id === noteId ? { ...note, color, updated_at: updatedAt } : note
@@ -634,7 +707,7 @@ export const useNotesStore = create<NotesStore>()(
             edge.id === edgeId
               ? {
                 ...edge,
-                data: { ...edge.data, ...updates },
+                data: { ...(edge.data ?? {}), ...updates },
                 ...(updates.color
                   ? {
                     style: {
@@ -651,7 +724,7 @@ export const useNotesStore = create<NotesStore>()(
 
         try {
           // Map updates to DB columns
-          const dbUpdates: any = {};
+          const dbUpdates: NoteEdgeUpdate = {};
           if (updates.label !== undefined) dbUpdates.label = updates.label;
           if (updates.color !== undefined) dbUpdates.color = updates.color;
 
@@ -678,7 +751,10 @@ export const useNotesStore = create<NotesStore>()(
         // Get the note before deleting to check if it's an image (for storage cleanup)
         const noteToDelete = get().nodes.find((node) => node.id === noteId);
         const isImageNote = noteToDelete?.type === 'imageNode';
-        const imageUrl = isImageNote ? noteToDelete?.data?.content : null;
+        const imageUrl =
+          noteToDelete && isImageNote && isNoteNode(noteToDelete)
+            ? noteToDelete.data.content
+            : null;
 
         // Optimistic update - remove node and associated edges
         set((state) => ({
@@ -779,21 +855,18 @@ export const useNotesStore = create<NotesStore>()(
         }
 
         try {
-          const sourceNode = get().nodes.find(n => n.id === connection.source);
-          const targetNode = get().nodes.find(n => n.id === connection.target);
+          const sourceNode = get().nodes.find((node) => node.id === connection.source);
+          const targetNode = get().nodes.find((node) => node.id === connection.target);
           const isSourceGroup = sourceNode?.type === 'groupNode';
           const isTargetGroup = targetNode?.type === 'groupNode';
           const { accentColor, darkMode } = useThemeStore.getState();
 
-          const getEdgeColor = (node?: Node) => {
+          const getEdgeColor = (node?: NotesNode) => {
             if (!node) return null;
-            const nodeColor = (node.data as { color?: string } | undefined)?.color;
-            if (nodeColor) return nodeColor;
-            if (node.type === 'noteNode' || node.type === 'linkNode') {
+            if (isGroupNode(node)) return node.data.color;
+            if (isNoteNode(node) && node.data.color) return node.data.color;
+            if (node.type === 'noteNode' || node.type === 'linkNode' || node.type === 'imageNode') {
               return darkMode ? '#334155' : '#e2e8f0';
-            }
-            if (node.type === 'groupNode') {
-              return accentColor;
             }
             return accentColor;
           };
@@ -811,15 +884,27 @@ export const useNotesStore = create<NotesStore>()(
             color: edgeColor,
           };
 
-          const { data, error } = await supabase.from('note_edges').insert(newEdge).select().single();
+          const {
+            data,
+            error,
+          }: { data: NoteEdge | null; error: PostgrestError | null } = await supabase
+            .from('note_edges')
+            .insert(newEdge)
+            .select()
+            .single();
 
           if (error) throw error;
+          if (!data) throw new Error('Failed to create edge');
 
-          const edge = {
-            ...noteEdgeToEdge(data as NoteEdge),
-            sourceHandle: connection.sourceHandle || (data as NoteEdge).source_handle || undefined,
-            targetHandle: connection.targetHandle || (data as NoteEdge).target_handle || undefined,
+          const createdEdge = noteEdgeToEdge(data);
+          if (!createdEdge) return;
+
+          const edge: NotesEdge = {
+            ...createdEdge,
+            sourceHandle: connection.sourceHandle ?? createdEdge.sourceHandle,
+            targetHandle: connection.targetHandle ?? createdEdge.targetHandle,
           };
+
           set((state) => ({
             edges: [...state.edges, edge],
           }));
@@ -866,7 +951,7 @@ export const useNotesStore = create<NotesStore>()(
         const tempId = crypto.randomUUID();
         const updatedAt = new Date().toISOString();
 
-        const newGroup = {
+        const newGroup: CanvasGroup = {
           id: tempId,
           user_id: user.id,
           canvas_id: currentCanvasId,
@@ -881,19 +966,20 @@ export const useNotesStore = create<NotesStore>()(
         };
 
         // Find nodes inside bounds
-        const notesInside = nodes.filter(n =>
-          (n.type === 'noteNode' || n.type === 'linkNode') &&
-          !n.parentNode &&
-          n.position.x >= bounds.x &&
-          n.position.x + (n.width || 256) <= bounds.x + bounds.width &&
-          n.position.y >= bounds.y &&
-          n.position.y + (n.height || 100) <= bounds.y + bounds.height
+        const notesInside = nodes.filter(
+          (node): node is NoteCanvasNode =>
+            (node.type === 'noteNode' || node.type === 'linkNode') &&
+            !node.parentNode &&
+            node.position.x >= bounds.x &&
+            node.position.x + (node.width || 256) <= bounds.x + bounds.width &&
+            node.position.y >= bounds.y &&
+            node.position.y + (node.height || 100) <= bounds.y + bounds.height
         );
 
         const notesInsideIds = notesInside.map(n => n.id);
 
         // Create the group node
-        const newGroupNode: Node = {
+        const newGroupNode: GroupCanvasNode = {
           id: tempId,
           type: 'groupNode',
           position: { x: bounds.x, y: bounds.y },
@@ -931,7 +1017,10 @@ export const useNotesStore = create<NotesStore>()(
         }));
 
         // 2. DB Operations
-        const { data: dbGroup, error } = await supabase
+        const {
+          data: dbGroup,
+          error,
+        }: { data: CanvasGroup | null; error: PostgrestError | null } = await supabase
           .from('canvas_groups')
           .insert({
             user_id: user.id,
@@ -1018,10 +1107,26 @@ export const useNotesStore = create<NotesStore>()(
         const user = useAuthStore.getState().user;
         if (!user) return;
 
+        const dataUpdates: Partial<GroupNodeData> = {};
+        if (updates.label !== undefined) dataUpdates.label = updates.label;
+        if (updates.color !== undefined) dataUpdates.color = updates.color;
+
+        const styleUpdates = {
+          ...(updates.width !== undefined ? { width: updates.width } : {}),
+          ...(updates.height !== undefined ? { height: updates.height } : {}),
+        };
+
         // Optimistic update
-        set(state => ({
-          groups: state.groups.map(g => g.id === id ? { ...g, ...updates } : g),
-          nodes: state.nodes.map(n => n.id === id ? { ...n, data: { ...n.data, ...updates }, style: { ...n.style, ...(updates.width ? { width: updates.width } : {}), ...(updates.height ? { height: updates.height } : {}) } } : n)
+        set((state) => ({
+          groups: state.groups.map((group) => (group.id === id ? { ...group, ...updates } : group)),
+          nodes: state.nodes.map((node) => {
+            if (node.id !== id || !isGroupNode(node)) return node;
+            return {
+              ...node,
+              data: { ...node.data, ...dataUpdates },
+              style: { ...node.style, ...styleUpdates },
+            };
+          }),
         }));
 
         const { error } = await supabase.from('canvas_groups').update(updates).eq('id', id);
@@ -1343,7 +1448,7 @@ export const useNotesStore = create<NotesStore>()(
       },
 
       onNodesChange: (changes: NodeChange[]) => {
-        const nextNodes = applyNodeChanges(changes, get().nodes);
+        const nextNodes = applyNodeChanges<NotesNode>(changes, get().nodes);
         set({ nodes: nextNodes });
 
         changes.forEach((change: NodeChange) => {
@@ -1458,7 +1563,7 @@ export const useNotesStore = create<NotesStore>()(
 
       onEdgesChange: (changes: EdgeChange[]) => {
         set((state) => ({
-          edges: applyEdgeChanges(changes, state.edges),
+          edges: applyEdgeChanges<NotesEdge>(changes, state.edges),
         }));
 
         // Handle edge removals
@@ -1517,13 +1622,13 @@ export const useNotesStore = create<NotesStore>()(
         if (!selectedNoteId) return null;
 
         const node = nodes.find((n) => n.id === selectedNoteId);
-        if (!node) return null;
+        if (!node || !isNoteNode(node)) return null;
 
         return {
           id: node.id,
           user_id: '', // Not needed for editor
-          title: node.data.title,
-          content: node.data.content,
+          title: node.data.title ?? '',
+          content: node.data.content ?? '',
           position_x: node.position.x,
           position_y: node.position.y,
           width: (node.style?.width as number) || null,

@@ -19,22 +19,6 @@ const HabitsPage = lazy(() => import('@/features/habits/HabitsPage'));
 const WorkoutPage = lazy(() => import('@/features/workout/WorkoutPage'));
 const NotesPage = lazy(() => import('@/features/notes/NotesPage'));
 
-// Route preloading map for instant navigation
-const routePreloaders: Record<string, () => void> = {
-  '/home': () => void import('@/pages/HomePage'),
-  '/tasks': () => void import('@/features/todos/TasksPage'),
-  '/goals': () => void import('@/features/goals/GoalsPage'),
-  '/habits': () => void import('@/features/habits/HabitsPage'),
-  '/workout': () => void import('@/features/workout/WorkoutPage'),
-  '/notes': () => void import('@/features/notes/NotesPage'),
-};
-
-// Preload route on hover/focus for instant navigation
-export function preloadRoute(path: string) {
-  const preloader = routePreloaders[path];
-  if (preloader) preloader();
-}
-
 // Loading fallback for lazy routes
 function PageLoader() {
   return (

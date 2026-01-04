@@ -1,24 +1,10 @@
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext } from 'react';
 
-interface MobileCanvasContextValue {
+export interface MobileCanvasContextValue {
   onEditNote?: (noteId: string) => void;
 }
 
-const MobileCanvasContext = createContext<MobileCanvasContextValue>({});
-
-export function MobileCanvasProvider({
-  children,
-  onEditNote,
-}: {
-  children: ReactNode;
-  onEditNote?: (noteId: string) => void;
-}) {
-  return (
-    <MobileCanvasContext.Provider value={{ onEditNote }}>
-      {children}
-    </MobileCanvasContext.Provider>
-  );
-}
+export const MobileCanvasContext = createContext<MobileCanvasContextValue>({});
 
 export function useMobileCanvas() {
   return useContext(MobileCanvasContext);

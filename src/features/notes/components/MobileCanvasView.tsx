@@ -1,7 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { ReactFlowProvider } from 'reactflow';
 import CanvasView from './CanvasView';
-import { MobileCanvasProvider } from './MobileCanvasContext';
+import { MobileCanvasProvider } from './MobileCanvasProvider';
 import { useCanvases } from '../hooks';
 import { useThemeStore } from '@/stores/themeStore';
 import { LoadingSpinner } from '@/components/ui';

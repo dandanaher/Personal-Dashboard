@@ -4,7 +4,12 @@ import { useNotesStore } from '@/stores/notesStore';
 import { useDoubleTap } from '@/hooks/useDoubleTap';
 import { FloatingToolbar } from './FloatingToolbar';
 
-const GroupNode = memo(({ data, selected, id }: NodeProps) => {
+interface GroupNodeData {
+  label?: string | null;
+  color?: string;
+}
+
+const GroupNode = memo(({ data, selected, id }: NodeProps<GroupNodeData>) => {
   const { updateGroup, deleteGroup } = useNotesStore();
   const { fitView } = useReactFlow();
   const [isHovered, setIsHovered] = useState(false);
@@ -35,16 +40,19 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
     setShowToolbar(false);
   }, []);
 
-  const handleColor = useCallback((newColor: string) => {
-    updateGroup(id, { color: newColor });
-  }, [updateGroup, id]);
+  const handleColor = useCallback(
+    (newColor: string) => {
+      void updateGroup(id, { color: newColor });
+    },
+    [updateGroup, id]
+  );
 
   const handleFocus = useCallback(() => {
     fitView({ nodes: [{ id }], padding: 0.1, duration: 800 });
   }, [fitView, id]);
 
   const handleDelete = useCallback(() => {
-    deleteGroup(id);
+    void deleteGroup(id);
   }, [deleteGroup, id]);
 
   const handleClasses = useMemo(
@@ -152,12 +160,12 @@ const GroupNode = memo(({ data, selected, id }: NodeProps) => {
             className="px-2 py-1 rounded bg-white dark:bg-secondary-800 border shadow-sm text-sm outline-none"
             defaultValue={data.label}
             onBlur={(e) => {
-              updateGroup(id, { label: e.target.value });
+              void updateGroup(id, { label: e.target.value });
               setIsEditingLabel(false);
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                updateGroup(id, { label: (e.target as HTMLInputElement).value });
+                void updateGroup(id, { label: (e.target as HTMLInputElement).value });
                 setIsEditingLabel(false);
               }
             }}

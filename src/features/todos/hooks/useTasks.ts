@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
+import type { PostgrestError } from '@supabase/supabase-js';
 import supabase from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { logger } from '@/lib/logger';
@@ -19,6 +20,8 @@ interface UseTasksReturn {
 interface UseTasksOptions {
   includeCompleted?: boolean;
 }
+
+type SupabaseResult<T> = { data: T | null; error: PostgrestError | null };
 
 export function useTasks(date: Date, options: UseTasksOptions = {}): UseTasksReturn {
   const { includeCompleted = true } = options;
@@ -75,7 +78,9 @@ export function useTasks(date: Date, options: UseTasksOptions = {}): UseTasksRet
         query = query.eq('completed', false);
       }
 
-      const { data, error: fetchError } = await query.order('order_index', { ascending: true });
+      const { data, error: fetchError } = (await query.order('order_index', {
+        ascending: true,
+      })) as SupabaseResult<Task[]>;
 
       if (fetchError) {
         throw fetchError;
@@ -128,17 +133,21 @@ export function useTasks(date: Date, options: UseTasksOptions = {}): UseTasksRet
           task_type: taskType || null,
         };
 
-        const { data, error: insertError } = await supabase
+        const { data, error: insertError } = (await supabase
           .from('tasks')
           .insert(insertData)
           .select()
-          .single();
+          .single()) as SupabaseResult<Task>;
 
         if (insertError) {
           throw insertError;
         }
 
         // Replace temp task with real task
+        if (!data) {
+          throw new Error('Failed to add task');
+        }
+
         setTasks((prev) =>
           filterAndSortTasks(prev.map((task) => (task.id === tempId ? data : task)))
         );
@@ -176,13 +185,13 @@ export function useTasks(date: Date, options: UseTasksOptions = {}): UseTasksRet
       );
 
       try {
-        const { error: updateError } = await supabase
+        const { error: updateError } = (await supabase
           .from('tasks')
           .update({
             completed: newCompleted,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', taskId);
+          .eq('id', taskId)) as SupabaseResult<Task[]>;
 
         if (updateError) {
           throw updateError;
@@ -213,7 +222,10 @@ export function useTasks(date: Date, options: UseTasksOptions = {}): UseTasksRet
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
 
       try {
-        const { error: deleteError } = await supabase.from('tasks').delete().eq('id', taskId);
+        const { error: deleteError } = (await supabase
+          .from('tasks')
+          .delete()
+          .eq('id', taskId)) as SupabaseResult<Task[]>;
 
         if (deleteError) {
           throw deleteError;
@@ -245,13 +257,13 @@ export function useTasks(date: Date, options: UseTasksOptions = {}): UseTasksRet
       );
 
       try {
-        const { error: updateError } = await supabase
+        const { error: updateError } = (await supabase
           .from('tasks')
           .update({
             ...updates,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', taskId);
+          .eq('id', taskId)) as SupabaseResult<Task[]>;
 
         if (updateError) {
           throw updateError;
@@ -275,7 +287,7 @@ export function useTasks(date: Date, options: UseTasksOptions = {}): UseTasksRet
   // Initial fetch
   useEffect(() => {
     setLoading(true);
-    fetchTasks();
+    void fetchTasks();
   }, [fetchTasks]);
 
   // Subscribe to real-time changes with targeted updates (no full refetch)
@@ -324,7 +336,7 @@ export function useTasks(date: Date, options: UseTasksOptions = {}): UseTasksRet
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [user, dateString, filterAndSortTasks]);
 

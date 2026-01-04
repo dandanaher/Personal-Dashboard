@@ -19,7 +19,7 @@ import { useThemeStore } from '@/stores/themeStore';
 import { useWorkoutSessionStore } from '@/stores/workoutSessionStore';
 import { useSidebarStore } from '@/stores/sidebarStore';
 import { formatTime } from '@/features/workout/lib/workoutEngine';
-import { preloadRoute } from '@/App';
+import { preloadRoute } from '@/lib/preloadRoute';
 import { DynamicLogo } from '@/components/ui/DynamicLogo';
 import { SettingsMenu } from './SettingsMenu';
 

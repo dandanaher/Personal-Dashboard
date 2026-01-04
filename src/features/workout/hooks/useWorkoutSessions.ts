@@ -1,6 +1,7 @@
 // Custom hook for fetching workout history/sessions
 
 import { useState, useEffect, useCallback } from 'react';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { WorkoutSession, WorkoutSessionUpdate } from '@/lib/types';
@@ -39,7 +40,10 @@ export function useWorkoutSessions(): UseWorkoutSessionsReturn {
 
     try {
       setError(null);
-      const { data, error: fetchError } = await supabase
+      const {
+        data,
+        error: fetchError,
+      }: { data: WorkoutSession[] | null; error: PostgrestError | null } = await supabase
         .from('workout_sessions')
         .select('*')
         .eq('user_id', user.id)
@@ -48,7 +52,7 @@ export function useWorkoutSessions(): UseWorkoutSessionsReturn {
         .limit(50);
 
       if (fetchError) throw fetchError;
-      setSessions(data || []);
+      setSessions(data ?? []);
     } catch (err) {
       console.error('Error fetching sessions:', err);
       setError('Failed to load workout history');
@@ -59,7 +63,7 @@ export function useWorkoutSessions(): UseWorkoutSessionsReturn {
 
   // Initial fetch
   useEffect(() => {
-    fetchSessions();
+    void fetchSessions();
   }, [fetchSessions]);
 
   // Real-time subscription
@@ -77,13 +81,13 @@ export function useWorkoutSessions(): UseWorkoutSessionsReturn {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          fetchSessions();
+          void fetchSessions();
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [user, fetchSessions]);
 
@@ -97,7 +101,10 @@ export function useWorkoutSessions(): UseWorkoutSessionsReturn {
       if (cached) return cached;
 
       try {
-        const { data, error: fetchError } = await supabase
+        const {
+          data,
+          error: fetchError,
+        }: { data: WorkoutSession | null; error: PostgrestError | null } = await supabase
           .from('workout_sessions')
           .select('*')
           .eq('id', id)
@@ -105,7 +112,7 @@ export function useWorkoutSessions(): UseWorkoutSessionsReturn {
           .single();
 
         if (fetchError) throw fetchError;
-        return data;
+        return data ?? null;
       } catch (err) {
         console.error('Error fetching session:', err);
         return null;

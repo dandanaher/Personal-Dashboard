@@ -7,11 +7,11 @@ interface TaskListProps {
   tasks: Task[];
   loading: boolean;
   error: string | null;
-  onToggle: (taskId: string) => void;
-  onDelete: (taskId: string) => void;
+  onToggle: (taskId: string) => Promise<void>;
+  onDelete: (taskId: string) => Promise<void>;
   onEdit?: (taskId: string, updates: TaskUpdate) => Promise<boolean>;
   onEditClick?: (task: Task) => void;
-  onRetry: () => void;
+  onRetry: () => Promise<void>;
 }
 
 // Skeleton loader for tasks
@@ -48,7 +48,7 @@ export function TaskList({
           Failed to load tasks
         </h3>
         <p className="text-sm text-secondary-500 dark:text-secondary-400 mb-4">{error}</p>
-        <Button variant="outline" onClick={onRetry}>
+        <Button variant="outline" onClick={() => void onRetry()}>
           Try Again
         </Button>
       </Card>

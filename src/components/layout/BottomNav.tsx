@@ -19,7 +19,7 @@ import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { useThemeStore } from '@/stores/themeStore';
 import { useWorkoutSessionStore } from '@/stores/workoutSessionStore';
 import { formatTime } from '@/features/workout/lib/workoutEngine';
-import { preloadRoute } from '@/App';
+import { preloadRoute } from '@/lib/preloadRoute';
 
 interface NavItem {
   path: string;

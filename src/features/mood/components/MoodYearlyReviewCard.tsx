@@ -3,7 +3,8 @@ import { format, addDays, subDays, startOfWeek } from 'date-fns';
 import { X } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import { useMoodLogs } from '../hooks/useMoodLogs';
-import { getMoodColor, getMoodInfo, MOOD_LEVELS, MoodPicker, type MoodLevel } from './MoodPicker';
+import { MoodPicker } from './MoodPicker';
+import { getMoodColor, getMoodInfo, MOOD_LEVELS, type MoodLevel } from './moodLevels';
 import { useThemeStore } from '@/stores/themeStore';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import type { MoodLog } from '@/lib/types';
@@ -44,7 +45,7 @@ const MoodEntryModal = memo(function MoodEntryModal({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey && selectedMood) {
       e.preventDefault();
-      handleSave();
+      void handleSave();
     }
     if (e.key === 'Escape') {
       onClose();
@@ -116,7 +117,7 @@ const MoodEntryModal = memo(function MoodEntryModal({
             </button>
             <button
               type="button"
-              onClick={handleSave}
+              onClick={() => void handleSave()}
               disabled={isSaving || !selectedMood}
               className="px-4 py-2 text-sm bg-secondary-900 dark:bg-white text-white dark:text-secondary-900 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >

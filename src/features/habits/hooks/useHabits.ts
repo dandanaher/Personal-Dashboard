@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import supabase from '@/lib/supabase';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { useAuthStore } from '@/stores/authStore';
 import { logger } from '@/lib/logger';
 import type { Habit } from '@/lib/types';
@@ -49,7 +50,8 @@ export function useHabits(): UseHabitsReturn {
         .order('created_at', { ascending: true });
 
       if (fetchError) throw fetchError;
-      setHabits(data || []);
+      const habitsData = (data ?? []) as Habit[];
+      setHabits(habitsData);
     } catch (err) {
       logger.error('Error fetching habits:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch habits');
@@ -88,7 +90,7 @@ export function useHabits(): UseHabitsReturn {
       setHabits((prev) => [...prev, tempHabit]);
 
       try {
-        const { data, error: insertError } = await supabase
+        const insertResult = (await supabase
           .from('habits')
           .insert({
             user_id: user.id,
@@ -100,12 +102,15 @@ export function useHabits(): UseHabitsReturn {
             habit_type: habitType || null,
           })
           .select()
-          .single();
+          .single()) as { data: Habit | null; error: PostgrestError | null };
+        const { data: insertedHabit, error: insertError } = insertResult;
 
         if (insertError) throw insertError;
 
+        const newHabit = insertedHabit as Habit;
+
         // Replace temp habit with real one
-        setHabits((prev) => prev.map((h) => (h.id === tempId ? data : h)));
+        setHabits((prev) => prev.map((h) => (h.id === tempId ? newHabit : h)));
         return true;
       } catch (err) {
         logger.error('Error adding habit:', err);
@@ -195,7 +200,7 @@ export function useHabits(): UseHabitsReturn {
 
   // Initial fetch
   useEffect(() => {
-    fetchHabits();
+    void fetchHabits();
   }, [fetchHabits]);
 
   // Real-time subscription with targeted updates
@@ -234,7 +239,7 @@ export function useHabits(): UseHabitsReturn {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [user]);
 

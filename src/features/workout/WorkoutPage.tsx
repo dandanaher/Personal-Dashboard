@@ -210,17 +210,20 @@ function WorkoutPageContent() {
       return;
     }
 
+    const strengthExercises = template.exercises.filter(
+      (exercise): exercise is Exercise & { weight: number; reps_per_set: number } =>
+        exercise.weight !== undefined && exercise.reps_per_set !== undefined
+    );
+
     // Calculate progressive overload suggestions
     const suggestions = await calculateTemplateOverloads(
       user.id,
-      template.exercises
-        .filter((e) => e.weight !== undefined && e.reps_per_set !== undefined)
-        .map((e) => ({
-          name: e.name,
-          weight: e.weight!,
-          reps_per_set: e.reps_per_set!,
-          to_failure: e.to_failure,
-        }))
+      strengthExercises.map((exercise) => ({
+        name: exercise.name,
+        weight: exercise.weight,
+        reps_per_set: exercise.reps_per_set,
+        to_failure: exercise.to_failure,
+      }))
     );
 
     // Check if any suggestions recommend action
@@ -272,7 +275,7 @@ function WorkoutPageContent() {
         onComplete={() => {
           resetSession();
           showToast('Workout saved!');
-          refetchSessions();
+          void refetchSessions();
         }}
         onCancel={() => {
           resetSession();
@@ -289,10 +292,10 @@ function WorkoutPageContent() {
           templates={templates}
           sessions={sessions}
           loading={templatesLoading}
-          onStart={handleStartWorkout}
+          onStart={(template) => void handleStartWorkout(template)}
           onEdit={setEditingTemplate}
-          onDuplicate={handleDuplicateTemplate}
-          onDelete={handleDeleteTemplate}
+          onDuplicate={(template) => void handleDuplicateTemplate(template)}
+          onDelete={(template) => void handleDeleteTemplate(template)}
           onAdd={() => setShowBuilder(true)}
         />
       )}
@@ -302,8 +305,8 @@ function WorkoutPageContent() {
           sessions={sessions}
           loading={sessionsLoading}
           error={null}
-          onDelete={handleDeleteSession}
-          onRetry={refetchSessions}
+          onDelete={(session) => void handleDeleteSession(session)}
+          onRetry={() => void refetchSessions()}
         />
       )}
     </>

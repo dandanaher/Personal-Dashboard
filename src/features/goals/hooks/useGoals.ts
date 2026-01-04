@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { Goal } from '@/lib/types';
 import { useAuthStore } from '@/stores/authStore';
@@ -11,6 +12,8 @@ interface HabitCompletionData {
   habitName: string;
   completions: number;
 }
+
+type SupabaseResult<T> = { data: T | null; error: PostgrestError | null };
 
 interface UseGoalsReturn {
   goals: Goal[];
@@ -46,11 +49,14 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
   const [habitData, setHabitData] = useState<Map<string, HabitCompletionData>>(new Map());
   const { user } = useAuthStore();
 
-  function goalMatchesFilters(goal: Goal) {
-    if (onlyActive && goal.completed) return false;
-    if (filterType && filterType !== 'all' && goal.type !== filterType) return false;
-    return true;
-  }
+  const goalMatchesFilters = useCallback(
+    (goal: Goal) => {
+      if (onlyActive && goal.completed) return false;
+      if (filterType && filterType !== 'all' && goal.type !== filterType) return false;
+      return true;
+    },
+    [filterType, onlyActive]
+  );
 
   const sortGoals = useCallback((goalsToSort: Goal[]) => {
     return [...goalsToSort].sort((a, b) => {
@@ -79,30 +85,34 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
       }
 
       // Fetch habit names
-      const { data: habits } = await supabase
+      const { data: habits, error: habitsError } = (await supabase
         .from('habits')
         .select('id, name')
         .eq('user_id', user.id)
-        .in('id', linkedHabitIds);
+        .in('id', linkedHabitIds)) as SupabaseResult<Array<{ id: string; name: string }>>;
+
+      if (habitsError) throw habitsError;
 
       // Fetch completion counts for each habit
-      const { data: logs } = await supabase
+      const { data: logs, error: logsError } = (await supabase
         .from('habit_logs')
         .select('habit_id')
         .eq('user_id', user.id)
         .eq('completed', true)
-        .in('habit_id', linkedHabitIds);
+        .in('habit_id', linkedHabitIds)) as SupabaseResult<Array<{ habit_id: string }>>;
+
+      if (logsError) throw logsError;
 
       // Count completions per habit
       const completionCounts = new Map<string, number>();
-      logs?.forEach((log: { habit_id: string }) => {
+      (logs || []).forEach((log) => {
         const current = completionCounts.get(log.habit_id) || 0;
         completionCounts.set(log.habit_id, current + 1);
       });
 
       // Build habit data map
       const newHabitData = new Map<string, HabitCompletionData>();
-      habits?.forEach((habit: { id: string; name: string }) => {
+      (habits || []).forEach((habit) => {
         newHabitData.set(habit.id, {
           habitId: habit.id,
           habitName: habit.name,
@@ -120,9 +130,11 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
     async (goalsData: Goal[]) => {
       if (!user) return;
 
-      const linkedHabitIds = [
-        ...new Set(goalsData.filter((g) => g.linked_habit_id).map((g) => g.linked_habit_id!)),
-      ];
+      const linkedHabitIds = Array.from(
+        new Set(
+          goalsData.flatMap((goal) => (goal.linked_habit_id ? [goal.linked_habit_id] : []))
+        )
+      );
 
       if (linkedHabitIds.length === 0) {
         setHabitData(new Map());
@@ -141,9 +153,11 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
 
   const syncHabitDataForGoals = useCallback(
     async (goalsData: Goal[]) => {
-      const linkedHabitIds = [
-        ...new Set(goalsData.filter((g) => g.linked_habit_id).map((g) => g.linked_habit_id!)),
-      ];
+      const linkedHabitIds = Array.from(
+        new Set(
+          goalsData.flatMap((goal) => (goal.linked_habit_id ? [goal.linked_habit_id] : []))
+        )
+      );
 
       if (linkedHabitIds.length === 0) {
         if (habitData.size > 0) setHabitData(new Map());
@@ -210,14 +224,14 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
         query = query.limit(limit);
       }
 
-      const { data, error: fetchError } = await query;
+      const { data, error: fetchError } = (await query) as SupabaseResult<Goal[]>;
 
       if (fetchError) {
         setError(fetchError.message);
         return;
       }
 
-      const goalsData = sortGoals((data as Goal[]) || []);
+      const goalsData = sortGoals(data || []);
       setGoals(goalsData);
 
       // Fetch habit data for linked goals
@@ -243,7 +257,7 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
       if (!user) return null;
 
       try {
-        const { data, error: insertError } = await supabase
+        const { data, error: insertError } = (await supabase
           .from('goals')
           .insert({
             user_id: user.id,
@@ -257,14 +271,19 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
             target_completions: goalData.target_completions || null,
           })
           .select()
-          .single();
+          .single()) as SupabaseResult<Goal>;
 
         if (insertError) {
           setError(insertError.message);
           return null;
         }
 
-        const newGoal = data as Goal;
+        if (!data) {
+          setError('Failed to add goal');
+          return null;
+        }
+
+        const newGoal = data;
         let didUpdate = false;
         let nextGoalsSnapshot: Goal[] = [];
         setGoals((prev) => {
@@ -286,7 +305,7 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
         return null;
       }
     },
-    [user, filterType, onlyActive, limit, sortGoals, syncHabitDataForGoals]
+    [user, limit, sortGoals, syncHabitDataForGoals, goalMatchesFilters]
   );
 
   // Update goal with optimistic update
@@ -311,7 +330,10 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
       });
 
       try {
-        const { error: updateError } = await supabase.from('goals').update(updates).eq('id', id);
+        const { error: updateError } = (await supabase
+          .from('goals')
+          .update(updates)
+          .eq('id', id)) as SupabaseResult<Goal[]>;
 
         if (updateError) {
           // Rollback on error
@@ -335,7 +357,7 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
         return false;
       }
     },
-    [goals, filterType, onlyActive, limit, sortGoals, syncHabitDataForGoals, fetchGoals]
+    [goals, limit, sortGoals, syncHabitDataForGoals, fetchGoals, goalMatchesFilters]
   );
 
   // Update progress (quick action) with debouncing for database updates
@@ -385,7 +407,7 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
 
     progressDebounceRef.current.set(id, timer);
     return Promise.resolve(true);
-  }, [filterType, onlyActive, limit, sortGoals]);
+  }, [goalMatchesFilters, limit, sortGoals]);
 
   // Toggle completion
   const toggleComplete = useCallback(
@@ -419,7 +441,7 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
         }, 300);
       }
     },
-    [goals, updateGoal, user]
+    [goals, updateGoal]
   );
 
   // Delete goal with optimistic update
@@ -441,7 +463,10 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
       });
 
       try {
-        const { error: deleteError } = await supabase.from('goals').delete().eq('id', id);
+        const { error: deleteError } = (await supabase
+          .from('goals')
+          .delete()
+          .eq('id', id)) as SupabaseResult<Goal[]>;
 
         if (deleteError) {
           // Rollback on error
@@ -475,10 +500,12 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
 
   // Cleanup debounce timers on unmount
   useEffect(() => {
+    const progressTimers = progressDebounceRef.current;
+    const pendingProgress = pendingProgressRef.current;
     return () => {
-      progressDebounceRef.current.forEach((timer) => clearTimeout(timer));
-      progressDebounceRef.current.clear();
-      pendingProgressRef.current.clear();
+      progressTimers.forEach((timer) => clearTimeout(timer));
+      progressTimers.clear();
+      pendingProgress.clear();
     };
   }, []);
 
@@ -557,7 +584,7 @@ export function useGoals(filterType?: FilterType, options: UseGoalsOptions = {})
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [user, fetchGoals, filterType, onlyActive, limit, sortGoals, syncHabitDataForGoals]);
+  }, [user, fetchGoals, limit, sortGoals, syncHabitDataForGoals, goalMatchesFilters]);
 
   // Real-time subscription for habit_logs (to update linked goal progress)
   useEffect(() => {

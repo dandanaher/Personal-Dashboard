@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format, startOfDay } from 'date-fns';
+import type { PostgrestError } from '@supabase/supabase-js';
 import supabase from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { logger } from '@/lib/logger';
@@ -26,6 +27,8 @@ interface UseAllTasksReturn {
   deleteTag: (tag: string) => Promise<boolean>;
   refetch: () => Promise<void>;
 }
+
+type SupabaseResult<T> = { data: T | null; error: PostgrestError | null };
 
 export function useAllTasks(): UseAllTasksReturn {
   const [allTasks, setAllTasks] = useState<Task[]>([]);
@@ -68,12 +71,12 @@ export function useAllTasks(): UseAllTasksReturn {
 
     try {
       setError(null);
-      const { data, error: fetchError } = await supabase
+      const { data, error: fetchError } = (await supabase
         .from('tasks')
         .select('*')
         .eq('user_id', user.id)
         .order('date', { ascending: true, nullsFirst: false })
-        .order('order_index', { ascending: true });
+        .order('order_index', { ascending: true })) as SupabaseResult<Task[]>;
 
       if (fetchError) {
         throw fetchError;
@@ -147,7 +150,7 @@ export function useAllTasks(): UseAllTasksReturn {
       setAllTasks((prev) => sortTasks([...prev, tempTask]));
 
       try {
-        const { data, error: insertError } = await supabase
+        const { data, error: insertError } = (await supabase
           .from('tasks')
           .insert({
             user_id: user.id,
@@ -159,13 +162,17 @@ export function useAllTasks(): UseAllTasksReturn {
             task_type: taskType || null,
           })
           .select()
-          .single();
+          .single()) as SupabaseResult<Task>;
 
         if (insertError) {
           throw insertError;
         }
 
         // Replace temp task with real task
+        if (!data) {
+          throw new Error('Failed to add task');
+        }
+
         setAllTasks((prev) => sortTasks(prev.map((task) => (task.id === tempId ? data : task))));
 
         return true;
@@ -201,13 +208,13 @@ export function useAllTasks(): UseAllTasksReturn {
       );
 
       try {
-        const { error: updateError } = await supabase
+        const { error: updateError } = (await supabase
           .from('tasks')
           .update({
             completed: newCompleted,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', taskId);
+          .eq('id', taskId)) as SupabaseResult<Task[]>;
 
         if (updateError) {
           throw updateError;
@@ -223,7 +230,7 @@ export function useAllTasks(): UseAllTasksReturn {
         logger.error('Error toggling task:', err);
       }
     },
-    [allTasks, sortTasks, user]
+    [allTasks, sortTasks]
   );
 
   // Delete task with optimistic update
@@ -236,7 +243,10 @@ export function useAllTasks(): UseAllTasksReturn {
       setAllTasks((prev) => prev.filter((t) => t.id !== taskId));
 
       try {
-        const { error: deleteError } = await supabase.from('tasks').delete().eq('id', taskId);
+        const { error: deleteError } = (await supabase
+          .from('tasks')
+          .delete()
+          .eq('id', taskId)) as SupabaseResult<Task[]>;
 
         if (deleteError) {
           throw deleteError;
@@ -268,13 +278,13 @@ export function useAllTasks(): UseAllTasksReturn {
       );
 
       try {
-        const { error: updateError } = await supabase
+        const { error: updateError } = (await supabase
           .from('tasks')
           .update({
             ...updates,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', taskId);
+          .eq('id', taskId)) as SupabaseResult<Task[]>;
 
         if (updateError) {
           throw updateError;
@@ -304,11 +314,11 @@ export function useAllTasks(): UseAllTasksReturn {
       );
 
       try {
-        const { error: updateError } = await supabase
+        const { error: updateError } = (await supabase
           .from('tasks')
           .update({ task_type: null })
           .eq('user_id', user.id)
-          .eq('task_type', tag);
+          .eq('task_type', tag)) as SupabaseResult<Task[]>;
 
         if (updateError) {
           throw updateError;
@@ -328,7 +338,7 @@ export function useAllTasks(): UseAllTasksReturn {
   // Initial fetch
   useEffect(() => {
     setLoading(true);
-    fetchTasks();
+    void fetchTasks();
   }, [fetchTasks]);
 
   // Subscribe to real-time changes with targeted updates
@@ -383,7 +393,7 @@ export function useAllTasks(): UseAllTasksReturn {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [user, sortTasks]);
 

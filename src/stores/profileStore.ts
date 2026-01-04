@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/lib/types';
 
@@ -32,7 +33,10 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const { data, error: fetchError } = await supabase
+      const {
+        data,
+        error: fetchError,
+      }: { data: Profile | null; error: PostgrestError | null } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
@@ -42,7 +46,10 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
         // Profile might not exist yet for older users
         if (fetchError.code === 'PGRST116') {
           // No rows returned - create a default profile
-          const { data: newProfile, error: insertError } = await supabase
+          const {
+            data: newProfile,
+            error: insertError,
+          }: { data: Profile | null; error: PostgrestError | null } = await supabase
             .from('profiles')
             .insert({
               id: userId,
@@ -53,6 +60,10 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
 
           if (insertError) {
             throw insertError;
+          }
+
+          if (!newProfile) {
+            throw new Error('Failed to create profile');
           }
 
           set({ profile: newProfile, loading: false, error: null });

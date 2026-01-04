@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
+import type { PostgrestError } from '@supabase/supabase-js';
 import supabase from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { MoodLog } from '@/lib/types';
@@ -31,12 +32,13 @@ export function useTodayMood(): UseTodayMoodReturn {
     try {
       setError(null);
 
-      const { data, error: fetchError } = await supabase
+      const fetchResult = (await supabase
         .from('mood_logs')
         .select('*')
         .eq('user_id', user.id)
         .eq('date', todayStr)
-        .maybeSingle();
+        .maybeSingle()) as { data: MoodLog | null; error: PostgrestError | null };
+      const { data, error: fetchError } = fetchResult;
 
       if (fetchError) throw fetchError;
       setTodayMood(data);
@@ -100,7 +102,7 @@ export function useTodayMood(): UseTodayMoodReturn {
       setTodayMood(tempLog);
 
       try {
-        const { data, error: insertError } = await supabase
+        const insertResult = (await supabase
           .from('mood_logs')
           .insert({
             user_id: user.id,
@@ -109,11 +111,13 @@ export function useTodayMood(): UseTodayMoodReturn {
             note: note || null,
           })
           .select()
-          .single();
+          .single()) as { data: MoodLog | null; error: PostgrestError | null };
+        const { data, error: insertError } = insertResult;
 
         if (insertError) throw insertError;
 
         // Replace temp with real
+        if (!data) throw new Error('Failed to create mood log');
         setTodayMood(data);
 
         return true;
@@ -163,7 +167,7 @@ export function useTodayMood(): UseTodayMoodReturn {
 
   // Initial fetch
   useEffect(() => {
-    fetchTodayMood();
+    void fetchTodayMood();
   }, [fetchTodayMood]);
 
   // Real-time subscription
@@ -185,14 +189,14 @@ export function useTodayMood(): UseTodayMoodReturn {
           const newRecord = payload.new as MoodLog | undefined;
           const oldRecord = payload.old as MoodLog | undefined;
           if (newRecord?.date === todayStr || oldRecord?.date === todayStr) {
-            fetchTodayMood();
+            void fetchTodayMood();
           }
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [user, todayStr, fetchTodayMood]);
 

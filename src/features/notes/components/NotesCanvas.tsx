@@ -31,7 +31,7 @@ function CanvasControls() {
   const { createNote } = useNotesStore();
 
   const handleAddNote = useCallback(() => {
-    createNote({
+    void createNote({
       x: Math.random() * 400 + 100,
       y: Math.random() * 300 + 100,
     });
@@ -75,7 +75,7 @@ function NotesCanvas() {
 
   const handleConnect = useCallback(
     (connection: Connection) => {
-      connectNotes(connection);
+      void connectNotes(connection);
     },
     [connectNotes]
   );
@@ -128,7 +128,8 @@ function NotesCanvas() {
           className="!bg-white dark:!bg-secondary-800 !border-secondary-200 dark:!border-secondary-700 hidden lg:block"
           nodeColor={(node) => {
             if (node.type === 'groupNode') {
-              return (node.data.color || accentColor) + '40';
+              const groupColor = (node.data as { color?: string } | undefined)?.color;
+              return (groupColor || accentColor) + '40';
             }
             return accentColor;
           }}

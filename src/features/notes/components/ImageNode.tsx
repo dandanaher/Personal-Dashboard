@@ -62,9 +62,12 @@ const ImageNode = memo(function ImageNode({ data, selected }: NodeProps<NoteNode
 
     const doubleTapHandlers = useDoubleTap(handleDoubleTap);
 
-    const handleColor = useCallback((newColor: string) => {
-        updateNoteColor(id, newColor);
-    }, [updateNoteColor, id]);
+    const handleColor = useCallback(
+        (newColor: string) => {
+            void updateNoteColor(id, newColor);
+        },
+        [updateNoteColor, id]
+    );
 
     const handleFocus = useCallback(() => {
         fitView({ nodes: [{ id }], padding: 0.2, duration: 800 });
@@ -72,7 +75,7 @@ const ImageNode = memo(function ImageNode({ data, selected }: NodeProps<NoteNode
 
     const handleDelete = useCallback(() => {
         if (window.confirm('Are you sure you want to delete this image? This cannot be undone.')) {
-            deleteNote(id);
+            void deleteNote(id);
         }
     }, [deleteNote, id]);
 
@@ -139,7 +142,7 @@ const ImageNode = memo(function ImageNode({ data, selected }: NodeProps<NoteNode
                 )}
                 <img
                     ref={imageRef}
-                    src={imageUrl!}
+                    src={imageUrl ?? ''}
                     alt="Canvas image"
                     onLoad={handleImageLoad}
                     onError={handleImageError}

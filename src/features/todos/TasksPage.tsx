@@ -20,11 +20,12 @@ import { useTasks, useAllTasks } from './hooks';
 import { TaskList } from './components/TaskList';
 import { TaskItem } from './components/TaskItem';
 import { AddTaskModal } from './components/AddTaskModal';
-import { ToastProvider, useToast } from './components/Toast';
+import { ToastProvider } from './components/Toast';
+import { useToast } from './components/useToast';
 import { formatDisplayDate, formatDateHeader, toDateString, getTodayString } from '@/lib/dateUtils';
 import type { Task, TaskUpdate } from '@/lib/types';
 
-type ViewMode = 'all' | 'day' | string; // 'all' for overview, 'day' for day view, or task_type string
+type ViewMode = string; // 'all' for overview, 'day' for day view, or task_type string
 
 function TasksPageContent() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -171,12 +172,14 @@ function TasksPageContent() {
             ? await updateDayTask(editingTask.id, taskData as TaskUpdate)
             : await updateAllTask(editingTask.id, taskData as TaskUpdate);
 
-        if (success) {
-          showToast('Task updated', 'success');
-          if (viewMode === 'day') refetchAll();
-        } else {
-          showToast('Failed to update task', 'error');
-        }
+          if (success) {
+            showToast('Task updated', 'success');
+            if (viewMode === 'day') {
+              await refetchAll();
+            }
+          } else {
+            showToast('Failed to update task', 'error');
+          }
         return success;
       } else {
         // Add new task
@@ -192,7 +195,9 @@ function TasksPageContent() {
 
         if (success) {
           showToast('Task added', 'success');
-          if (viewMode === 'day') refetchAll();
+          if (viewMode === 'day') {
+            await refetchAll();
+          }
         } else {
           showToast('Failed to add task', 'error');
         }
@@ -214,7 +219,7 @@ function TasksPageContent() {
   // Handle toggle task
   const handleToggleDayTask = async (taskId: string) => {
     await toggleDayTask(taskId);
-    refetchAll();
+    await refetchAll();
   };
 
   const handleToggleOverviewTask = async (taskId: string) => {
@@ -231,7 +236,7 @@ function TasksPageContent() {
 
     await deleteDayTask(taskId);
     showToast('Task deleted', 'success');
-    refetchAll();
+    await refetchAll();
   };
 
   const handleDeleteOverviewTask = async (taskId: string) => {
@@ -251,7 +256,7 @@ function TasksPageContent() {
     const success = await updateDayTask(taskId, updates);
     if (success) {
       showToast('Task updated', 'success');
-      refetchAll();
+      await refetchAll();
     } else {
       showToast('Failed to update task', 'error');
     }
@@ -267,6 +272,17 @@ function TasksPageContent() {
     }
     return success;
   };
+
+  const handleDeleteTag = useCallback(
+    async (tag: string) => {
+      if (!window.confirm(`Remove tag "${tag}" from all tasks?`)) return;
+      if (viewMode === tag) {
+        setViewMode('all');
+      }
+      await deleteAllTag(tag);
+    },
+    [deleteAllTag, viewMode]
+  );
 
   // Get completed tasks sorted reverse chronologically (newest first)
   const completedTasks = useMemo(
@@ -480,7 +496,7 @@ function TasksPageContent() {
                   Failed to load tasks
                 </h3>
                 <p className="text-xs text-secondary-500 dark:text-secondary-400 mb-3">{error}</p>
-                <Button variant="outline" size="sm" onClick={refetchAll}>
+                <Button variant="outline" size="sm" onClick={() => void refetchAll()}>
                   Try Again
                 </Button>
               </Card>
@@ -768,15 +784,9 @@ function TasksPageContent() {
                         </button>
                         {canDelete && (
                           <button
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              if (window.confirm(`Remove tag "${type}" from all tasks?`)) {
-                                // Reset to 'all' view if currently viewing this tag
-                                if (viewMode === type) {
-                                  setViewMode('all');
-                                }
-                                await deleteAllTag(type);
-                              }
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleDeleteTag(type);
                             }}
                             className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-secondary-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-opacity"
                             title="Remove unused tag"
@@ -875,7 +885,7 @@ function TasksPageContent() {
                       Failed to load tasks
                     </h3>
                     <p className="text-xs text-secondary-500 dark:text-secondary-400 mb-3">{error}</p>
-                    <Button variant="outline" size="sm" onClick={refetchAll}>
+                    <Button variant="outline" size="sm" onClick={() => void refetchAll()}>
                       Try Again
                     </Button>
                   </Card>

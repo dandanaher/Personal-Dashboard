@@ -50,12 +50,12 @@ export function AddTaskForm({ onAdd, defaultDate, showDateToggle = false }: AddT
     // Submit on Enter in title field (unless Shift is held for multiline)
     if (e.key === 'Enter' && !e.shiftKey && e.currentTarget === titleInputRef.current) {
       e.preventDefault();
-      handleSubmit(e);
+      void handleSubmit(e);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form onSubmit={(event) => void handleSubmit(event)} className="space-y-3">
       <div className="flex gap-2">
         <div className="flex-1">
           <Input

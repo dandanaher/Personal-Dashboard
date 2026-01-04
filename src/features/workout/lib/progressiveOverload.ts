@@ -1,7 +1,8 @@
 // Progressive overload calculation utilities
 
 import { supabase } from '@/lib/supabase';
-import type { CompletedExercise, CompletedSet } from '@/lib/types';
+import type { CompletedExercise, CompletedSet, WorkoutSessionData } from '@/lib/types';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { getWeightIncrement, roundToNearestIncrement } from './workoutEngine';
 
 // =============================================================================
@@ -36,6 +37,11 @@ export interface ExerciseHistory {
   } | null;
 }
 
+interface WorkoutSessionHistoryRow {
+  data: WorkoutSessionData | null;
+  started_at: string;
+}
+
 // =============================================================================
 // Progressive Overload Calculation
 // =============================================================================
@@ -48,13 +54,14 @@ export async function calculateProgressiveOverload(
   isTemplateFailure: boolean
 ): Promise<ProgressiveSuggestion> {
   // Fetch last 10 sessions to find relevant exercise data
-  const { data: sessions, error } = await supabase
+  const historyResult = (await supabase
     .from('workout_sessions')
     .select('data, started_at')
     .eq('user_id', userId)
     .not('completed_at', 'is', null)
     .order('started_at', { ascending: false })
-    .limit(10);
+    .limit(10)) as { data: WorkoutSessionHistoryRow[] | null; error: PostgrestError | null };
+  const { data: sessions, error } = historyResult;
 
   if (error || !sessions) {
     return {
@@ -69,7 +76,8 @@ export async function calculateProgressiveOverload(
   // Find sessions with this exercise (case-insensitive match)
   const relevantSessions: SessionSummary[] = sessions
     .map((session) => {
-      const exercise = session.data.exercises.find(
+      const exercises = session.data?.exercises ?? [];
+      const exercise = exercises.find(
         (e: CompletedExercise) => e.name.toLowerCase() === exerciseName.toLowerCase()
       );
 
@@ -83,7 +91,7 @@ export async function calculateProgressiveOverload(
 
       return {
         date: session.started_at,
-        weight: exercise.weight,
+        weight: exercise.weight ?? 0,
         sets: exercise.main_sets.length,
         avgReps: Math.round(avgReps * 10) / 10,
         allTargetHit,
@@ -189,13 +197,14 @@ export async function getExerciseHistory(
   exerciseName: string,
   limit: number = 10
 ): Promise<ExerciseHistory> {
-  const { data: sessions, error } = await supabase
+  const historyResult = (await supabase
     .from('workout_sessions')
     .select('data, started_at')
     .eq('user_id', userId)
     .not('completed_at', 'is', null)
     .order('started_at', { ascending: false })
-    .limit(50);
+    .limit(50)) as { data: WorkoutSessionHistoryRow[] | null; error: PostgrestError | null };
+  const { data: sessions, error } = historyResult;
 
   if (error || !sessions) {
     return {
@@ -209,7 +218,8 @@ export async function getExerciseHistory(
 
   const relevantSessions: SessionSummary[] = sessions
     .map((session) => {
-      const exercise = session.data.exercises.find(
+      const exercises = session.data?.exercises ?? [];
+      const exercise = exercises.find(
         (e: CompletedExercise) => e.name.toLowerCase() === exerciseName.toLowerCase()
       );
 
@@ -217,14 +227,16 @@ export async function getExerciseHistory(
 
       // Track personal record (highest weight with target reps hit)
       for (const set of exercise.main_sets) {
+        const setWeight = set.weight ?? 0;
+        const setReps = set.reps ?? 0;
         if (
           !personalRecord ||
-          set.weight > personalRecord.weight ||
-          (set.weight === personalRecord.weight && set.reps > personalRecord.reps)
+          setWeight > personalRecord.weight ||
+          (setWeight === personalRecord.weight && setReps > personalRecord.reps)
         ) {
           personalRecord = {
-            weight: set.weight,
-            reps: set.reps,
+            weight: setWeight,
+            reps: setReps,
             date: session.started_at,
           };
         }
@@ -234,13 +246,14 @@ export async function getExerciseHistory(
         exercise.main_sets.reduce((sum: number, s: CompletedSet) => sum + (s.reps || 0), 0) /
         exercise.main_sets.length;
 
+      const targetRepsValue = exercise.target_reps ?? 0;
       const allTargetHit = exercise.main_sets.every(
-        (s: CompletedSet) => (s.reps || 0) >= exercise.target_reps
+        (s: CompletedSet) => (s.reps || 0) >= targetRepsValue
       );
 
       return {
         date: session.started_at,
-        weight: exercise.weight,
+        weight: exercise.weight ?? 0,
         sets: exercise.main_sets.length,
         avgReps: Math.round(avgReps * 10) / 10,
         allTargetHit,

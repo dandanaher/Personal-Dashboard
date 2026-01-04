@@ -10,6 +10,11 @@ import type { Note, Canvas, Folder as FolderType } from '@/lib/types';
 
 type FilterType = 'all' | 'notes' | 'canvases' | 'folders';
 
+type LibraryItem =
+    | { type: 'note'; data: Note }
+    | { type: 'canvas'; data: Canvas }
+    | { type: 'folder'; data: FolderType };
+
 interface MobileNotesViewProps {
     onNoteClick: (noteId: string) => void;
     onCanvasClick: (canvasId: string) => void;
@@ -34,7 +39,7 @@ export function MobileNotesView({ onNoteClick, onCanvasClick }: MobileNotesViewP
             await fetchLibraryNotes();
             setNotesLoading(false);
         };
-        loadNotes();
+        void loadNotes();
     }, [fetchLibraryNotes]);
 
     // Get current folder
@@ -50,7 +55,8 @@ export function MobileNotesView({ onNoteClick, onCanvasClick }: MobileNotesViewP
         let current = folders.find((f) => f.id === currentFolderId);
         while (current) {
             path.unshift(current);
-            current = current.parent_id ? folders.find((f) => f.id === current!.parent_id) : undefined;
+            const parentId = current.parent_id;
+            current = parentId ? folders.find((f) => f.id === parentId) : undefined;
         }
         return path;
     }, [currentFolderId, folders]);
@@ -95,8 +101,7 @@ export function MobileNotesView({ onNoteClick, onCanvasClick }: MobileNotesViewP
 
     // Combined and sorted items based on filter and current folder
     const items = useMemo(() => {
-        type ItemType = { type: 'note' | 'canvas' | 'folder'; data: Note | Canvas | FolderType };
-        const result: ItemType[] = [];
+        const result: LibraryItem[] = [];
 
         if (filter === 'folders' || currentFolderId) {
             // Show folder contents
@@ -116,11 +121,17 @@ export function MobileNotesView({ onNoteClick, onCanvasClick }: MobileNotesViewP
         }
 
         // Sort: folders first, then by updated_at descending
+        const getTimestamp = (item: Note | Canvas | FolderType) => {
+            const updatedAt = 'updated_at' in item ? item.updated_at : undefined;
+            const fallbackDate = updatedAt || item.created_at;
+            return new Date(fallbackDate).getTime();
+        };
+
         result.sort((a, b) => {
             if (a.type === 'folder' && b.type !== 'folder') return -1;
             if (a.type !== 'folder' && b.type === 'folder') return 1;
-            const aDate = new Date((a.data as any).updated_at || (a.data as any).created_at).getTime();
-            const bDate = new Date((b.data as any).updated_at || (b.data as any).created_at).getTime();
+            const aDate = getTimestamp(a.data);
+            const bDate = getTimestamp(b.data);
             return bDate - aDate;
         });
 
@@ -213,10 +224,15 @@ export function MobileNotesView({ onNoteClick, onCanvasClick }: MobileNotesViewP
         return date.toLocaleDateString();
     };
 
-    const getItemTitle = (item: { type: string; data: any }) => {
-        if (item.type === 'note') return (item.data as Note).title || 'Untitled';
-        if (item.type === 'canvas') return (item.data as Canvas).name || 'Untitled Canvas';
-        if (item.type === 'folder') return (item.data as FolderType).name || 'Untitled Folder';
+    const getItemDate = (item: Note | Canvas | FolderType) => {
+        const updatedAt = 'updated_at' in item ? item.updated_at : undefined;
+        return updatedAt || item.created_at;
+    };
+
+    const getItemTitle = (item: LibraryItem) => {
+        if (item.type === 'note') return item.data.title || 'Untitled';
+        if (item.type === 'canvas') return item.data.name || 'Untitled Canvas';
+        if (item.type === 'folder') return item.data.name || 'Untitled Folder';
         return 'Untitled';
     };
 
@@ -239,7 +255,7 @@ export function MobileNotesView({ onNoteClick, onCanvasClick }: MobileNotesViewP
                 </div>
                 {currentFolderId ? (
                     /* In folder view: Add button creates note immediately */
-                    <Button size="sm" onClick={handleAddNote} className="gap-2">
+                    <Button size="sm" onClick={() => void handleAddNote()} className="gap-2">
                         <Plus className="h-4 w-4" />
                         Add
                     </Button>
@@ -258,21 +274,21 @@ export function MobileNotesView({ onNoteClick, onCanvasClick }: MobileNotesViewP
                                 <div className="fixed inset-0 z-40" onClick={() => setShowAddMenu(false)} />
                                 <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-secondary-800 rounded-lg shadow-lg border border-secondary-200 dark:border-secondary-700 py-1 min-w-[140px]">
                                     <button
-                                        onClick={handleAddNote}
+                                        onClick={() => void handleAddNote()}
                                         className="w-full flex items-center gap-2 px-3 py-2 text-sm text-secondary-700 dark:text-secondary-200 hover:bg-secondary-100 dark:hover:bg-secondary-700"
                                     >
                                         <FileText className="h-4 w-4" />
                                         New Note
                                     </button>
                                     <button
-                                        onClick={handleAddFolder}
+                                        onClick={() => void handleAddFolder()}
                                         className="w-full flex items-center gap-2 px-3 py-2 text-sm text-secondary-700 dark:text-secondary-200 hover:bg-secondary-100 dark:hover:bg-secondary-700"
                                     >
                                         <FolderPlus className="h-4 w-4" />
                                         New Folder
                                     </button>
                                     <button
-                                        onClick={handleAddCanvas}
+                                        onClick={() => void handleAddCanvas()}
                                         className="w-full flex items-center gap-2 px-3 py-2 text-sm text-secondary-700 dark:text-secondary-200 hover:bg-secondary-100 dark:hover:bg-secondary-700"
                                     >
                                         <Layout className="h-4 w-4" />
@@ -369,7 +385,7 @@ export function MobileNotesView({ onNoteClick, onCanvasClick }: MobileNotesViewP
                     {items.map((item) => {
                         const id = item.data.id;
                         const title = getItemTitle(item);
-                        const updatedAt = (item.data as any).updated_at || (item.data as any).created_at;
+                        const updatedAt = getItemDate(item.data);
 
                         const handleClick = () => {
                             if (item.type === 'folder') {
@@ -383,11 +399,11 @@ export function MobileNotesView({ onNoteClick, onCanvasClick }: MobileNotesViewP
 
                         const handleDelete = () => {
                             if (item.type === 'folder') {
-                                handleDeleteFolder(id);
+                                void handleDeleteFolder(id);
                             } else if (item.type === 'note') {
-                                handleDeleteNote(id);
+                                void handleDeleteNote(id);
                             } else {
-                                handleDeleteCanvas(id);
+                                void handleDeleteCanvas(id);
                             }
                         };
 

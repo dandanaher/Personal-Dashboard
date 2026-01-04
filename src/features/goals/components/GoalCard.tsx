@@ -13,7 +13,8 @@ import {
 import { parseISO, differenceInDays } from 'date-fns';
 import { Card, Button } from '@/components/ui';
 import { Goal } from '@/lib/types';
-import { ProgressBar, getProgressColor } from './ProgressBar';
+import { ProgressBar } from './ProgressBar';
+import { getProgressColor } from './progressColors';
 import { getGoalDisplayProgress, isGoalHabitLinked } from '@/features/goals/lib/progress';
 
 interface GoalCardProps {
@@ -58,13 +59,7 @@ export const GoalCard = memo(function GoalCard({
   // Calculate actual progress for habit-linked goals
   const displayProgress = useMemo(() => {
     return getGoalDisplayProgress(goal, habitCompletions);
-  }, [
-    goal.completed,
-    goal.linked_habit_id,
-    goal.progress,
-    goal.target_completions,
-    habitCompletions,
-  ]);
+  }, [goal, habitCompletions]);
 
   // Get progress bar color
   const progressColor = useMemo(() => {

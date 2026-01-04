@@ -16,6 +16,11 @@ import type { StoreApi } from 'zustand/vanilla';
 import { useNotesStore } from '@/stores/notesStore';
 import { FloatingToolbar } from './FloatingToolbar';
 
+interface FloatingEdgeData {
+  label?: string | null;
+  color?: string | null;
+}
+
 export default function FloatingEdge({
   id,
   sourceX,
@@ -27,7 +32,7 @@ export default function FloatingEdge({
   style = {},
   markerEnd,
   data,
-}: EdgeProps) {
+}: EdgeProps<FloatingEdgeData>) {
   const { updateEdge, deleteEdge } = useNotesStore();
   const { zoom, x: viewportX, y: viewportY } = useViewport();
   const store = useStoreApi();
@@ -138,7 +143,7 @@ export default function FloatingEdge({
   };
 
   const handleColor = (newColor: string) => {
-    updateEdge(id, { color: newColor });
+    void updateEdge(id, { color: newColor });
   };
 
   // Custom focus implementation for edge
@@ -150,13 +155,13 @@ export default function FloatingEdge({
   };
 
   const handleDelete = () => {
-    deleteEdge(id);
+    void deleteEdge(id);
   };
 
   const handleLabelSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (labelInputRef.current) {
-      updateEdge(id, { label: labelInputRef.current.value });
+      void updateEdge(id, { label: labelInputRef.current.value });
     }
     setIsEditing(false);
   };
@@ -192,7 +197,9 @@ export default function FloatingEdge({
               defaultValue={data?.label || ''}
               className="px-2 py-1 rounded bg-white dark:bg-secondary-800 border border-accent shadow-lg text-sm font-semibold outline-none min-w-[100px]"
               onBlur={() => {
-                if (labelInputRef.current) updateEdge(id, { label: labelInputRef.current.value });
+                if (labelInputRef.current) {
+                  void updateEdge(id, { label: labelInputRef.current.value });
+                }
                 setIsEditing(false);
               }}
               onKeyDown={(e) => {

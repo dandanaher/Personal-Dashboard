@@ -1,16 +1,5 @@
 import { memo } from 'react';
-import { Frown, Annoyed, Meh, Smile, Laugh } from 'lucide-react';
-
-// Mood level configuration
-export const MOOD_LEVELS = [
-  { level: 1 as const, label: 'Bad', icon: Frown, color: '#ef4444' },
-  { level: 2 as const, label: 'Poor', icon: Annoyed, color: '#f97316' },
-  { level: 3 as const, label: 'Okay', icon: Meh, color: '#eab308' },
-  { level: 4 as const, label: 'Good', icon: Smile, color: '#22c55e' },
-  { level: 5 as const, label: 'Great', icon: Laugh, color: '#10b981' },
-] as const;
-
-export type MoodLevel = 1 | 2 | 3 | 4 | 5;
+import { MOOD_LEVELS, type MoodLevel } from './moodLevels';
 
 interface MoodPickerProps {
   selectedMood?: MoodLevel | null;
@@ -74,13 +63,3 @@ export const MoodPicker = memo(function MoodPicker({
     </div>
   );
 });
-
-// Helper to get mood info by level
-export function getMoodInfo(level: MoodLevel) {
-  return MOOD_LEVELS.find((m) => m.level === level)!;
-}
-
-// Get color for a mood level (useful for contribution graph)
-export function getMoodColor(level: MoodLevel): string {
-  return getMoodInfo(level).color;
-}

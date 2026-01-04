@@ -342,7 +342,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
 
   const handleConnect = useCallback(
     (connection: Connection) => {
-      connectNotes(connection);
+      void connectNotes(connection);
     },
     [connectNotes]
   );
@@ -356,7 +356,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
     (_event: React.MouseEvent, node: CanvasNode) => {
       resume();
       if (node.type === 'noteNode' || node.type === 'linkNode') {
-        handleNoteDragEnd(node.id);
+        void handleNoteDragEnd(node.id);
       }
     },
     [handleNoteDragEnd, resume]
@@ -550,7 +550,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
       if (distance >= NOTE_DROP_DRAG_THRESHOLD && isInside) {
         const flowPosition = screenToFlowPosition({ x: event.clientX, y: event.clientY });
         const groupId = findGroupAtPosition(flowPosition);
-        createNote({
+        void createNote({
           x: flowPosition.x - NOTE_DROP_PREVIEW_SIZE.width / 2,
           y: flowPosition.y - NOTE_DROP_PREVIEW_SIZE.height / 2,
           canvasId,
@@ -591,7 +591,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
 
   // Magic Paste: Listen for paste events - handle images first, then URLs
   useEffect(() => {
-    const handlePaste = async (event: ClipboardEvent) => {
+    const handlePasteAsync = async (event: ClipboardEvent) => {
       // Guard clause: Ignore if user is in an input or textarea
       const activeElement = document.activeElement;
       if (
@@ -643,30 +643,27 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
             };
 
             // Get dimensions, then create note and upload
-            getDims().then(async (dims) => {
-              const noteId = await createNote({
-                type: 'image',
-                content: '', // Empty triggers loading state
-                title: 'Image',
-                x: flowPosition.x - (dims.width / 2) + (i * 20),
-                y: flowPosition.y - (dims.height / 2) + (i * 20),
-                canvasId,
-                width: dims.width,
-                height: dims.height,
-              });
-
-              if (!noteId) return;
-
-              // Upload in background and update content when done
-              uploadImage(file)
-                .then((url) => {
-                  updateNoteContent(noteId, 'Image', url);
-                })
-                .catch((error) => {
-                  console.error('Failed to upload pasted image:', error);
-                  deleteNote(noteId);
-                });
+            const dims = await getDims();
+            const noteId = await createNote({
+              type: 'image',
+              content: '', // Empty triggers loading state
+              title: 'Image',
+              x: flowPosition.x - (dims.width / 2) + (i * 20),
+              y: flowPosition.y - (dims.height / 2) + (i * 20),
+              canvasId,
+              width: dims.width,
+              height: dims.height,
             });
+
+            if (!noteId) continue;
+
+            try {
+              const url = await uploadImage(file);
+              await updateNoteContent(noteId, 'Image', url);
+            } catch (error) {
+              console.error('Failed to upload pasted image:', error);
+              await deleteNote(noteId);
+            }
           }
           return;
         }
@@ -712,6 +709,10 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
         width: 280,
         height: 220, // Taller for video embeds
       });
+    };
+
+    const handlePaste = (event: ClipboardEvent) => {
+      void handlePasteAsync(event);
     };
 
     document.addEventListener('paste', handlePaste);
@@ -777,13 +778,12 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
       if (!noteId) continue;
 
       // Upload in background and update content when done
-      uploadImage(file)
-        .then((url) => {
-          updateNoteContent(noteId, 'Image', url);
-        })
-        .catch(() => {
-          deleteNote(noteId);
-        });
+      try {
+        const url = await uploadImage(file);
+        await updateNoteContent(noteId, 'Image', url);
+      } catch {
+        await deleteNote(noteId);
+      }
     }
 
     // Reset input
@@ -829,14 +829,13 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
       if (!noteId) continue;
 
       // Upload in background and update content when done
-      uploadImage(file)
-        .then((url) => {
-          updateNoteContent(noteId, 'Image', url);
-        })
-        .catch((error) => {
-          console.error('Failed to upload dropped image:', error);
-          deleteNote(noteId);
-        });
+      try {
+        const url = await uploadImage(file);
+        await updateNoteContent(noteId, 'Image', url);
+      } catch (error) {
+        console.error('Failed to upload dropped image:', error);
+        await deleteNote(noteId);
+      }
     }
   }, [canvasId, createNote, deleteNote, getImageDimensions, screenToFlowPosition, updateNoteContent, uploadImage]);
 
@@ -1218,7 +1217,7 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
       onPointerUp={onSelectionMouseUp}
       onPointerCancel={onSelectionMouseUp}
       onDragOver={handleDragOver}
-      onDrop={handleDrop}
+      onDrop={(event) => void handleDrop(event)}
     >
       <ReactFlow
         nodes={nodes}
@@ -1257,7 +1256,8 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
           className="!bg-white dark:!bg-secondary-800 !border-secondary-200 dark:!border-secondary-700 hidden lg:block"
           nodeColor={(node) => {
             if (node.type === 'groupNode') {
-              return (node.data.color || accentColor) + '40';
+              const nodeData = node.data as { color?: string } | undefined;
+              return (nodeData?.color || accentColor) + '40';
             }
             return accentColor;
           }}
@@ -1270,12 +1270,12 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
           setIsSelecting={setIsSelecting}
           isPlacingNote={isPlacingNote}
           onStartNoteDrag={handleStartNoteDrag}
-          onImageUpload={handleImageUpload}
+          onImageUpload={(event) => void handleImageUpload(event)}
           canUndo={canUndo}
           canRedo={canRedo}
           onUndo={handleUndo}
           onRedo={handleRedo}
-          onRefresh={() => fetchCanvasNotes(canvasId)}
+          onRefresh={() => void fetchCanvasNotes(canvasId)}
         />
       </ReactFlow>
 
@@ -1315,8 +1315,8 @@ function CanvasViewInner({ canvasId }: CanvasViewInnerProps) {
               <FloatingToolbar
                 onColor={handleSelectionColor}
                 onFocus={handleSelectionRecenter}
-                onDelete={handleSelectionDelete}
-                onGroup={handleSelectionGroup}
+                onDelete={() => void handleSelectionDelete()}
+                onGroup={() => void handleSelectionGroup()}
                 color={selectedNodes[0]?.data?.color ?? undefined}
               />
             </div>
@@ -1369,8 +1369,8 @@ export function CanvasView({ canvasId }: CanvasViewProps) {
 
   // Fetch notes for this canvas when it mounts or canvasId changes
   useEffect(() => {
-    fetchCanvasNotes(canvasId);
-    updateLastAccessed(canvasId);
+    void fetchCanvasNotes(canvasId);
+    void updateLastAccessed(canvasId);
 
     return () => {
       // Clear canvas state when unmounting
@@ -1403,7 +1403,7 @@ export function CanvasView({ canvasId }: CanvasViewProps) {
           <p className="text-red-500 mb-2">Failed to load canvas</p>
           <p className="text-secondary-500 text-sm">{error}</p>
           <button
-            onClick={() => fetchCanvasNotes(canvasId)}
+            onClick={() => void fetchCanvasNotes(canvasId)}
             className="mt-4 px-4 py-2 bg-secondary-100 dark:bg-secondary-800 rounded-lg hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-colors"
           >
             Retry

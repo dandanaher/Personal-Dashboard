@@ -74,11 +74,15 @@ export default function LiveWorkout({
   // Auto-save when workout completes naturally
   useEffect(() => {
     if (phase.type === 'complete' && !isSaved) {
-      endWorkout().then((sessionId) => {
-        if (sessionId) {
-          setIsSaved(true);
-        }
-      });
+      void endWorkout()
+        .then((sessionId) => {
+          if (sessionId) {
+            setIsSaved(true);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to auto-save workout:', err);
+        });
     }
   }, [phase.type, isSaved, endWorkout]);
 
@@ -370,7 +374,7 @@ export default function LiveWorkout({
             skipped={skippedExercises}
             exercises={workoutTemplate.exercises}
             onReturn={returnToSkipped}
-            onSkipAll={handleEndWorkout}
+            onSkipAll={() => void handleEndWorkout()}
           />
         )}
 
@@ -602,7 +606,7 @@ export default function LiveWorkout({
               <Button variant="ghost" fullWidth onClick={() => setShowEndConfirm(false)}>
                 Cancel
               </Button>
-              <Button fullWidth onClick={handleEndWorkout}>
+              <Button fullWidth onClick={() => void handleEndWorkout()}>
                 End Workout
               </Button>
             </div>

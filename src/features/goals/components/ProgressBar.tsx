@@ -1,5 +1,6 @@
 import { useThemeStore } from '@/stores/themeStore';
 import { useRef, useState, useEffect } from 'react';
+import { getProgressColor } from './progressColors';
 
 interface ProgressBarProps {
   progress: number;
@@ -85,7 +86,11 @@ export function ProgressBar({
   // Modern (Default) Style Rendering
   // Determine if color is a Tailwind class (starts with 'bg-') or a CSS color value
   const isTailwindClass = color && color.startsWith('bg-');
-  const barColorClass = isTailwindClass ? color : (color ? undefined : getProgressColor(clampedProgress));
+  const barColorClass = isTailwindClass
+    ? color
+    : color
+      ? undefined
+      : getProgressColor(clampedProgress);
   const barColorStyle = !isTailwindClass && color ? color : undefined;
 
   return (
@@ -116,14 +121,6 @@ export function ProgressBar({
       </div>
     </div>
   );
-}
-
-// Helper function to get color based on progress
-export function getProgressColor(progress: number): string {
-  if (progress >= 100) return 'bg-green-500';
-  if (progress >= 67) return 'bg-blue-500';
-  if (progress >= 34) return 'bg-yellow-500';
-  return 'bg-orange-500';
 }
 
 export default ProgressBar;

@@ -74,13 +74,13 @@ function HabitsPage() {
   }, []);
 
   const handleDeleteClick = useCallback(
-    async (habit: Habit) => {
+    (habit: Habit) => {
       if (
         window.confirm(
           `Are you sure you want to delete "${habit.name}"? This will also delete all completion history. This action cannot be undone.`
         )
       ) {
-        await deleteHabit(habit.id);
+        void deleteHabit(habit.id);
       }
     },
     [deleteHabit]
@@ -116,6 +116,10 @@ function HabitsPage() {
   const handleFilterChange = useCallback((filter: string | null) => {
     setSelectedFilter(filter);
   }, []);
+
+  const handleRetry = useCallback(() => {
+    void refetch();
+  }, [refetch]);
 
   return (
     <>
@@ -175,7 +179,7 @@ function HabitsPage() {
           error={error}
           onEdit={handleEditClick}
           onDelete={handleDeleteClick}
-          onRetry={refetch}
+          onRetry={handleRetry}
           onAddClick={handleAddClick}
           onCompletionChange={handleCompletionChange}
         />
@@ -256,7 +260,7 @@ function HabitsPage() {
               error={error}
               onEdit={handleEditClick}
               onDelete={handleDeleteClick}
-              onRetry={refetch}
+              onRetry={handleRetry}
               onAddClick={handleAddClick}
               onCompletionChange={handleCompletionChange}
               logsByHabit={logsByHabit}

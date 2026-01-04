@@ -141,7 +141,7 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
 
   const handleColor = useCallback(
     (newColor: string) => {
-      updateNoteColor(id, newColor);
+      void updateNoteColor(id, newColor);
     },
     [updateNoteColor, id]
   );
@@ -152,7 +152,7 @@ const LinkNode = memo(function LinkNode({ data, selected, dragging }: NodeProps<
 
   const handleDelete = useCallback(() => {
     if (window.confirm('Are you sure you want to delete this link? This cannot be undone.')) {
-      deleteNote(id);
+      void deleteNote(id);
     }
   }, [deleteNote, id]);
 

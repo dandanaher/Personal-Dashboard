@@ -25,10 +25,11 @@ const getSetDisplay = (
       return `${set.reps || 0} × ${set.weight || 0}kg`;
     case 'cardio':
       return `${set.distance || 0}km in ${formatDuration(set.time || 0)}`;
-    case 'timed':
+    case 'timed': {
       const timeStr = formatDuration(set.time || 0);
       const weightStr = set.weight ? ` @ ${set.weight}kg` : '';
       return `${timeStr}${weightStr}`;
+    }
     default:
       return `${set.reps || 0} reps`;
   }
@@ -43,10 +44,11 @@ const getTargetDisplay = (exercise: CompletedExercise): string => {
       return `${exercise.target_sets} × ${exercise.target_reps || 0} @ ${exercise.weight || 0}kg`;
     case 'cardio':
       return `${exercise.target_distance || 0}${exercise.distance_unit || 'km'} in ${formatDuration(exercise.target_time || 0)}`;
-    case 'timed':
+    case 'timed': {
       const timeStr = formatDuration(exercise.target_time || 0);
       const weightStr = exercise.weight ? ` @ ${exercise.weight}kg` : '';
       return `${exercise.target_sets} × ${timeStr}${weightStr}`;
+    }
     default:
       return `${exercise.target_sets} sets`;
   }

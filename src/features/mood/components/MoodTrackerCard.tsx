@@ -3,7 +3,8 @@ import { format } from 'date-fns';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import { useTodayMood } from '../hooks/useTodayMood';
-import { MoodPicker, getMoodInfo, type MoodLevel } from './MoodPicker';
+import { MoodPicker } from './MoodPicker';
+import { getMoodInfo, type MoodLevel } from './moodLevels';
 import { useThemeStore } from '@/stores/themeStore';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
@@ -18,8 +19,8 @@ export const MoodTrackerCard = memo(function MoodTrackerCard({ className = '' }:
   const [noteText, setNoteText] = useState('');
   const [isSavingNote, setIsSavingNote] = useState(false);
 
-  const handleMoodSelect = async (level: MoodLevel) => {
-    await setMood(level);
+  const handleMoodSelect = (level: MoodLevel) => {
+    void setMood(level);
   };
 
   const handleSaveNote = async () => {
@@ -40,7 +41,7 @@ export const MoodTrackerCard = memo(function MoodTrackerCard({ className = '' }:
   const handleNoteKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSaveNote();
+      void handleSaveNote();
     }
     if (e.key === 'Escape') {
       setShowNoteInput(false);
@@ -133,7 +134,7 @@ export const MoodTrackerCard = memo(function MoodTrackerCard({ className = '' }:
               </button>
               <button
                 type="button"
-                onClick={handleSaveNote}
+                onClick={() => void handleSaveNote()}
                 disabled={isSavingNote}
                 className="px-3 py-1 text-xs bg-secondary-900 dark:bg-white text-white dark:text-secondary-900 rounded-md hover:opacity-90 transition-opacity disabled:opacity-50"
               >

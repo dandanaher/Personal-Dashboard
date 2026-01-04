@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
-import { ColorPicker, HABIT_COLORS } from './ColorPicker';
+import { ColorPicker } from './ColorPicker';
+import { HABIT_COLORS } from './habitColors';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { useThemeStore, getColorVariants } from '@/stores/themeStore';
 import type { Habit } from '@/lib/types';
@@ -140,7 +141,7 @@ export function AddHabitModal({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={(event) => void handleSubmit(event)} className="p-4 space-y-4">
           {/* Name Input */}
           <div>
             <label

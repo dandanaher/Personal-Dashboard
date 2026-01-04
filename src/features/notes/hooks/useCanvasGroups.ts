@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { CanvasGroup } from '@/lib/types';
@@ -24,14 +25,17 @@ export function useCanvasGroups(): UseCanvasGroupsReturn {
     }
 
     try {
-      const { data, error: fetchError } = await supabase
+      const {
+        data,
+        error: fetchError,
+      }: { data: CanvasGroup[] | null; error: PostgrestError | null } = await supabase
         .from('canvas_groups')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: true });
 
       if (fetchError) throw fetchError;
-      setGroups((data || []) as CanvasGroup[]);
+      setGroups(data ?? []);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch canvas groups');
@@ -41,7 +45,7 @@ export function useCanvasGroups(): UseCanvasGroupsReturn {
   }, [user]);
 
   useEffect(() => {
-    fetchGroups();
+    void fetchGroups();
   }, [fetchGroups]);
 
   useEffect(() => {

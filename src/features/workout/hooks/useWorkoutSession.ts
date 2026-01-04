@@ -1,6 +1,7 @@
 // Thin wrapper around the global workout session store for component consumption
 
 import { useMemo, useCallback, useState } from 'react';
+import type { PostgrestError } from '@supabase/supabase-js';
 import type {
   WorkoutTemplate,
   Exercise,
@@ -55,6 +56,10 @@ type SetCompletionData = {
   weight?: number;
   distance?: number;
   time?: number;
+};
+
+type WorkoutTemplateExercisesRow = {
+  exercises: Exercise[];
 };
 
 export function useWorkoutSession(template?: WorkoutTemplate): UseWorkoutSessionReturn {
@@ -117,21 +122,29 @@ export function useWorkoutSession(template?: WorkoutTemplate): UseWorkoutSession
     if (sessionId && resolvedTemplate?.id && user) {
       try {
         // Fetch the latest template to avoid persisting transient flags (e.g., ad-hoc test failure sets)
-        const { data: existingTemplate } = await supabase
+        const {
+          data: existingTemplate,
+          error: fetchError,
+        }: { data: WorkoutTemplateExercisesRow | null; error: PostgrestError | null } =
+          await supabase
           .from('workout_templates')
           .select('exercises')
           .eq('id', resolvedTemplate.id)
           .eq('user_id', user.id)
           .single();
 
-        const mergedExercises =
-          existingTemplate?.exercises?.map((exercise: Exercise) => {
-            const updated = resolvedTemplate.exercises.find(
-              (ex) => ex.name.toLowerCase() === exercise.name.toLowerCase()
-            );
-            if (!updated) return exercise;
-            return { ...exercise, weight: updated.weight };
-          }) || resolvedTemplate.exercises;
+        if (fetchError) {
+          throw fetchError;
+        }
+
+        const templateExercises = existingTemplate?.exercises ?? resolvedTemplate.exercises;
+        const mergedExercises = templateExercises.map((exercise) => {
+          const updated = resolvedTemplate.exercises.find(
+            (ex) => ex.name.toLowerCase() === exercise.name.toLowerCase()
+          );
+          if (!updated) return exercise;
+          return { ...exercise, weight: updated.weight };
+        });
 
         await supabase
           .from('workout_templates')

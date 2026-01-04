@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type {
@@ -6,6 +7,7 @@ import type {
   CompletedExercise,
   CompletedSet,
   WorkoutSessionData,
+  WorkoutSession,
 } from '@/lib/types';
 import {
   WorkoutPhase,
@@ -132,7 +134,11 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
     });
 
     restInterval = setInterval(() => {
-      const remaining = Math.ceil((restEndTime! - Date.now()) / 1000);
+      if (restEndTime === null) {
+        clearRestTimer();
+        return;
+      }
+      const remaining = Math.ceil((restEndTime - Date.now()) / 1000);
       if (remaining <= 0) {
         clearRestTimer();
         vibrateRestComplete();
@@ -181,7 +187,11 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
     });
 
     restInterval = setInterval(() => {
-      const remaining = Math.ceil((restEndTime! - Date.now()) / 1000);
+      if (restEndTime === null) {
+        clearRestTimer();
+        return;
+      }
+      const remaining = Math.ceil((restEndTime - Date.now()) / 1000);
       if (remaining <= 0) {
         clearRestTimer();
         vibrateRestComplete();
@@ -219,7 +229,11 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
     });
 
     restInterval = setInterval(() => {
-      const remaining = Math.ceil((restEndTime! - Date.now()) / 1000);
+      if (restEndTime === null) {
+        clearRestTimer();
+        return;
+      }
+      const remaining = Math.ceil((restEndTime - Date.now()) / 1000);
       if (remaining <= 0) {
         clearRestTimer();
         vibrateRestComplete();
@@ -312,8 +326,8 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
 
       initializeExerciseState(0);
       startElapsedTimer(start);
-      requestWakeLock();
-      loadExerciseNotesHistory(template);
+      void requestWakeLock();
+      void loadExerciseNotesHistory(template);
     },
 
     completeSet: (data?: SetCompletionData | number) => {
@@ -530,7 +544,10 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
           exercises: sessionData,
         };
 
-        const { data, error } = await supabase
+        const {
+          data,
+          error,
+        }: { data: WorkoutSession | null; error: PostgrestError | null } = await supabase
           .from('workout_sessions')
           .insert({
             user_id: user.id,
@@ -546,10 +563,15 @@ export const useWorkoutSessionStore = create<WorkoutSessionStore>((set, get) => 
           .single();
 
         if (error) throw error;
+        if (!data) {
+          throw new Error('Failed to save workout session');
+        }
 
         if (activeTemplate.linked_habit_id) {
           const today = new Date().toISOString().slice(0, 10);
-          const { data: existingLog } = await supabase
+          const {
+            data: existingLog,
+          }: { data: { id: string } | null } = await supabase
             .from('habit_logs')
             .select('id')
             .eq('habit_id', activeTemplate.linked_habit_id)

@@ -9,9 +9,9 @@ interface HabitCalendarProps {
 }
 
 export function HabitCalendar({ logs, color, onDayClick }: HabitCalendarProps) {
-  const today = new Date();
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
-  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const today = useMemo(() => new Date(), []);
+  const [currentMonth, setCurrentMonth] = useState(() => today.getMonth());
+  const [currentYear, setCurrentYear] = useState(() => today.getFullYear());
 
   // Create a set of completed dates for quick lookup
   const completedDates = useMemo(() => {

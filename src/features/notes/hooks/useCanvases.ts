@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { Canvas, CanvasInsert, CanvasUpdate } from '@/lib/types';
@@ -28,14 +29,17 @@ export function useCanvases(): UseCanvasesReturn {
     }
 
     try {
-      const { data, error: fetchError } = await supabase
+      const {
+        data,
+        error: fetchError,
+      }: { data: Canvas[] | null; error: PostgrestError | null } = await supabase
         .from('canvases')
         .select('*')
         .eq('user_id', user.id)
         .order('last_accessed_at', { ascending: false });
 
       if (fetchError) throw fetchError;
-      setCanvases((data || []) as Canvas[]);
+      setCanvases(data ?? []);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch canvases');
@@ -55,7 +59,10 @@ export function useCanvases(): UseCanvasesReturn {
           description: description || null,
         };
 
-        const { data, error: insertError } = await supabase
+        const {
+          data,
+          error: insertError,
+        }: { data: Canvas | null; error: PostgrestError | null } = await supabase
           .from('canvases')
           .insert(newCanvas)
           .select()
@@ -63,7 +70,10 @@ export function useCanvases(): UseCanvasesReturn {
 
         if (insertError) throw insertError;
 
-        const canvas = data as Canvas;
+        if (!data) {
+          throw new Error('Failed to create canvas');
+        }
+        const canvas = data;
         setCanvases((prev) => [canvas, ...prev]);
         return canvas;
       } catch (err) {
@@ -158,7 +168,7 @@ export function useCanvases(): UseCanvasesReturn {
   );
 
   useEffect(() => {
-    fetchCanvases();
+    void fetchCanvases();
   }, [fetchCanvases]);
 
   // Real-time subscription

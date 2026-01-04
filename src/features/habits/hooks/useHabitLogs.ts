@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format, subDays, parseISO, differenceInDays, startOfDay } from 'date-fns';
+import type { PostgrestError } from '@supabase/supabase-js';
 import supabase from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { HabitLog } from '@/lib/types';
@@ -51,14 +52,9 @@ export function calculateHabitStats(logs: HabitLog[]): HabitStats {
   // If today is NOT completed, count from yesterday backward (giving user until end of day)
   let checkDate = todayCompleted ? today : subDays(today, 1);
 
-  while (true) {
-    const dateStr = format(checkDate, 'yyyy-MM-dd');
-    if (completedDates.has(dateStr)) {
-      currentStreak++;
-      checkDate = subDays(checkDate, 1);
-    } else {
-      break;
-    }
+  while (completedDates.has(format(checkDate, 'yyyy-MM-dd'))) {
+    currentStreak++;
+    checkDate = subDays(checkDate, 1);
   }
 
   // Calculate longest streak
@@ -124,7 +120,8 @@ export function useHabitLogs(habitId: string, initialLogs?: HabitLog[]): UseHabi
         .order('date', { ascending: false });
 
       if (fetchError) throw fetchError;
-      setLogs(data || []);
+      const logsData = (data ?? []) as HabitLog[];
+      setLogs(logsData);
     } catch (err) {
       console.error('Error fetching habit logs:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch habit logs');
@@ -182,7 +179,7 @@ export function useHabitLogs(habitId: string, initialLogs?: HabitLog[]): UseHabi
         );
 
         try {
-          const { data, error: insertError } = await supabase
+          const insertResult = (await supabase
             .from('habit_logs')
             .insert({
               habit_id: habitId,
@@ -191,12 +188,14 @@ export function useHabitLogs(habitId: string, initialLogs?: HabitLog[]): UseHabi
               completed: true,
             })
             .select()
-            .single();
+            .single()) as { data: HabitLog | null; error: PostgrestError | null };
+          const { data: insertedLog, error: insertError } = insertResult;
 
           if (insertError) throw insertError;
+          const newLog = insertedLog as HabitLog;
 
           // Replace temp with real
-          setLogs((prev) => prev.map((log) => (log.id === tempId ? data : log)));
+          setLogs((prev) => prev.map((log) => (log.id === tempId ? newLog : log)));
 
           return true;
         } catch (err) {
@@ -220,7 +219,7 @@ export function useHabitLogs(habitId: string, initialLogs?: HabitLog[]): UseHabi
       setLogs(initialLogs);
       setLoading(false);
     } else {
-      fetchLogs();
+      void fetchLogs();
     }
   }, [fetchLogs, initialLogs]);
 
@@ -239,13 +238,13 @@ export function useHabitLogs(habitId: string, initialLogs?: HabitLog[]): UseHabi
           filter: `habit_id=eq.${habitId}`,
         },
         () => {
-          fetchLogs();
+          void fetchLogs();
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [user, habitId, fetchLogs]);
 

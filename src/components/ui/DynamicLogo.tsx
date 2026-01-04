@@ -48,7 +48,11 @@ export function DynamicLogo({ size = 40, className = '' }: DynamicLogoProps) {
 
   // Load static logo
   useEffect(() => {
-    generateColoredLogoDataUrl(accentColor, darkMode, stylePreset, size).then(setLogoUrl);
+    void generateColoredLogoDataUrl(accentColor, darkMode, stylePreset, size)
+      .then(setLogoUrl)
+      .catch((err) => {
+        console.error('Failed to generate logo preview:', err);
+      });
   }, [accentColor, darkMode, stylePreset, size]);
 
   // Pre-load and recolor BOTH light and dark logo GIF frames

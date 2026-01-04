@@ -31,9 +31,9 @@ export function HabitCard({ habit, onEdit, onDelete, onCompletionChange, initial
     }
   }, [habit.id, isCompletedToday, loading, onCompletionChange]);
 
-  const handleTodayToggle = async (e: React.MouseEvent) => {
+  const handleTodayToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    await toggleLog(today);
+    void toggleLog(today);
   };
 
   const handleCardClick = () => {
@@ -122,7 +122,7 @@ export function HabitCard({ habit, onEdit, onDelete, onCompletionChange, initial
         habit={habit}
         logs={logs}
         stats={stats}
-        onDayClick={toggleLog}
+        onDayClick={(date) => void toggleLog(date)}
         onEdit={onEdit}
         onDelete={onDelete}
       />

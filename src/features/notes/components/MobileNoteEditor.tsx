@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ArrowLeft, Check, Bold, Italic, List, ListOrdered } from 'lucide-react';
 import { useNotesStore } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
@@ -60,7 +60,7 @@ export function MobileNoteEditor({ noteId, onClose }: MobileNoteEditorProps) {
             }
             setContentLoading(false);
         };
-        loadNote();
+        void loadNote();
     }, [noteId, fetchNote, cachedNote]);
 
     // Set content after loading completes and contentEditable is mounted
@@ -73,11 +73,12 @@ export function MobileNoteEditor({ noteId, onClose }: MobileNoteEditorProps) {
     }, [contentLoading, note]);
 
     // Auto-save debounced function
-    const debouncedSave = useCallback(
-        debounce((noteTitle: string, noteContent: string) => {
+    const debouncedSave = useMemo(
+        () =>
+            debounce((noteTitle: string, noteContent: string) => {
             const sanitizedContent = noteContent.replace(/\u200B/g, '');
             if (sanitizedContent !== lastSavedContent.current || noteTitle !== note?.title) {
-                updateNoteContent(noteId, noteTitle, sanitizedContent);
+                void updateNoteContent(noteId, noteTitle, sanitizedContent);
                 lastSavedContent.current = sanitizedContent;
                 setHasChanges(false);
             }
@@ -216,7 +217,7 @@ export function MobileNoteEditor({ noteId, onClose }: MobileNoteEditorProps) {
     const handleClose = useCallback(() => {
         if (contentEditableRef.current && hasChanges && note) {
             const finalContent = contentEditableRef.current.innerHTML.replace(/\u200B/g, '');
-            updateNoteContent(noteId, title, finalContent);
+            void updateNoteContent(noteId, title, finalContent);
         }
         onClose();
     }, [hasChanges, note, title, noteId, updateNoteContent, onClose]);

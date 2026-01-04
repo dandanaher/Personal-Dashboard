@@ -60,7 +60,7 @@ function LoginPage() {
             {isSignUp ? 'Create Account' : 'Welcome Back'}
           </h2>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={(event) => void handleSubmit(event)} className="space-y-4">
             {isSignUp && (
               <Input
                 label="Username"

@@ -336,7 +336,7 @@ export function AddGoalModal({ isOpen, onClose, onSave, editingGoal }: AddGoalMo
 
         {/* Form */}
         <form
-          onSubmit={handleSubmit}
+          onSubmit={(event) => void handleSubmit(event)}
           className="p-4 space-y-4 overflow-y-auto overflow-x-hidden max-h-[calc(90vh-8rem)]"
         >
           {/* Error message */}

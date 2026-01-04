@@ -1,6 +1,6 @@
 # AGENTS.md - Personal Dashboard Codebase Guide
 
-**Last Updated:** 2025-12-31
+**Last Updated:** 2026-01-04
 
 This document provides a comprehensive guide to the Personal Dashboard codebase for AI assistants and developers. It covers architecture, conventions, and best practices.
 
@@ -1147,7 +1147,18 @@ When making changes:
 3. **Format code**: `npm run format` to ensure consistent style
 4. **Test in browser**: Verify functionality works as expected
 
-#### 8. Common Pitfalls to Avoid
+#### 8. Lint Error Prevention
+
+- Wrap async handlers for void props: `onClick={() => void handleSave()}`, `onSubmit={(e) => void handleSubmit(e)}`.
+- Mark fire-and-forget promises with `void` in effects/handlers; otherwise `await` and handle errors.
+- Type Supabase responses (`SupabaseResult<T>`) and guard `data` for null to avoid `any` and unsafe assignments.
+- Avoid non-null assertions (`!`); use guard clauses or fallback values.
+- Keep hook dependencies complete; wrap helper predicates in `useCallback`/`useMemo` when referenced.
+- Move non-component exports (helpers/constants) into separate files to satisfy `react-refresh/only-export-components`.
+- Avoid redundant unions like `'all' | string`; use `string` or a strict union.
+- Remove `async` from functions without `await` to satisfy `require-await`.
+
+#### 9. Common Pitfalls to Avoid
 
 - **Don't bypass RLS**: Always filter by `user_id` in queries
 - **Don't forget optimistic updates**: Users expect instant feedback
@@ -1156,7 +1167,7 @@ When making changes:
 - **Don't create unused abstractions**: Keep it simple until complexity is needed
 - **Don't ignore mobile**: Test UI at mobile widths (375px+)
 
-#### 9. File Location Decision Tree
+#### 10. File Location Decision Tree
 
 When creating a new file:
 - **Component used by one feature?** → `src/features/<feature>/components/`
@@ -1167,7 +1178,7 @@ When creating a new file:
 - **Types?** → `src/lib/types.ts` (single file)
 - **Page component?** → `src/features/<feature>/<Feature>Page.tsx` or `src/pages/`
 
-#### 10. When Adding New Dependencies
+#### 11. When Adding New Dependencies
 
 - **Check if already available**: Review `package.json` first
 - **Prefer lighter alternatives**: Smaller bundle = faster load
@@ -1197,7 +1208,7 @@ When creating a new file:
 
 ---
 
-**Last Updated**: 2025-12-31
+**Last Updated**: 2026-01-04
 **Version**: 2.0.0
 **Maintained by**: Dan Danaher
 

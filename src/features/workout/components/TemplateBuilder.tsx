@@ -200,7 +200,11 @@ export default function TemplateBuilder({ template, onSave, onClose }: TemplateB
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
-          <form id="template-form" onSubmit={handleSubmit} className="space-y-4">
+          <form
+            id="template-form"
+            onSubmit={(event) => void handleSubmit(event)}
+            className="space-y-4"
+          >
             {error && (
               <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg text-sm">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />

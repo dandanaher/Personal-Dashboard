@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { Canvas, Folder, CanvasGroup, Note } from '@/lib/types';
@@ -19,6 +20,8 @@ interface UseNotesLibraryDataReturn {
     updateFolder: (id: string, updates: Partial<Folder>) => Promise<boolean>;
     deleteFolder: (id: string) => Promise<boolean>;
 }
+
+type SupabaseResult<T> = { data: T | null; error: PostgrestError | null };
 
 /**
  * Combined hook that fetches all notes library data in parallel
@@ -46,27 +49,32 @@ export function useNotesLibraryData(): UseNotesLibraryDataReturn {
         setLoading(true);
         try {
             // Fetch all data in parallel
+            const notesPromise = supabase
+                .from('notes')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('updated_at', { ascending: false }) as Promise<SupabaseResult<Note[]>>;
+            const canvasesPromise = supabase
+                .from('canvases')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('last_accessed_at', { ascending: false }) as Promise<SupabaseResult<Canvas[]>>;
+            const foldersPromise = supabase
+                .from('folders')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('name', { ascending: true }) as Promise<SupabaseResult<Folder[]>>;
+            const groupsPromise = supabase
+                .from('canvas_groups')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: true }) as Promise<SupabaseResult<CanvasGroup[]>>;
+
             const [notesResult, canvasesResult, foldersResult, groupsResult] = await Promise.all([
-                supabase
-                    .from('notes')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .order('updated_at', { ascending: false }),
-                supabase
-                    .from('canvases')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .order('last_accessed_at', { ascending: false }),
-                supabase
-                    .from('folders')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .order('name', { ascending: true }),
-                supabase
-                    .from('canvas_groups')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .order('created_at', { ascending: true }),
+                notesPromise,
+                canvasesPromise,
+                foldersPromise,
+                groupsPromise,
             ]);
 
             if (notesResult.error) throw notesResult.error;
@@ -74,10 +82,10 @@ export function useNotesLibraryData(): UseNotesLibraryDataReturn {
             if (foldersResult.error) throw foldersResult.error;
             if (groupsResult.error) throw groupsResult.error;
 
-            setNotes((notesResult.data || []) as Note[]);
-            setCanvases((canvasesResult.data || []) as Canvas[]);
-            setFolders((foldersResult.data || []) as Folder[]);
-            setGroups((groupsResult.data || []) as CanvasGroup[]);
+            setNotes(notesResult.data ?? []);
+            setCanvases(canvasesResult.data ?? []);
+            setFolders(foldersResult.data ?? []);
+            setGroups(groupsResult.data ?? []);
             setError(null);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to fetch library data');
@@ -92,7 +100,10 @@ export function useNotesLibraryData(): UseNotesLibraryDataReturn {
             if (!user) return null;
 
             try {
-                const { data, error: insertError } = await supabase
+                const {
+                    data,
+                    error: insertError,
+                }: { data: Canvas | null; error: PostgrestError | null } = await supabase
                     .from('canvases')
                     .insert({
                         user_id: user.id,
@@ -104,7 +115,10 @@ export function useNotesLibraryData(): UseNotesLibraryDataReturn {
 
                 if (insertError) throw insertError;
 
-                const canvas = data as Canvas;
+                if (!data) {
+                    throw new Error('Failed to create canvas');
+                }
+                const canvas = data;
                 setCanvases((prev) => [canvas, ...prev]);
                 return canvas;
             } catch (err) {
@@ -175,7 +189,10 @@ export function useNotesLibraryData(): UseNotesLibraryDataReturn {
             if (!user) return null;
 
             try {
-                const { data, error: insertError } = await supabase
+                const {
+                    data,
+                    error: insertError,
+                }: { data: Folder | null; error: PostgrestError | null } = await supabase
                     .from('folders')
                     .insert({
                         user_id: user.id,
@@ -187,7 +204,10 @@ export function useNotesLibraryData(): UseNotesLibraryDataReturn {
 
                 if (insertError) throw insertError;
 
-                const folder = data as Folder;
+                if (!data) {
+                    throw new Error('Failed to create folder');
+                }
+                const folder = data;
                 setFolders((prev) => [...prev, folder].sort((a, b) => a.name.localeCompare(b.name)));
                 return folder;
             } catch (err) {
@@ -249,7 +269,7 @@ export function useNotesLibraryData(): UseNotesLibraryDataReturn {
     );
 
     useEffect(() => {
-        fetchAll();
+        void fetchAll();
     }, [fetchAll]);
 
     // Real-time subscriptions for all tables

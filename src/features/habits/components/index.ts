@@ -1,4 +1,5 @@
-export { ColorPicker, HABIT_COLORS } from './ColorPicker';
+export { ColorPicker } from './ColorPicker';
+export { HABIT_COLORS } from './habitColors';
 export { HabitStats } from './HabitStats';
 export { ContributionGraph } from './ContributionGraph';
 export { AddHabitModal } from './AddHabitModal';

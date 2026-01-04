@@ -63,9 +63,16 @@ export async function requestWakeLock(): Promise<boolean> {
       wakeLock = await navigator.wakeLock.request('screen');
 
       // Re-request wake lock if visibility changes
-      document.addEventListener('visibilitychange', async () => {
+      document.addEventListener('visibilitychange', () => {
         if (wakeLock !== null && document.visibilityState === 'visible') {
-          wakeLock = await navigator.wakeLock.request('screen');
+          void navigator.wakeLock
+            .request('screen')
+            .then((lock) => {
+              wakeLock = lock;
+            })
+            .catch((err) => {
+              console.error('Wake lock error:', err);
+            });
         }
       });
 
@@ -80,7 +87,7 @@ export async function requestWakeLock(): Promise<boolean> {
 
 export function releaseWakeLock(): void {
   if (wakeLock) {
-    wakeLock.release();
+    void wakeLock.release();
     wakeLock = null;
   }
 }

@@ -40,8 +40,9 @@ export function useAllHabitLogs(): UseAllHabitLogsReturn {
             if (fetchError) throw fetchError;
 
             // Group logs by habit_id
+            const logs = (data ?? []) as HabitLog[];
             const grouped: Record<string, HabitLog[]> = {};
-            data?.forEach((log) => {
+            logs.forEach((log) => {
                 if (!grouped[log.habit_id]) {
                     grouped[log.habit_id] = [];
                 }
@@ -58,7 +59,7 @@ export function useAllHabitLogs(): UseAllHabitLogsReturn {
     }, [user]);
 
     useEffect(() => {
-        fetchAllLogs();
+        void fetchAllLogs();
     }, [fetchAllLogs]);
 
     const upsertLog = useCallback((log: HabitLog) => {
@@ -141,7 +142,7 @@ export function useAllHabitLogs(): UseAllHabitLogsReturn {
             .subscribe();
 
         return () => {
-            supabase.removeChannel(channel);
+            void supabase.removeChannel(channel);
         };
     }, [user, upsertLog, removeLog]);
 

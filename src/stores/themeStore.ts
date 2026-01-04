@@ -133,7 +133,7 @@ export const useThemeStore = create<ThemeState>()(
         updateThemeColorMeta(color);
         // Update favicon with new accent color
         const { darkMode, stylePreset } = get();
-        updateFavicon(color, darkMode, stylePreset);
+        void updateFavicon(color, darkMode, stylePreset);
       },
       toggleDarkMode: () => {
         const newDarkMode = !get().darkMode;
@@ -149,7 +149,7 @@ export const useThemeStore = create<ThemeState>()(
         }
         // Update favicon with new dark mode
         const { accentColor, stylePreset } = get();
-        updateFavicon(accentColor, newDarkMode, stylePreset);
+        void updateFavicon(accentColor, newDarkMode, stylePreset);
         // Re-enable transitions after paint
         requestAnimationFrame(() => {
           document.documentElement.classList.remove('switching-theme');
@@ -168,7 +168,7 @@ export const useThemeStore = create<ThemeState>()(
         }
         // Update favicon with new dark mode
         const { accentColor, stylePreset } = get();
-        updateFavicon(accentColor, isDark, stylePreset);
+        void updateFavicon(accentColor, isDark, stylePreset);
         // Re-enable transitions after paint
         requestAnimationFrame(() => {
           document.documentElement.classList.remove('switching-theme');
@@ -182,7 +182,7 @@ export const useThemeStore = create<ThemeState>()(
         applyThemeVariables(style);
         // Update favicon with new style preset
         const { accentColor, darkMode } = get();
-        updateFavicon(accentColor, darkMode, style);
+        void updateFavicon(accentColor, darkMode, style);
       },
     }),
     {
@@ -216,7 +216,7 @@ export const useThemeStore = create<ThemeState>()(
         const accentColor = state?.accentColor || '#3b82f6';
         const darkMode = state?.darkMode ?? getInitialDarkMode();
         const stylePreset = state?.stylePreset || 'modern';
-        updateFavicon(accentColor, darkMode, stylePreset);
+        void updateFavicon(accentColor, darkMode, stylePreset);
       },
     }
   )

@@ -1,6 +1,7 @@
 // Custom hook for workout template CRUD operations
 
 import { useState, useEffect, useCallback } from 'react';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type {
@@ -58,14 +59,17 @@ export function useWorkoutTemplates(): UseWorkoutTemplatesReturn {
 
     try {
       setError(null);
-      const { data, error: fetchError } = await supabase
+      const {
+        data,
+        error: fetchError,
+      }: { data: WorkoutTemplate[] | null; error: PostgrestError | null } = await supabase
         .from('workout_templates')
         .select('*')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
 
       if (fetchError) throw fetchError;
-      setTemplates(data || []);
+      setTemplates(data ?? []);
     } catch (err) {
       console.error('Error fetching templates:', err);
       setError('Failed to load workout templates');
@@ -76,7 +80,7 @@ export function useWorkoutTemplates(): UseWorkoutTemplatesReturn {
 
   // Initial fetch
   useEffect(() => {
-    fetchTemplates();
+    void fetchTemplates();
   }, [fetchTemplates]);
 
   // Real-time subscription
@@ -94,13 +98,13 @@ export function useWorkoutTemplates(): UseWorkoutTemplatesReturn {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          fetchTemplates();
+          void fetchTemplates();
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [user, fetchTemplates]);
 
@@ -123,7 +127,10 @@ export function useWorkoutTemplates(): UseWorkoutTemplatesReturn {
           linked_habit_id: linkedHabitId || null,
         };
 
-        const { data, error: insertError } = await supabase
+        const {
+          data,
+          error: insertError,
+        }: { data: WorkoutTemplate | null; error: PostgrestError | null } = await supabase
           .from('workout_templates')
           .insert(templateData)
           .select()
@@ -132,6 +139,9 @@ export function useWorkoutTemplates(): UseWorkoutTemplatesReturn {
         if (insertError) throw insertError;
 
         // Optimistically add to state
+        if (!data) {
+          throw new Error('Template insert returned no data');
+        }
         setTemplates((prev) => [data, ...prev]);
         return data;
       } catch (err) {

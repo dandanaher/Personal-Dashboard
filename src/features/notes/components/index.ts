@@ -7,4 +7,5 @@ export { default as StandaloneNoteEditor } from './StandaloneNoteEditor';
 export { MobileNotesView } from './MobileNotesView';
 export { MobileNoteEditor } from './MobileNoteEditor';
 export { MobileCanvasView } from './MobileCanvasView';
-export { MobileCanvasProvider, useMobileCanvas } from './MobileCanvasContext';
+export { MobileCanvasProvider } from './MobileCanvasProvider';
+export { useMobileCanvas } from './MobileCanvasContext';

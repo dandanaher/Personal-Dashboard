@@ -7,8 +7,8 @@ import type { Task, TaskUpdate } from '@/lib/types';
 
 interface TaskItemProps {
   task: Task;
-  onToggle: (taskId: string) => void;
-  onDelete: (taskId: string) => void;
+  onToggle: (taskId: string) => Promise<void>;
+  onDelete: (taskId: string) => Promise<void>;
   onEdit?: (taskId: string, updates: TaskUpdate) => Promise<boolean>;
   onEditClick?: (task: Task) => void;
   showDate?: boolean;
@@ -116,7 +116,7 @@ export const TaskItem = memo(function TaskItem({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSaveEdit();
+      void handleSaveEdit();
     } else if (e.key === 'Escape') {
       handleCancelEdit();
     }
@@ -160,7 +160,7 @@ export const TaskItem = memo(function TaskItem({
           </Button>
           <Button
             size="sm"
-            onClick={handleSaveEdit}
+            onClick={() => void handleSaveEdit()}
             disabled={!editTitle.trim() || isSaving}
             isLoading={isSaving}
             className="text-xs"
@@ -182,7 +182,7 @@ export const TaskItem = memo(function TaskItem({
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleStartEdit}
+            onClick={() => handleStartEdit()}
               className="text-white hover:text-white hover:bg-blue-600 p-1.5"
               aria-label="Edit task"
             >
@@ -194,7 +194,7 @@ export const TaskItem = memo(function TaskItem({
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleDelete}
+            onClick={() => void handleDelete()}
             disabled={isDeleting}
             className="text-white hover:text-white hover:bg-red-600 p-1.5"
             aria-label="Delete task"
@@ -223,7 +223,7 @@ export const TaskItem = memo(function TaskItem({
             onClick={(e) => {
               e.stopPropagation();
               if (!showActions) {
-                onToggle(task.id);
+              void onToggle(task.id);
               }
             }}
             className={`
@@ -312,7 +312,7 @@ export const TaskItem = memo(function TaskItem({
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                handleDelete();
+                void handleDelete();
               }}
               disabled={isDeleting}
               className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 p-1.5"

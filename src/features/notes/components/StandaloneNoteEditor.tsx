@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Trash2, Bold, Italic, List, ListOrdered } from 'lucide-react';
 import { useNotesStore } from '@/stores/notesStore';
 import { useThemeStore } from '@/stores/themeStore';
@@ -62,24 +62,25 @@ export function StandaloneNoteEditor({ noteId }: StandaloneNoteEditorProps) {
       setLoading(false);
     };
 
-    loadNote();
+    void loadNote();
   }, [noteId, fetchNote]);
 
   // Auto-save debounced function
-  const debouncedSave = useCallback(
-    debounce((noteTitle: string, noteContent: string) => {
-      const sanitizedContent = noteContent.replace(/\u200B/g, '');
-      if (sanitizedContent !== lastSavedContent.current || noteTitle !== note?.title) {
-        updateNoteContent(noteId, noteTitle, sanitizedContent);
-        lastSavedContent.current = sanitizedContent;
+  const debouncedSave = useMemo(
+    () =>
+      debounce((noteTitle: string, noteContent: string) => {
+        const sanitizedContent = noteContent.replace(/\u200B/g, '');
+        if (sanitizedContent !== lastSavedContent.current || noteTitle !== note?.title) {
+          void updateNoteContent(noteId, noteTitle, sanitizedContent);
+          lastSavedContent.current = sanitizedContent;
 
-        // Update tab title if it changed
-        const tab = findTabByEntity('note', noteId);
-        if (tab && tab.title !== noteTitle) {
-          updateTabTitle(tab.id, noteTitle || 'Untitled');
+          // Update tab title if it changed
+          const tab = findTabByEntity('note', noteId);
+          if (tab && tab.title !== noteTitle) {
+            updateTabTitle(tab.id, noteTitle || 'Untitled');
+          }
         }
-      }
-    }, 1000),
+      }, 1000),
     [noteId, updateNoteContent, updateTabTitle, findTabByEntity, note?.title]
   );
 
@@ -301,7 +302,7 @@ export function StandaloneNoteEditor({ noteId }: StandaloneNoteEditorProps) {
         <div className="flex items-center gap-2">
           {/* Delete button */}
           <button
-            onClick={handleDelete}
+            onClick={() => void handleDelete()}
             className="p-2 rounded-lg hover:bg-red-500/10 transition-colors text-red-500"
             aria-label="Delete note"
           >

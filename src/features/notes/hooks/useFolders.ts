@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { Folder, FolderInsert, FolderUpdate } from '@/lib/types';
@@ -28,14 +29,17 @@ export function useFolders(): UseFoldersReturn {
     }
 
     try {
-      const { data, error: fetchError } = await supabase
+      const {
+        data,
+        error: fetchError,
+      }: { data: Folder[] | null; error: PostgrestError | null } = await supabase
         .from('folders')
         .select('*')
         .eq('user_id', user.id)
         .order('name', { ascending: true });
 
       if (fetchError) throw fetchError;
-      setFolders((data || []) as Folder[]);
+      setFolders(data ?? []);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch folders');
@@ -55,7 +59,10 @@ export function useFolders(): UseFoldersReturn {
           parent_id: parentId,
         };
 
-        const { data, error: insertError } = await supabase
+        const {
+          data,
+          error: insertError,
+        }: { data: Folder | null; error: PostgrestError | null } = await supabase
           .from('folders')
           .insert(newFolder)
           .select()
@@ -63,7 +70,10 @@ export function useFolders(): UseFoldersReturn {
 
         if (insertError) throw insertError;
 
-        const folder = data as Folder;
+        if (!data) {
+          throw new Error('Failed to create folder');
+        }
+        const folder = data;
         setFolders((prev) => [...prev, folder].sort((a, b) => a.name.localeCompare(b.name)));
         return folder;
       } catch (err) {
@@ -135,7 +145,8 @@ export function useFolders(): UseFoldersReturn {
 
       while (current) {
         path.unshift(current);
-        current = current.parent_id ? folders.find((f) => f.id === current!.parent_id) : undefined;
+        const parentId = current.parent_id;
+        current = parentId ? folders.find((f) => f.id === parentId) : undefined;
       }
 
       return path;
@@ -144,7 +155,7 @@ export function useFolders(): UseFoldersReturn {
   );
 
   useEffect(() => {
-    fetchFolders();
+    void fetchFolders();
   }, [fetchFolders]);
 
   // Real-time subscription

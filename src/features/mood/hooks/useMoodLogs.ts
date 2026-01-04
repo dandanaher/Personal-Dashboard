@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format, subDays, parseISO, differenceInDays, startOfDay } from 'date-fns';
+import type { PostgrestError } from '@supabase/supabase-js';
 import supabase from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { MoodLog } from '@/lib/types';
@@ -57,14 +58,9 @@ export function calculateMoodStats(logs: MoodLog[]): MoodStats {
   // If today is NOT logged, count from yesterday backward
   let checkDate = todayLogged ? today : subDays(today, 1);
 
-  while (true) {
-    const dateStr = format(checkDate, 'yyyy-MM-dd');
-    if (loggedDates.has(dateStr)) {
-      currentStreak++;
-      checkDate = subDays(checkDate, 1);
-    } else {
-      break;
-    }
+  while (loggedDates.has(format(checkDate, 'yyyy-MM-dd'))) {
+    currentStreak++;
+    checkDate = subDays(checkDate, 1);
   }
 
   // Calculate longest streak
@@ -129,7 +125,8 @@ export function useMoodLogs(): UseMoodLogsReturn {
         .order('date', { ascending: false });
 
       if (fetchError) throw fetchError;
-      setLogs(data || []);
+      const logsData = (data ?? []) as MoodLog[];
+      setLogs(logsData);
     } catch (err) {
       console.error('Error fetching mood logs:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch mood logs');
@@ -137,62 +134,6 @@ export function useMoodLogs(): UseMoodLogsReturn {
       setLoading(false);
     }
   }, [user]);
-
-  const addMoodLog = useCallback(
-    async (date: string, moodLevel: 1 | 2 | 3 | 4 | 5, note?: string): Promise<boolean> => {
-      if (!user) return false;
-
-      // Check if a log already exists for this date
-      const existingLog = logs.find((log) => log.date === date);
-      if (existingLog) {
-        // Update instead
-        return updateMoodLog(existingLog.id, moodLevel, note);
-      }
-
-      const tempId = `temp-${Date.now()}`;
-      const tempLog: MoodLog = {
-        id: tempId,
-        user_id: user.id,
-        date,
-        mood_level: moodLevel,
-        note: note || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      // Optimistic add
-      setLogs((prev) =>
-        [tempLog, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      );
-
-      try {
-        const { data, error: insertError } = await supabase
-          .from('mood_logs')
-          .insert({
-            user_id: user.id,
-            date,
-            mood_level: moodLevel,
-            note: note || null,
-          })
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
-
-        // Replace temp with real
-        setLogs((prev) => prev.map((log) => (log.id === tempId ? data : log)));
-
-        return true;
-      } catch (err) {
-        console.error('Error creating mood log:', err);
-        // Rollback
-        setLogs((prev) => prev.filter((log) => log.id !== tempId));
-        setError(err instanceof Error ? err.message : 'Failed to create log');
-        return false;
-      }
-    },
-    [user, logs]
-  );
 
   const updateMoodLog = useCallback(
     async (id: string, moodLevel: 1 | 2 | 3 | 4 | 5, note?: string): Promise<boolean> => {
@@ -231,6 +172,64 @@ export function useMoodLogs(): UseMoodLogsReturn {
       }
     },
     [user, logs]
+  );
+
+  const addMoodLog = useCallback(
+    async (date: string, moodLevel: 1 | 2 | 3 | 4 | 5, note?: string): Promise<boolean> => {
+      if (!user) return false;
+
+      // Check if a log already exists for this date
+      const existingLog = logs.find((log) => log.date === date);
+      if (existingLog) {
+        // Update instead
+        return updateMoodLog(existingLog.id, moodLevel, note);
+      }
+
+      const tempId = `temp-${Date.now()}`;
+      const tempLog: MoodLog = {
+        id: tempId,
+        user_id: user.id,
+        date,
+        mood_level: moodLevel,
+        note: note || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // Optimistic add
+      setLogs((prev) =>
+        [tempLog, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      );
+
+      try {
+        const insertResult = (await supabase
+          .from('mood_logs')
+          .insert({
+            user_id: user.id,
+            date,
+            mood_level: moodLevel,
+            note: note || null,
+          })
+          .select()
+          .single()) as { data: MoodLog | null; error: PostgrestError | null };
+        const { data: insertedLog, error: insertError } = insertResult;
+
+        if (insertError) throw insertError;
+        if (!insertedLog) throw new Error('Failed to create mood log');
+
+        // Replace temp with real
+        setLogs((prev) => prev.map((log) => (log.id === tempId ? insertedLog : log)));
+
+        return true;
+      } catch (err) {
+        console.error('Error creating mood log:', err);
+        // Rollback
+        setLogs((prev) => prev.filter((log) => log.id !== tempId));
+        setError(err instanceof Error ? err.message : 'Failed to create log');
+        return false;
+      }
+    },
+    [user, logs, updateMoodLog]
   );
 
   const deleteMoodLog = useCallback(
@@ -272,7 +271,7 @@ export function useMoodLogs(): UseMoodLogsReturn {
 
   // Initial fetch
   useEffect(() => {
-    fetchLogs();
+    void fetchLogs();
   }, [fetchLogs]);
 
   // Real-time subscription
@@ -290,13 +289,13 @@ export function useMoodLogs(): UseMoodLogsReturn {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          fetchLogs();
+          void fetchLogs();
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [user, fetchLogs]);
 

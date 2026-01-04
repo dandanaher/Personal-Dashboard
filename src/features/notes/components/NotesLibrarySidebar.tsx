@@ -665,7 +665,7 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
   const [renameValue, setRenameValue] = useState('');
 
   useEffect(() => {
-    fetchLibraryNotes();
+    void fetchLibraryNotes();
   }, [fetchLibraryNotes]);
 
   const { rootNotes, notesByFolder, notesByCanvas } = organizeLibraryItems(libraryNotes, folders, canvases);
@@ -688,7 +688,7 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
     addTab('note', note.id, note.title || 'Untitled');
   };
 
-  const handleCanvasClick = async (canvas: Canvas) => {
+  const handleCanvasClick = (canvas: Canvas) => {
     addTab('canvas', canvas.id, canvas.name);
   };
 
@@ -908,7 +908,7 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
           </div>
           <div className="flex items-center gap-1">
             <button
-              onClick={handleCreateFolder}
+              onClick={() => void handleCreateFolder()}
               className="p-1.5 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors"
               style={{ color: accentColor }}
               aria-label="Create folder"
@@ -917,7 +917,7 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
               <FolderPlus className="h-4 w-4" />
             </button>
             <button
-              onClick={handleCreateNote}
+              onClick={() => void handleCreateNote()}
               className="p-1.5 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors"
               style={{ color: accentColor }}
               aria-label="Create note"
@@ -926,7 +926,7 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
               <FileText className="h-4 w-4" />
             </button>
             <button
-              onClick={handleCreateCanvas}
+              onClick={() => void handleCreateCanvas()}
               className="p-1.5 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors"
               style={{ color: accentColor }}
               aria-label="Create canvas"
@@ -948,11 +948,11 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
                   notes={notesByFolder[item.data.id] || []}
                   onNoteClick={handleNoteClick}
                   onRename={handleRenameFolder}
-                  onDelete={handleDeleteFolder}
-                  onAddNote={handleAddNoteToFolder}
-                  onNoteDrop={handleNoteDrop}
+                  onDelete={(folderId) => void handleDeleteFolder(folderId)}
+                  onAddNote={(folderId) => void handleAddNoteToFolder(folderId)}
+                  onNoteDrop={(noteId, folderId) => void handleNoteDrop(noteId, folderId)}
                   onNoteRename={handleRenameNote}
-                  onNoteDelete={handleDeleteNote}
+                  onNoteDelete={(noteId) => void handleDeleteNote(noteId)}
                 />
               );
             }
@@ -964,7 +964,7 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
                   level={0}
                   onClick={() => handleNoteClick(item.data)}
                   onRename={() => handleRenameNote(item.data)}
-                  onDelete={() => handleDeleteNote(item.data.id)}
+                  onDelete={() => void handleDeleteNote(item.data.id)}
                 />
               );
             }
@@ -977,12 +977,12 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
                   groups={groupsByCanvasId[item.data.id] || []}
                   onClick={() => handleCanvasClick(item.data)}
                   onRename={() => handleRenameCanvas(item.data)}
-                  onDelete={() => handleDeleteCanvas(item.data.id)}
-                  onAddNote={handleAddNoteToCanvas}
-                  onNoteDrop={handleNoteDropToCanvas}
+                  onDelete={() => void handleDeleteCanvas(item.data.id)}
+                  onAddNote={(canvasId) => void handleAddNoteToCanvas(canvasId)}
+                  onNoteDrop={(noteId, canvasId) => void handleNoteDropToCanvas(noteId, canvasId)}
                   onNoteClick={handleNoteClick}
                   onNoteRename={handleRenameNote}
-                  onNoteDelete={handleDeleteNote}
+                  onNoteDelete={(noteId) => void handleDeleteNote(noteId)}
                 />
               );
             }
@@ -1011,7 +1011,9 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleRenameSubmit();
+                if (e.key === 'Enter') {
+                  void handleRenameSubmit();
+                }
                 if (e.key === 'Escape') {
                   setRenameCanvasId(null);
                   setRenameFolderId(null);
@@ -1036,7 +1038,7 @@ export function NotesLibrarySidebar({ onClose }: NotesLibrarySidebarProps) {
                 Cancel
               </button>
               <button
-                onClick={handleRenameSubmit}
+                onClick={() => void handleRenameSubmit()}
                 className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors"
                 style={{ backgroundColor: accentColor }}
               >
