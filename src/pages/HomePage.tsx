@@ -24,7 +24,7 @@ import { CARD_REGISTRY } from '@/features/homepage/cardRegistry';
 import { CardWrapper } from '@/features/homepage/components/CardWrapper';
 import { AddCardModal } from '@/features/homepage/components/AddCardModal';
 import { SettingsMenu } from '@/components/layout/SettingsMenu';
-import { StaticLogo } from '@/components/ui/StaticLogo';
+import { DynamicLogo } from '@/components/ui/DynamicLogo';
 import { PixelClock } from '@/components/ui/PixelClock';
 import { WeatherWidget } from '@/components/ui/WeatherWidget';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -156,43 +156,40 @@ function HomePage() {
   return (
     <>
       {/* Mobile View */}
-      <div className="lg:hidden space-y-4">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <StaticLogo size={40} />
-            <div>
-              <h1 className="text-xl font-semibold text-secondary-900 dark:text-white whitespace-nowrap">
-                {greeting}, {userName}
-                {profileLoading && <LoadingSpinner size="sm" className="inline-block ml-2" />}
-              </h1>
-              <PixelClock pixelSize={4} gap={1} className="mt-2" />
-              <WeatherWidget compact className="mt-2" />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleEditClick}
-              title={isEditMode ? 'Finish editing' : 'Edit layout'}
-              className={`flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200 ${
-                isEditMode
-                  ? 'text-white'
-                  : 'text-secondary-600 dark:text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800'
-              }`}
-              style={isEditMode ? { backgroundColor: accentColor } : undefined}
-            >
-              {isEditMode ? <Check size={18} /> : <LayoutGrid size={18} />}
-            </button>
-            <SettingsMenu />
-          </div>
+      <div className="lg:hidden space-y-6">
+        {/* Top Bar - Settings & Edit */}
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={handleEditClick}
+            title={isEditMode ? 'Finish editing' : 'Edit layout'}
+            className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200 ${
+              isEditMode
+                ? 'text-white'
+                : 'text-secondary-600 dark:text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800'
+            }`}
+            style={isEditMode ? { backgroundColor: accentColor } : undefined}
+          >
+            {isEditMode ? <Check size={18} /> : <LayoutGrid size={18} />}
+          </button>
+          <SettingsMenu />
         </div>
 
-        {/* Day Overview */}
-        <div>
-          <h2 className="text-base font-bold text-secondary-900 dark:text-white mb-3">
-            Day Overview
-          </h2>
+        {/* Header - Centered greeting with logo */}
+        <div className="flex flex-col items-center text-center space-y-4">
+          <DynamicLogo size={48} />
+          <div>
+            <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">
+              {greeting}, {userName}
+              {profileLoading && <LoadingSpinner size="sm" className="inline-block ml-2" />}
+            </h1>
+          </div>
+          <PixelClock pixelSize={4} gap={1} />
+          <WeatherWidget compact />
+        </div>
+
+        {/* Cards */}
+        <div className="pt-2">
           <CardGrid />
         </div>
       </div>
@@ -257,11 +254,7 @@ function HomePage() {
         {/* Right Panel - Content */}
         <div className="flex-1 flex flex-col overflow-hidden bg-light-bg dark:bg-secondary-900">
           {/* Header */}
-          <div className="h-[60px] flex items-center px-6 border-b border-secondary-200 dark:border-secondary-800 bg-white dark:bg-secondary-900 flex-shrink-0">
-            <h2 className="text-lg font-semibold text-secondary-900 dark:text-white">
-              Day Overview
-            </h2>
-          </div>
+          <div className="h-[60px] border-b border-secondary-200 dark:border-secondary-800 bg-white dark:bg-secondary-900 flex-shrink-0" />
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-6">

@@ -146,16 +146,16 @@ export function DynamicLogo({ size = 40, className = '' }: DynamicLogoProps) {
     <div
       className={`relative inline-block cursor-pointer ${className}`}
       onMouseEnter={startAnimation}
+      onClick={startAnimation}
       style={{ width: size, height: size }}
     >
-      {/* Static Logo */}
+      {/* Static Logo - hidden while animation plays, no transition for instant swap */}
       <img
         src={logoUrl}
         alt="MyDash"
         width={size}
         height={size}
-        className={isPlaying ? 'opacity-0' : 'opacity-100'}
-        style={{ transition: 'opacity 0.2s' }}
+        className={isPlaying ? 'invisible' : 'visible'}
       />
 
       {/* Animated Canvas */}
@@ -163,7 +163,7 @@ export function DynamicLogo({ size = 40, className = '' }: DynamicLogoProps) {
         ref={canvasRef}
         width={size}
         height={size}
-        className={`absolute top-0 left-0 pointer-events-none ${isPlaying ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute top-0 left-0 pointer-events-none ${isPlaying ? 'visible' : 'invisible'}`}
       />
     </div>
   );
