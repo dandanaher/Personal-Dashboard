@@ -2,6 +2,22 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { updateFavicon } from '../utils/faviconUtils';
 
+// Debounce favicon updates - only the last color change triggers the update
+let faviconTimeout: ReturnType<typeof setTimeout> | null = null;
+function debouncedUpdateFavicon(
+  accentColor: string,
+  darkMode: boolean,
+  stylePreset: 'modern' | 'retro'
+) {
+  if (faviconTimeout) {
+    clearTimeout(faviconTimeout);
+  }
+  faviconTimeout = setTimeout(() => {
+    void updateFavicon(accentColor, darkMode, stylePreset);
+    faviconTimeout = null;
+  }, 0);
+}
+
 // Same colors as habits page
 export const APP_COLORS = [
   { name: 'Blue', value: '#3b82f6' },
@@ -126,14 +142,20 @@ export const useThemeStore = create<ThemeState>()(
       darkMode: getInitialDarkMode(),
       stylePreset: 'modern',
       setAccentColor: (color: string) => {
+        // Disable transitions during accent color switch for instant visual update
+        document.documentElement.classList.add('switching-theme');
         set({ accentColor: color });
         // Update CSS custom property for global access
         document.documentElement.style.setProperty('--accent-color', color);
         // Update PWA window header color
         updateThemeColorMeta(color);
-        // Update favicon with new accent color
+        // Debounce favicon update - expensive canvas operation
         const { darkMode, stylePreset } = get();
-        void updateFavicon(color, darkMode, stylePreset);
+        debouncedUpdateFavicon(color, darkMode, stylePreset);
+        // Re-enable transitions after paint
+        requestAnimationFrame(() => {
+          document.documentElement.classList.remove('switching-theme');
+        });
       },
       toggleDarkMode: () => {
         const newDarkMode = !get().darkMode;
@@ -147,9 +169,9 @@ export const useThemeStore = create<ThemeState>()(
           document.documentElement.classList.remove('dark');
           localStorage.theme = 'light';
         }
-        // Update favicon with new dark mode
+        // Debounce favicon update - expensive canvas operation
         const { accentColor, stylePreset } = get();
-        void updateFavicon(accentColor, newDarkMode, stylePreset);
+        debouncedUpdateFavicon(accentColor, newDarkMode, stylePreset);
         // Re-enable transitions after paint
         requestAnimationFrame(() => {
           document.documentElement.classList.remove('switching-theme');
@@ -166,9 +188,9 @@ export const useThemeStore = create<ThemeState>()(
           document.documentElement.classList.remove('dark');
           localStorage.theme = 'light';
         }
-        // Update favicon with new dark mode
+        // Debounce favicon update - expensive canvas operation
         const { accentColor, stylePreset } = get();
-        void updateFavicon(accentColor, isDark, stylePreset);
+        debouncedUpdateFavicon(accentColor, isDark, stylePreset);
         // Re-enable transitions after paint
         requestAnimationFrame(() => {
           document.documentElement.classList.remove('switching-theme');
@@ -180,9 +202,9 @@ export const useThemeStore = create<ThemeState>()(
         set({ stylePreset: style });
         document.documentElement.classList.add(`style-${style}`);
         applyThemeVariables(style);
-        // Update favicon with new style preset
+        // Debounce favicon update - expensive canvas operation
         const { accentColor, darkMode } = get();
-        void updateFavicon(accentColor, darkMode, style);
+        debouncedUpdateFavicon(accentColor, darkMode, style);
       },
     }),
     {

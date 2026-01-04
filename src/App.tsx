@@ -70,11 +70,6 @@ function App() {
     });
   }, [initialize]);
 
-  // Initialize theme color CSS variable
-  useEffect(() => {
-    document.documentElement.style.setProperty('--accent-color', accentColor);
-  }, [accentColor]);
-
   // Show loading screen while initializing auth
   if (loading) {
     logger.log('App: Showing loading screen');
