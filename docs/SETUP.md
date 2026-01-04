@@ -43,18 +43,12 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 Run the following SQL in your Supabase SQL editor:
 
 ```sql
--- Profiles table (for gamification)
+-- Profiles table (user display info)
 create table profiles (
   id uuid references auth.users(id) on delete cascade primary key,
   username text,
-  total_xp integer default 0,
-  consistency_xp integer default 0,
-  vitality_xp integer default 0,
-  focus_xp integer default 0,
-  drive_xp integer default 0,
-  last_decay_date date,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
+  avatar_url text,
+  created_at timestamptz default now()
 );
 
 -- Tasks table
@@ -63,9 +57,10 @@ create table tasks (
   user_id uuid references auth.users(id) on delete cascade not null,
   title text not null,
   description text,
-  is_completed boolean default false,
-  priority text check (priority in ('low', 'medium', 'high')) default 'medium',
-  due_date timestamptz,
+  completed boolean default false,
+  date date,
+  order_index integer default 0,
+  task_type text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -76,10 +71,12 @@ create table goals (
   user_id uuid references auth.users(id) on delete cascade not null,
   title text not null,
   description text,
-  target_date timestamptz,
+  type text check (type in ('weekly', 'monthly', 'yearly', 'custom', 'open')) default 'open',
+  target_date date,
   progress integer default 0 check (progress >= 0 and progress <= 100),
-  is_completed boolean default false,
-  category text,
+  completed boolean default false,
+  linked_habit_id uuid references habits(id) on delete set null,
+  target_completions integer,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -90,11 +87,10 @@ create table habits (
   user_id uuid references auth.users(id) on delete cascade not null,
   name text not null,
   description text,
-  frequency text check (frequency in ('daily', 'weekly', 'monthly')) default 'daily',
-  target_count integer default 1,
-  color text,
-  icon text,
-  is_active boolean default true,
+  color text not null,
+  icon text not null,
+  target_frequency integer default 1,
+  habit_type text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -104,9 +100,23 @@ create table habit_logs (
   id uuid default gen_random_uuid() primary key,
   habit_id uuid references habits(id) on delete cascade not null,
   user_id uuid references auth.users(id) on delete cascade not null,
-  completed_at timestamptz default now(),
+  date date not null,
+  completed boolean default true,
   notes text,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  unique(habit_id, date)
+);
+
+-- Mood logs table
+create table mood_logs (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  date date not null,
+  mood_level integer check (mood_level >= 1 and mood_level <= 5) not null,
+  note text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique(user_id, date)
 );
 
 -- Workout templates table
@@ -116,8 +126,7 @@ create table workout_templates (
   name text not null,
   description text,
   exercises jsonb default '[]'::jsonb,
-  estimated_duration integer,
-  category text,
+  linked_habit_id uuid references habits(id) on delete set null,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -127,14 +136,13 @@ create table workout_sessions (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users(id) on delete cascade not null,
   template_id uuid references workout_templates(id) on delete set null,
-  name text not null,
-  exercises jsonb default '[]'::jsonb,
+  template_name text not null,
   started_at timestamptz default now(),
   completed_at timestamptz,
   duration integer,
+  data jsonb default '{"exercises": []}'::jsonb,
   notes text,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
+  created_at timestamptz default now()
 );
 
 -- Notes table
@@ -216,6 +224,7 @@ alter table tasks enable row level security;
 alter table goals enable row level security;
 alter table habits enable row level security;
 alter table habit_logs enable row level security;
+alter table mood_logs enable row level security;
 alter table workout_templates enable row level security;
 alter table workout_sessions enable row level security;
 alter table notes enable row level security;
@@ -238,6 +247,9 @@ create policy "Users can manage their own habits" on habits
   for all using (auth.uid() = user_id);
 
 create policy "Users can manage their own habit logs" on habit_logs
+  for all using (auth.uid() = user_id);
+
+create policy "Users can manage their own mood logs" on mood_logs
   for all using (auth.uid() = user_id);
 
 create policy "Users can manage their own workout templates" on workout_templates
@@ -344,4 +356,4 @@ For Vercel, Netlify, or similar:
 
 ---
 
-*Last updated: 2026-01-03*
+*Last updated: 2026-01-04*

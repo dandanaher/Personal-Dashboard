@@ -22,8 +22,8 @@ Welcome to the MyDash documentation. This folder contains comprehensive document
 
 ## Project Summary
 
-MyDash is a mobile-first personal dashboard application built with React, TypeScript, and Supabase. It helps users track tasks, goals, habits, workouts, and notes with gamification elements to encourage consistent usage.
+MyDash is a mobile-first personal dashboard application built with React, TypeScript, and Supabase. It helps users track tasks, goals, habits, workouts, mood, and notes with a customizable homepage layout featuring drag-and-drop card arrangement.
 
 ---
 
-*Last updated: 2026-01-03*
+*Last updated: 2026-01-04*

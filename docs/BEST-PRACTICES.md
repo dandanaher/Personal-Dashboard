@@ -26,7 +26,7 @@ import { User, supabase } from '@supabase/supabase-js';
 | Hooks | camelCase with `use` prefix | `useTasks.ts` |
 | Stores | camelCase with `Store` suffix | `authStore.ts` |
 | Utilities | camelCase | `dateUtils.ts` |
-| Constants | SCREAMING_SNAKE_CASE | `XP_REWARDS` |
+| Constants | SCREAMING_SNAKE_CASE | `DEFAULT_CARDS` |
 | Types/Interfaces | PascalCase | `interface TaskState` |
 
 ### File Organization
@@ -400,4 +400,4 @@ Minimum 44x44px for interactive elements:
 
 ---
 
-*Last updated: 2026-01-03*
+*Last updated: 2026-01-04*

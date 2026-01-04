@@ -98,6 +98,12 @@
 
 ## Completed Recently
 
+- [x] **Removed gamification/ranks system** - Simplified the app by removing XP, attributes, and rank progression
+- [x] **Mood tracking feature** - Daily mood logging (1-5 scale) with notes, yearly review visualization, and streak tracking
+- [x] **Homepage layout customization** - Drag-and-drop card arrangement with @dnd-kit, add/remove cards, persist layout to localStorage
+- [x] **Mood Tracker card** - Quick mood logging from the homepage
+- [x] **Yearly Mood Review card** - GitHub-style contribution graph for mood history
+- [x] **Fixed lint errors** - Codebase cleanup and lint error fixes
 - [x] **Decoupled theme and style systems** - Theme (light/dark) controls colors only, style (modern/retro) controls visual appearance only
 - [x] **Instant theme switching** - Added `switching-theme` CSS class to disable transitions during theme toggle
 - [x] **Dynamic logo improvements** - Pre-loads both light/dark GIF frames for seamless mid-animation theme switching
@@ -136,4 +142,4 @@ When updating Supabase schema:
 
 ---
 
-*Last updated: 2026-01-03*
+*Last updated: 2026-01-04*

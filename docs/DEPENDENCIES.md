@@ -10,6 +10,9 @@
 | `@supabase/supabase-js` | ^2.39.0 | Supabase client for authentication, database, and storage |
 | `zustand` | ^4.4.7 | Lightweight state management with hooks |
 | `zundo` | ^2.3.0 | Undo/redo middleware for Zustand (used in notes canvas) |
+| `@dnd-kit/core` | ^6.3.1 | Core drag-and-drop functionality for homepage cards |
+| `@dnd-kit/sortable` | ^10.0.0 | Sortable preset for drag-and-drop reordering |
+| `@dnd-kit/utilities` | ^3.2.2 | Utility functions for @dnd-kit |
 | `reactflow` | ^11.11.4 | Canvas-based node graph editor for notes feature |
 | `recharts` | ^3.4.1 | Charting library for statistics and visualizations |
 | `lucide-react` | ^0.303.0 | Icon library (tree-shakeable SVG icons) |
@@ -66,6 +69,13 @@
 - Middleware system (persist, devtools)
 
 **Zundo** adds undo/redo to the notes store for canvas operations.
+
+### Drag and Drop
+
+**@dnd-kit** provides accessible drag-and-drop for the homepage card layout:
+- Pointer and keyboard sensors for accessibility
+- Sortable presets for reordering cards
+- Smooth animations during drag operations
 
 ### Backend Integration
 
@@ -124,6 +134,7 @@
 2. **ReactFlow v12** - Currently using v11; v12 has API changes for custom nodes
 3. **Tailwind v4** - Currently using v3; v4 has configuration changes
 4. **Zustand v5** - Currently using v4; v5 may have middleware changes
+5. **@dnd-kit/sortable v11** - Currently using v10; check for API changes
 
 ### Security Updates
 
@@ -135,4 +146,4 @@ npm update
 
 ---
 
-*Last updated: 2026-01-03*
+*Last updated: 2026-01-04*

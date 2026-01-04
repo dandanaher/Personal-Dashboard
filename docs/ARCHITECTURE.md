@@ -119,21 +119,36 @@ src/
 │   │       ├── useFolders.ts
 │   │       └── useNotesLibraryData.ts
 │   │
-│   └── gamification/    # XP and rank system
-│       ├── utils.ts     # XP calculations, rank definitions
-│       ├── components/
-│       │   ├── RankDisplay.tsx
-│       │   ├── RankOverview.tsx
-│       │   ├── SettingsMenu.tsx
-│       │   └── StatCard.tsx
-│       └── hooks/
-│           ├── useProfile.ts
-│           ├── useProfileStats.ts
-│           └── useRankDecay.ts
+│   ├── mood/            # Mood tracking feature
+│   │   ├── components/
+│   │   │   ├── MoodPicker.tsx
+│   │   │   ├── MoodTrackerCard.tsx
+│   │   │   ├── MoodYearlyReviewCard.tsx
+│   │   │   ├── moodLevels.ts
+│   │   │   └── index.ts
+│   │   └── hooks/
+│   │       ├── useMoodLogs.ts
+│   │       ├── useTodayMood.ts
+│   │       └── index.ts
+│   │
+│   └── homepage/        # Homepage customization
+│       ├── cardRegistry.ts    # Card definitions and registry
+│       ├── cards/
+│       │   ├── TasksCard.tsx
+│       │   ├── HabitsCard.tsx
+│       │   ├── GoalsCard.tsx
+│       │   └── index.ts
+│       └── components/
+│           ├── EditableCardGrid.tsx  # Drag-and-drop grid
+│           ├── CardWrapper.tsx       # Sortable card wrapper
+│           ├── AddCardModal.tsx
+│           ├── EditModeButton.tsx
+│           └── index.ts
 │
 ├── hooks/               # Shared custom hooks
 │   ├── useAuth.ts       # Authentication hook
 │   ├── useDoubleTap.ts  # Double-tap gesture detection
+│   ├── useProfile.ts    # User profile hook
 │   └── useScrollLock.ts # Scroll lock utility
 │
 ├── lib/                 # Core utilities
@@ -153,8 +168,9 @@ src/
 │
 └── stores/              # Zustand state stores
     ├── authStore.ts     # Authentication state
+    ├── homepageStore.ts # Homepage card layout (with localStorage persistence)
     ├── notesStore.ts    # Notes/canvas state (with undo/redo)
-    ├── profileStore.ts  # User profile & gamification
+    ├── profileStore.ts  # User profile (username, avatar)
     ├── sidebarStore.ts  # Sidebar collapse state
     ├── themeStore.ts    # Theme preferences
     ├── workspaceStore.ts # Notes workspace tabs
@@ -217,6 +233,7 @@ Each feature has custom hooks that encapsulate data fetching and mutations:
 - `useTasks()` - CRUD operations for tasks
 - `useGoals()` - Goal management with progress tracking
 - `useHabits()` / `useHabitLogs()` - Habit tracking
+- `useMoodLogs()` / `useTodayMood()` - Mood tracking with stats
 - `useWorkoutTemplates()` / `useWorkoutSessions()` - Workout data
 - `useCanvases()` / `useFolders()` - Notes organization
 
@@ -338,4 +355,4 @@ The `DynamicLogo` component pre-loads both light and dark GIF frame sets:
 
 ---
 
-*Last updated: 2026-01-03*
+*Last updated: 2026-01-04*

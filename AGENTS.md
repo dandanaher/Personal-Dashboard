@@ -25,13 +25,14 @@ This document provides a comprehensive guide to the Personal Dashboard codebase 
 
 ## Project Overview
 
-**MyDash** is a mobile-first personal dashboard web application for managing tasks, goals, habits, and workouts. It features:
+**MyDash** is a mobile-first personal dashboard web application for managing tasks, goals, habits, mood, and workouts. It features:
 
+- **Customizable Homepage**: Drag-and-drop card layout with @dnd-kit
 - **Tasks**: Daily task management with date-based organization
 - **Goals**: Weekly, monthly, yearly, and open-ended goal tracking
 - **Habits**: Habit tracking with streaks, types/tags, and contribution graphs
+- **Mood**: Daily mood logging with yearly review visualization
 - **Workout**: Exercise templates and session logging with progressive overload
-- **Gamification**: XP system with four attributes (Consistency, Vitality, Focus, Drive)
 - **Notes**: Infinite canvas with markdown notes, folders, groups, and connections (ReactFlow)
 
 The app is built with React + TypeScript + Vite, uses Supabase for backend, and follows a feature-based architecture.
@@ -167,7 +168,8 @@ export function useFeatureData(params): UseFeatureDataReturn {
 **Zustand stores** for global state:
 - `authStore`: User authentication and session
 - `themeStore`: Theme preferences (dark mode, accent color)
-- `profileStore`: User profile and XP data
+- `profileStore`: User profile (username, avatar)
+- `homepageStore`: Homepage card layout configuration
 
 **Local state** for component-specific data:
 - Use `useState` for UI state (modals, forms, filters)
@@ -201,11 +203,13 @@ export function useFeatureData(params): UseFeatureDataReturn {
 │   │   │   └── index.ts
 │   │   └── ErrorBoundary.tsx       # React error boundary
 │   ├── features/
-│   │   ├── gamification/           # XP system and stats
-│   │   │   ├── components/
-│   │   │   ├── hooks/
-│   │   │   ├── utils.ts            # XP calculations
-│   │   │   └── index.ts
+│   │   ├── homepage/              # Homepage customization
+│   │   │   ├── cards/             # Dashboard card components
+│   │   │   ├── components/        # EditableCardGrid, CardWrapper
+│   │   │   └── cardRegistry.ts    # Card definitions
+│   │   ├── mood/                  # Mood tracking
+│   │   │   ├── components/        # MoodTrackerCard, MoodYearlyReviewCard
+│   │   │   └── hooks/             # useMoodLogs, useTodayMood
 │   │   ├── goals/                  # Goal tracking
 │   │   │   ├── GoalsPage.tsx
 │   │   │   ├── components/
@@ -269,8 +273,9 @@ export function useFeatureData(params): UseFeatureDataReturn {
 │   │   └── NotFoundPage.tsx        # 404 page
 │   ├── stores/
 │   │   ├── authStore.ts            # Auth state (Zustand)
+│   │   ├── homepageStore.ts        # Homepage card layout
 │   │   ├── themeStore.ts           # Theme state
-│   │   ├── profileStore.ts         # User profile and XP
+│   │   ├── profileStore.ts         # User profile (username, avatar)
 │   │   ├── notesStore.ts           # Notes canvas state (ReactFlow)
 │   │   ├── workspaceStore.ts       # Tab management for notes
 │   │   ├── sidebarStore.ts         # Sidebar collapse state
@@ -310,7 +315,7 @@ export function useFeatureData(params): UseFeatureDataReturn {
 **Variables and Functions:**
 - **camelCase** for variables, functions, hooks
 - **PascalCase** for component names, type names
-- **UPPER_SNAKE_CASE** for constants (e.g., `XP_REWARDS`)
+- **UPPER_SNAKE_CASE** for constants (e.g., `DEFAULT_CARDS`)
 
 **Boolean Props:**
 - Use `is` prefix: `isLoading`, `isCompleted`, `isActive`
@@ -694,13 +699,12 @@ create policy "Users can manage their own data" on table_name
 
 #### `profileStore` (`src/stores/profileStore.ts`)
 
-**Purpose**: Manages user profile and gamification data.
+**Purpose**: Manages user profile data (username and avatar).
 
 **State:**
 ```typescript
 {
   profile: Profile | null;        // User profile from profiles table
-  attributes: AttributeWithXP[];  // XP data for 4 attributes
   loading: boolean;
   error: string | null;
 }
@@ -708,8 +712,28 @@ create policy "Users can manage their own data" on table_name
 
 **Actions:**
 - `fetchProfile(userId)`: Load user profile
-- `fetchAttributes(userId)`: Load XP data
+- `updateProfile(userId, updates)`: Update profile data
 - `clearProfile()`: Clear profile on logout
+
+#### `homepageStore` (`src/stores/homepageStore.ts`)
+
+**Purpose**: Manages homepage card layout with localStorage persistence.
+
+**State:**
+```typescript
+{
+  cards: CardConfig[];           // Array of card configurations
+  isEditMode: boolean;           // Edit mode toggle
+}
+```
+
+**Actions:**
+- `setEditMode(enabled)`: Toggle edit mode
+- `addCard(cardId, size?)`: Add a card to the homepage
+- `removeCard(cardId)`: Remove a card
+- `reorderCards(cards)`: Update card order after drag-and-drop
+- `setCardSize(cardId, size)`: Change card size (1 or 2 columns)
+- `resetToDefault()`: Reset to default layout
 
 #### `notesStore` (`src/stores/notesStore.ts`)
 
@@ -1041,21 +1065,6 @@ export const useMyStore = create<MyState & MyActions>()(
 ```typescript
 const { value, setValue } = useMyStore();
 ```
-
-### Integrating XP Rewards
-
-To award XP for an action:
-```typescript
-import { incrementXP } from '@/features/gamification/hooks/useProfileStats';
-import { XP_REWARDS } from '@/features/gamification/utils';
-
-// After successful action
-if (user) {
-  await incrementXP(user.id, 'focus', XP_REWARDS.TASK_COMPLETE);
-}
-```
-
-Available attributes: `consistency`, `vitality`, `focus`, `drive`
 
 ---
 

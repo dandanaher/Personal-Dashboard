@@ -2,34 +2,51 @@
 
 ## What is MyDash?
 
-MyDash is a mobile-first personal dashboard web application designed to help users manage their daily productivity and self-improvement. It combines task management, goal tracking, habit building, workout logging, and note-taking into a unified platform with gamification elements.
+MyDash is a mobile-first personal dashboard web application designed to help users manage their daily productivity and self-improvement. It combines task management, goal tracking, habit building, workout logging, mood tracking, and note-taking into a unified platform with a customizable homepage layout.
 
 ## Key Features
 
+### Customizable Homepage
+- Drag-and-drop card arrangement using @dnd-kit
+- Add/remove cards to personalize your dashboard
+- Resizable cards (single or double width)
+- Persistent layout saved to localStorage
+- Edit mode toggle for easy customization
+
 ### Tasks
-- Create and manage daily tasks with priorities (low, medium, high)
-- Set due dates and descriptions
+- Create and manage daily tasks with custom task types
+- Organize tasks by date with order-based sorting
 - Mark tasks as complete
 - Filter and organize tasks
 
 ### Goals
 - Set long-term goals with target dates
+- Multiple timeframe types: weekly, monthly, yearly, custom, or open-ended
 - Track progress with percentage-based milestones
-- Organize goals by category
+- Link goals to habits for automatic progress tracking
 - Kanban board view for goal management
 
 ### Habits
-- Track daily, weekly, or monthly habits
+- Track habits with customizable weekly frequency targets
 - Customizable colors and icons for each habit
 - Streak tracking and contribution graphs (GitHub-style)
 - Detailed statistics and calendar views
+- Custom habit types for categorization
+
+### Mood Tracking
+- Log daily mood on a 1-5 scale (Bad, Poor, Okay, Good, Great)
+- Optional notes for each mood entry
+- Yearly review visualization (GitHub-style contribution graph)
+- Statistics: average mood, positive days, streak tracking
+- Real-time sync across devices
 
 ### Workouts
-- Create workout templates with exercises
-- Log workout sessions with sets, reps, and weights
+- Create workout templates with multiple exercise types (strength, cardio, timed)
+- Log workout sessions with sets, reps, weights, distance, and time
 - Track exercise history and progress
 - Rest timer between sets
 - Progressive overload suggestions
+- Link workouts to habits for automatic habit completion
 
 ### Notes (Canvas)
 - Visual canvas-based note-taking using ReactFlow
@@ -39,19 +56,12 @@ MyDash is a mobile-first personal dashboard web application designed to help use
 - Desktop: tabbed interface with library sidebar
 - Mobile: dedicated views for notes and canvases
 
-### Gamification System
-- XP rewards for completing tasks, habits, goals, and workouts
-- Material-based rank system (Wood through Palladium)
-- Daily XP tax at higher ranks (prevents stagnation)
-- Four attributes: Consistency, Vitality, Focus, Drive
-- Level progression with visual rank badges
-
 ## Target Users
 
 - Individuals seeking a unified productivity system
-- People who enjoy gamification as motivation
 - Users who prefer mobile-first applications
 - Self-improvement enthusiasts tracking multiple life areas
+- People who want a customizable dashboard experience
 
 ## Tech Stack Summary
 
@@ -96,4 +106,4 @@ MyDash is a mobile-first personal dashboard web application designed to help use
 
 ---
 
-*Last updated: 2026-01-03*
+*Last updated: 2026-01-04*
