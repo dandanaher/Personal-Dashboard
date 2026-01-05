@@ -9,8 +9,8 @@ self.addEventListener('push', (event) => {
 
   // Default notification data
   let data = {
-    title: 'MyDash',
-    body: 'You have pending habits to complete!',
+    title: "Log today's habits",
+    body: "Don't forget to log your habits!",
     icon: '/MyDash/pwa-192x192.png',
     badge: '/MyDash/pwa-192x192.png',
     tag: 'habit-reminder',
@@ -50,7 +50,7 @@ self.addEventListener('push', (event) => {
     actions: [
       {
         action: 'open',
-        title: 'Open Habits',
+        title: 'Log Habits',
       },
       {
         action: 'dismiss',

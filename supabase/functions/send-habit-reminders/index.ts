@@ -261,20 +261,21 @@ async function sendHabitReminder(userId: string, habitNames: string[]): Promise<
   }
 
   // Build notification
-  const habitList =
-    habitNames.length <= 3
-      ? habitNames.join(', ')
-      : `${habitNames.slice(0, 2).join(', ')} and ${habitNames.length - 2} more`;
+  const habitCount = habitNames.length;
+  const body =
+    habitCount === 1
+      ? "Don't forget to log your habit. Keep the streak going!"
+      : `You have ${habitCount} streaks to maintain. Don't forget to log your habits!`;
 
   const payload = {
-    title: 'Habit Reminder',
-    body: `Don't break your streak! Complete: ${habitList}`,
+    title: "Log today's habits",
+    body,
     icon: '/MyDash/pwa-192x192.png',
     badge: '/MyDash/pwa-192x192.png',
     tag: 'habit-reminder',
     data: {
       url: '/MyDash/habits',
-      habitCount: habitNames.length,
+      habitCount,
     },
   };
 
