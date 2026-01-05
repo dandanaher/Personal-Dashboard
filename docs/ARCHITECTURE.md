@@ -131,6 +131,18 @@ src/
 │   │       ├── useTodayMood.ts
 │   │       └── index.ts
 │   │
+│   ├── notifications/   # Push notifications feature
+│   │   ├── components/
+│   │   │   ├── NotificationSettings.tsx
+│   │   │   └── index.ts
+│   │   ├── hooks/
+│   │   │   ├── useNotificationPreferences.ts
+│   │   │   ├── usePushSubscription.ts
+│   │   │   └── index.ts
+│   │   ├── utils/
+│   │   │   └── pushManager.ts
+│   │   └── index.ts
+│   │
 │   └── homepage/        # Homepage customization
 │       ├── cardRegistry.ts    # Card definitions and registry
 │       ├── cards/
@@ -170,6 +182,7 @@ src/
     ├── authStore.ts     # Authentication state
     ├── homepageStore.ts # Homepage card layout (with localStorage persistence)
     ├── notesStore.ts    # Notes/canvas state (with undo/redo)
+    ├── notificationStore.ts # Push notification state
     ├── profileStore.ts  # User profile (username, avatar)
     ├── sidebarStore.ts  # Sidebar collapse state
     ├── themeStore.ts    # Theme preferences
@@ -236,6 +249,7 @@ Each feature has custom hooks that encapsulate data fetching and mutations:
 - `useMoodLogs()` / `useTodayMood()` - Mood tracking with stats
 - `useWorkoutTemplates()` / `useWorkoutSessions()` - Workout data
 - `useCanvases()` / `useFolders()` - Notes organization
+- `usePushSubscription()` / `useNotificationPreferences()` - Push notifications
 
 ### Optimistic Updates Pattern
 
@@ -355,4 +369,4 @@ The `DynamicLogo` component pre-loads both light and dark GIF frame sets:
 
 ---
 
-*Last updated: 2026-01-04*
+*Last updated: 2026-01-05*

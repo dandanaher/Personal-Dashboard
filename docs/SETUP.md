@@ -34,7 +34,10 @@ Add your Supabase credentials:
 ```env
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_VAPID_PUBLIC_KEY=your_vapid_public_key
 ```
+
+Note: The VAPID key is optional but required for push notifications. Generate VAPID keys using the web-push library or an online generator.
 
 ### 4. Set Up Supabase
 
@@ -213,6 +216,49 @@ create table note_edges (
   color text,
   created_at timestamptz default now()
 );
+
+-- Push subscriptions table (for notifications)
+create table push_subscriptions (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  endpoint text not null,
+  p256dh_key text not null,
+  auth_key text not null,
+  device_name text,
+  user_agent text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  last_used_at timestamptz,
+  unique(user_id, endpoint)
+);
+
+-- Notification preferences table
+create table notification_preferences (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade unique not null,
+  habit_reminders_enabled boolean default false not null,
+  reminder_time time default '20:00:00' not null,
+  timezone text default 'UTC' not null,
+  weekly_summary_enabled boolean default false,
+  streak_milestone_enabled boolean default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- Notification log table (for debugging and analytics)
+create table notification_log (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  subscription_id uuid references push_subscriptions(id) on delete set null,
+  notification_type text not null,
+  title text not null,
+  body text,
+  status text default 'pending' not null,
+  error_message text,
+  created_at timestamptz default now(),
+  sent_at timestamptz,
+  clicked_at timestamptz
+);
 ```
 
 #### Enable Row Level Security
@@ -272,6 +318,20 @@ create policy "Users can manage their own canvas groups" on canvas_groups
 
 create policy "Users can manage their own note edges" on note_edges
   for all using (auth.uid() = user_id);
+
+-- Push notifications RLS
+alter table push_subscriptions enable row level security;
+alter table notification_preferences enable row level security;
+alter table notification_log enable row level security;
+
+create policy "Users can manage their own push subscriptions" on push_subscriptions
+  for all using (auth.uid() = user_id);
+
+create policy "Users can manage their own notification preferences" on notification_preferences
+  for all using (auth.uid() = user_id);
+
+create policy "Users can view their own notification log" on notification_log
+  for select using (auth.uid() = user_id);
 ```
 
 #### Set Up Storage (for images)
@@ -285,6 +345,24 @@ create policy "Users can manage their own note edges" on note_edges
 1. Go to Authentication > Providers in Supabase
 2. Enable Email provider
 3. Configure email templates as needed
+
+#### Set Up Push Notifications (Optional)
+
+1. Generate VAPID keys:
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+
+2. Add keys to environment:
+   - `VITE_VAPID_PUBLIC_KEY` - Add to `.env` for the frontend
+   - `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` - Add to Supabase Edge Function secrets
+
+3. Deploy the habit reminders edge function:
+   ```bash
+   supabase functions deploy send-habit-reminders
+   ```
+
+4. Set up a cron job to invoke the function every 15 minutes (via Supabase Dashboard or external scheduler)
 
 ### 5. Start Development Server
 
@@ -356,4 +434,4 @@ For Vercel, Netlify, or similar:
 
 ---
 
-*Last updated: 2026-01-04*
+*Last updated: 2026-01-05*

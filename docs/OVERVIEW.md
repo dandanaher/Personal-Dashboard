@@ -32,6 +32,7 @@ MyDash is a mobile-first personal dashboard web application designed to help use
 - Streak tracking and contribution graphs (GitHub-style)
 - Detailed statistics and calendar views
 - Custom habit types for categorization
+- Push notification reminders for habits with active streaks
 
 ### Mood Tracking
 - Log daily mood on a 1-5 scale (Bad, Poor, Okay, Good, Great)
@@ -103,7 +104,8 @@ MyDash is a mobile-first personal dashboard web application designed to help use
 - Installable on mobile devices
 - Offline support via service worker
 - Native-like experience
+- Push notifications for habit reminders (requires iOS 16.4+ for iOS)
 
 ---
 
-*Last updated: 2026-01-04*
+*Last updated: 2026-01-05*

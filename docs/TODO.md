@@ -20,7 +20,7 @@
 
 ### Low Priority
 
-- [ ] **Habit streak notifications** - No reminders when about to break a streak.
+- [x] **Habit streak notifications** - Push notification reminders for habits with active streaks (completed).
 
 - [ ] **Export data** - No way to export user data (tasks, habits, etc.) for backup.
 
@@ -98,6 +98,12 @@
 
 ## Completed Recently
 
+- [x] **Push notifications for habit reminders** - Web Push API integration with Supabase Edge Functions for habit streak reminders
+- [x] **Notification preferences** - Settings UI for enabling/disabling notifications and setting reminder time
+- [x] **Supabase Edge Function** - `send-habit-reminders` function runs on schedule to send notifications
+- [x] **Homepage QOL improvements** - Various homepage layout and interaction improvements
+- [x] **Mobile layout updates** - Improved mobile layouts and logo GIF fixes
+- [x] **Accent color delay fix** - Fixed delay when switching accent colors
 - [x] **Removed gamification/ranks system** - Simplified the app by removing XP, attributes, and rank progression
 - [x] **Mood tracking feature** - Daily mood logging (1-5 scale) with notes, yearly review visualization, and streak tracking
 - [x] **Homepage layout customization** - Drag-and-drop card arrangement with @dnd-kit, add/remove cards, persist layout to localStorage
@@ -142,4 +148,4 @@ When updating Supabase schema:
 
 ---
 
-*Last updated: 2026-01-04*
+*Last updated: 2026-01-05*
