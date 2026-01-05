@@ -64,6 +64,7 @@ create table tasks (
   date date,
   order_index integer default 0,
   task_type text,
+  priority smallint check (priority in (1, 2, 3)),
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -363,6 +364,16 @@ create policy "Users can view their own notification log" on notification_log
    ```
 
 4. Set up a cron job to invoke the function every 15 minutes (via Supabase Dashboard or external scheduler)
+
+#### Database Migrations
+
+If you have an existing database, run these migrations to add new features:
+
+```sql
+-- Add task priority (2026-01-05)
+-- Priority: 1 = High, 2 = Medium, 3 = Low, NULL = No priority
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS priority smallint check (priority in (1, 2, 3));
+```
 
 ### 5. Start Development Server
 

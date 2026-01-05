@@ -3,7 +3,19 @@ import { Check, Trash2, Pencil, X, Save } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { useThemeStore } from '@/stores/themeStore';
 import { formatRelativeDate } from '@/lib/dateUtils';
-import type { Task, TaskUpdate } from '@/lib/types';
+import type { Task, TaskUpdate, TaskPriority } from '@/lib/types';
+
+// Priority colors matching AddTaskModal
+const PRIORITY_COLORS: Record<1 | 2 | 3, string> = {
+  1: '#EF4444', // High - red
+  2: '#F59E0B', // Medium - amber
+  3: '#3B82F6', // Low - blue
+};
+
+function getPriorityColor(priority: TaskPriority): string | null {
+  if (priority === null) return null;
+  return PRIORITY_COLORS[priority];
+}
 
 interface TaskItemProps {
   task: Task;
@@ -218,7 +230,7 @@ export const TaskItem = memo(function TaskItem({
         onClick={() => showActions && resetSwipe()}
       >
         <div className="flex items-start gap-2.5 p-3">
-          {/* Checkbox */}
+          {/* Checkbox with priority border */}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -227,16 +239,20 @@ export const TaskItem = memo(function TaskItem({
               }
             }}
             className={`
-              flex-shrink-0 w-5 h-5 rounded-full border-2
+              flex-shrink-0 w-5 h-5 rounded-full
               flex items-center justify-center
               transition-all duration-200 ease-in-out
               focus:outline-none focus:ring-2 focus:ring-offset-2
-              ${task.completed ? 'text-white' : 'border-secondary-300 dark:border-secondary-600'}
+              ${task.completed ? 'text-white border-2' : task.priority ? 'border-[3px]' : 'border-2 border-secondary-300 dark:border-secondary-600'}
             `}
             style={
               {
                 backgroundColor: task.completed ? accentColor : undefined,
-                borderColor: task.completed ? accentColor : undefined,
+                borderColor: task.completed
+                  ? accentColor
+                  : task.priority
+                    ? getPriorityColor(task.priority) ?? undefined
+                    : undefined,
                 '--tw-ring-color': accentColor,
               } as React.CSSProperties
             }

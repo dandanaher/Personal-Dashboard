@@ -121,6 +121,13 @@ export interface WorkoutSessionData {
 // =============================================================================
 
 /**
+ * Task priority level.
+ * 1 = High (urgent), 2 = Medium, 3 = Low
+ * null = No priority set
+ */
+export type TaskPriority = 1 | 2 | 3 | null;
+
+/**
  * Task table row.
  * Uses 'date' field for task scheduling (date only, no time).
  * Null date indicates a general/dateless task.
@@ -138,6 +145,8 @@ export interface Task {
   order_index: number;
   /** User-defined task type/tag for categorization */
   task_type: string | null;
+  /** Priority level: 1 (high), 2 (medium), 3 (low), null (no priority) */
+  priority: TaskPriority;
   created_at: string;
   updated_at: string;
 }

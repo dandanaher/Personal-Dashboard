@@ -19,7 +19,7 @@ interface UseAllTasksReturn {
   hasPreviousUncompleted: boolean;
   loading: boolean;
   error: string | null;
-  addTask: (title: string, description?: string, date?: string | null, taskType?: string | null) => Promise<boolean>;
+  addTask: (title: string, description?: string, date?: string | null, taskType?: string | null, priority?: 1 | 2 | 3 | null) => Promise<boolean>;
   toggleTask: (taskId: string) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   updateTask: (taskId: string, updates: TaskUpdate) => Promise<boolean>;
@@ -38,7 +38,7 @@ export function useAllTasks(): UseAllTasksReturn {
 
   const today = format(startOfDay(new Date()), 'yyyy-MM-dd');
 
-  // Sort tasks: by date (nulls last), then by order_index, then by created_at
+  // Sort tasks: by date (nulls last), then by priority, then by order_index, then by created_at
   const sortTasks = useCallback((tasksToSort: Task[]): Task[] => {
     return [...tasksToSort].sort((a, b) => {
       // Completed tasks go to bottom
@@ -51,6 +51,12 @@ export function useAllTasks(): UseAllTasksReturn {
       // Sort by date
       if (a.date && b.date && a.date !== b.date) {
         return a.date.localeCompare(b.date);
+      }
+      // Then by priority (1 = high first, null = no priority last)
+      const aPriority = a.priority ?? 4; // Treat null as lowest priority (4)
+      const bPriority = b.priority ?? 4;
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority;
       }
       // Then by order_index
       if (a.order_index !== b.order_index) {
@@ -119,7 +125,7 @@ export function useAllTasks(): UseAllTasksReturn {
 
   // Add a new task with optimistic update
   const addTask = useCallback(
-    async (title: string, description?: string, date?: string | null, taskType?: string | null): Promise<boolean> => {
+    async (title: string, description?: string, date?: string | null, taskType?: string | null, priority?: 1 | 2 | 3 | null): Promise<boolean> => {
       if (!user) return false;
 
       // Calculate new order_index
@@ -142,6 +148,7 @@ export function useAllTasks(): UseAllTasksReturn {
         date: targetDate,
         order_index: maxOrderIndex + 1,
         task_type: taskType || null,
+        priority: priority ?? null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -160,6 +167,7 @@ export function useAllTasks(): UseAllTasksReturn {
             date: targetDate,
             order_index: maxOrderIndex + 1,
             task_type: taskType || null,
+            priority: priority ?? null,
           })
           .select()
           .single()) as SupabaseResult<Task>;

@@ -10,7 +10,7 @@ interface UseTasksReturn {
   tasks: Task[];
   loading: boolean;
   error: string | null;
-  addTask: (title: string, description?: string, taskType?: string | null) => Promise<boolean>;
+  addTask: (title: string, description?: string, taskType?: string | null, priority?: 1 | 2 | 3 | null) => Promise<boolean>;
   toggleTask: (taskId: string) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   updateTask: (taskId: string, updates: TaskUpdate) => Promise<boolean>;
@@ -32,12 +32,18 @@ export function useTasks(date: Date, options: UseTasksOptions = {}): UseTasksRet
 
   const dateString = format(date, 'yyyy-MM-dd');
 
-  // Sort tasks: incomplete first, then by order_index, then by created_at
+  // Sort tasks: incomplete first, then by priority, then by order_index, then by created_at
   const sortTasks = useCallback((tasksToSort: Task[]): Task[] => {
     return [...tasksToSort].sort((a, b) => {
       // Completed tasks go to bottom
       if (a.completed !== b.completed) {
         return a.completed ? 1 : -1;
+      }
+      // Then by priority (1 = high first, null = no priority last)
+      const aPriority = a.priority ?? 4; // Treat null as lowest priority (4)
+      const bPriority = b.priority ?? 4;
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority;
       }
       // Then by order_index
       if (a.order_index !== b.order_index) {
@@ -98,7 +104,7 @@ export function useTasks(date: Date, options: UseTasksOptions = {}): UseTasksRet
 
   // Add a new task with optimistic update
   const addTask = useCallback(
-    async (title: string, description?: string, taskType?: string | null): Promise<boolean> => {
+    async (title: string, description?: string, taskType?: string | null, priority?: 1 | 2 | 3 | null): Promise<boolean> => {
       if (!user) return false;
 
       // Calculate new order_index (max + 1)
@@ -115,6 +121,7 @@ export function useTasks(date: Date, options: UseTasksOptions = {}): UseTasksRet
         date: dateString,
         order_index: maxOrderIndex + 1,
         task_type: taskType || null,
+        priority: priority ?? null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -131,6 +138,7 @@ export function useTasks(date: Date, options: UseTasksOptions = {}): UseTasksRet
           date: dateString,
           order_index: maxOrderIndex + 1,
           task_type: taskType || null,
+          priority: priority ?? null,
         };
 
         const { data, error: insertError } = (await supabase

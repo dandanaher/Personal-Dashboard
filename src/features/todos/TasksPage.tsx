@@ -23,7 +23,7 @@ import { AddTaskModal } from './components/AddTaskModal';
 import { ToastProvider } from './components/Toast';
 import { useToast } from './components/useToast';
 import { formatDisplayDate, formatDateHeader, toDateString, getTodayString } from '@/lib/dateUtils';
-import type { Task, TaskUpdate } from '@/lib/types';
+import type { Task, TaskUpdate, TaskPriority } from '@/lib/types';
 
 type ViewMode = string; // 'all' for overview, 'day' for day view, or task_type string
 
@@ -164,6 +164,7 @@ function TasksPageContent() {
       description?: string | null;
       date?: string | null;
       task_type?: string | null;
+      priority?: TaskPriority;
     }): Promise<boolean> => {
       if (editingTask) {
         // Update existing task
@@ -185,12 +186,13 @@ function TasksPageContent() {
         // Add new task
         const success =
           viewMode === 'day'
-            ? await addDayTask(taskData.title, taskData.description || undefined, taskData.task_type)
+            ? await addDayTask(taskData.title, taskData.description || undefined, taskData.task_type, taskData.priority)
             : await addAllTask(
               taskData.title,
               taskData.description || undefined,
               taskData.date,
-              taskData.task_type
+              taskData.task_type,
+              taskData.priority
             );
 
         if (success) {
@@ -892,6 +894,7 @@ function TasksPageContent() {
                 )}
 
                 {!loading && !error && filteredTasks && (
+                  <>
                   <div className="flex gap-6">
                     {/* Left column: Dated tasks */}
                     <div className="flex-1 space-y-3">
@@ -988,7 +991,87 @@ function TasksPageContent() {
                       )}
                     </div>
                   </div>
-                )}
+
+                  {/* Completed Tasks Section (desktop) */}
+                  {filteredCompletedTasks.length > 0 && (
+                    <div className="space-y-2 mt-6">
+                      <button
+                        onClick={() => setShowCompletedTasks(!showCompletedTasks)}
+                        className="w-full flex items-center justify-between px-1 py-1.5 text-xs font-semibold text-secondary-600 dark:text-secondary-400 hover:text-secondary-800 dark:hover:text-secondary-200 transition-colors"
+                      >
+                        <span>Completed Tasks ({filteredCompletedTasks.length})</span>
+                        {showCompletedTasks ? (
+                          <ChevronUp className="h-3.5 w-3.5" />
+                        ) : (
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+
+                      {showCompletedTasks && (
+                        <div className="flex gap-6 mt-2">
+                          {/* Left Column: Completed with Date */}
+                          <div className="flex-1 space-y-2">
+                            <h3 className="text-xs font-medium text-secondary-500 dark:text-secondary-400 px-1">
+                              With Due Date
+                            </h3>
+                            {filteredCompletedTasks.some((t) => t.date) ? (
+                              <Card variant="outlined" padding="none">
+                                <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
+                                  {filteredCompletedTasks
+                                    .filter((task) => task.date)
+                                    .map((task) => (
+                                      <div key={task.id} className="group">
+                                        <TaskItem
+                                          task={task}
+                                          onToggle={handleToggleOverviewTask}
+                                          onDelete={handleDeleteOverviewTask}
+                                          onEdit={handleEditOverviewTask}
+                                          onEditClick={handleEditClick}
+                                          showDate={true}
+                                        />
+                                      </div>
+                                    ))}
+                                </div>
+                              </Card>
+                            ) : (
+                              <p className="text-xs text-secondary-400 italic px-1">None</p>
+                            )}
+                          </div>
+
+                          {/* Right Column: Completed without Date */}
+                          <div className="flex-1 space-y-2">
+                            <h3 className="text-xs font-medium text-secondary-500 dark:text-secondary-400 px-1">
+                              General
+                            </h3>
+                            {filteredCompletedTasks.some((t) => !t.date) ? (
+                              <Card variant="outlined" padding="none">
+                                <div className="divide-y divide-secondary-100 dark:divide-secondary-700">
+                                  {filteredCompletedTasks
+                                    .filter((task) => !task.date)
+                                    .map((task) => (
+                                      <div key={task.id} className="group">
+                                        <TaskItem
+                                          task={task}
+                                          onToggle={handleToggleOverviewTask}
+                                          onDelete={handleDeleteOverviewTask}
+                                          onEdit={handleEditOverviewTask}
+                                          onEditClick={handleEditClick}
+                                          showDate={false}
+                                        />
+                                      </div>
+                                    ))}
+                                </div>
+                              </Card>
+                            ) : (
+                              <p className="text-xs text-secondary-400 italic px-1">None</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
               </>
             )}
           </div>
