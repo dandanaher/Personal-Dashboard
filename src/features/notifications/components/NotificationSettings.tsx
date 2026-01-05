@@ -58,8 +58,20 @@ export function NotificationSettings({ compact = false }: NotificationSettingsPr
   };
 
   // Check platform support
-  if (!isPushSupported() || !isVapidConfigured()) {
-    // Show message for iOS users
+  // If VAPID key not configured, hide entirely (deployment issue)
+  if (!isVapidConfigured()) {
+    return (
+      <div className="p-3 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-xl">
+        <p className="text-xs text-yellow-700 dark:text-yellow-300">
+          Notifications not configured.
+        </p>
+      </div>
+    );
+  }
+
+  // If push not supported
+  if (!isPushSupported()) {
+    // Show iOS-specific message
     if (isIOS()) {
       return (
         <div className="p-3 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-xl">
@@ -77,13 +89,8 @@ export function NotificationSettings({ compact = false }: NotificationSettingsPr
         </div>
       );
     }
-
-    // Not configured or not supported
-    if (!isVapidConfigured()) {
-      return null; // Silently hide if not configured
-    }
-
-    return null; // Not supported on this platform
+    // Not supported on other platforms
+    return null;
   }
 
   return (
