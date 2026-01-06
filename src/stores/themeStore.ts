@@ -152,9 +152,11 @@ export const useThemeStore = create<ThemeState>()(
         // Debounce favicon update - expensive canvas operation
         const { darkMode, stylePreset } = get();
         debouncedUpdateFavicon(color, darkMode, stylePreset);
-        // Re-enable transitions after paint
+        // Re-enable transitions after paint completes (double rAF ensures paint is done)
         requestAnimationFrame(() => {
-          document.documentElement.classList.remove('switching-theme');
+          requestAnimationFrame(() => {
+            document.documentElement.classList.remove('switching-theme');
+          });
         });
       },
       toggleDarkMode: () => {
@@ -172,9 +174,11 @@ export const useThemeStore = create<ThemeState>()(
         // Debounce favicon update - expensive canvas operation
         const { accentColor, stylePreset } = get();
         debouncedUpdateFavicon(accentColor, newDarkMode, stylePreset);
-        // Re-enable transitions after paint
+        // Re-enable transitions after paint completes (double rAF ensures paint is done)
         requestAnimationFrame(() => {
-          document.documentElement.classList.remove('switching-theme');
+          requestAnimationFrame(() => {
+            document.documentElement.classList.remove('switching-theme');
+          });
         });
       },
       setDarkMode: (isDark: boolean) => {
@@ -191,12 +195,16 @@ export const useThemeStore = create<ThemeState>()(
         // Debounce favicon update - expensive canvas operation
         const { accentColor, stylePreset } = get();
         debouncedUpdateFavicon(accentColor, isDark, stylePreset);
-        // Re-enable transitions after paint
+        // Re-enable transitions after paint completes (double rAF ensures paint is done)
         requestAnimationFrame(() => {
-          document.documentElement.classList.remove('switching-theme');
+          requestAnimationFrame(() => {
+            document.documentElement.classList.remove('switching-theme');
+          });
         });
       },
       setStylePreset: (style: 'modern' | 'retro') => {
+        // Disable transitions during style switch for instant visual update
+        document.documentElement.classList.add('switching-theme');
         const currentStyle = get().stylePreset;
         document.documentElement.classList.remove(`style-${currentStyle}`);
         set({ stylePreset: style });
@@ -205,6 +213,12 @@ export const useThemeStore = create<ThemeState>()(
         // Debounce favicon update - expensive canvas operation
         const { accentColor, darkMode } = get();
         debouncedUpdateFavicon(accentColor, darkMode, style);
+        // Re-enable transitions after paint completes (double rAF ensures paint is done)
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            document.documentElement.classList.remove('switching-theme');
+          });
+        });
       },
     }),
     {

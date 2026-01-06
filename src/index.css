@@ -128,6 +128,8 @@
   .switching-theme,
   .switching-theme * {
     transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    animation-duration: 0s !important;
   }
 
   /* Hide scrollbar but keep functionality */
