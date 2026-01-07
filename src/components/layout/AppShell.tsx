@@ -15,7 +15,8 @@ import Sidebar from './Sidebar';
 
 function AppShell() {
   const location = useLocation();
-  const isWideLayout = ['/goals', '/tasks', '/habits', '/workout'].includes(location.pathname);
+  const isWideLayout = ['/goals', '/tasks', '/habits', '/workout', '/settings'].includes(location.pathname);
+  const isSettingsPage = location.pathname === '/settings';
 
   return (
     // flex-col on mobile, flex-row on desktop (lg:)
@@ -23,15 +24,15 @@ function AppShell() {
       {/* DESKTOP ONLY: Sidebar navigation (uses `hidden lg:flex` internally) */}
       <Sidebar />
 
-      {/* Main content area - pb-24 on mobile for BottomNav clearance, pb-6 on desktop */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide pt-safe-top px-safe-left px-safe-right pb-24 lg:pb-6 touch-pan-y">
+      {/* Main content area - pb-24 on mobile for BottomNav clearance (unless on settings), pb-6 on desktop */}
+      <main className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide pt-safe-top px-safe-left px-safe-right lg:pb-6 touch-pan-y ${isSettingsPage ? 'pb-6' : 'pb-24'}`}>
         <div className={`mx-auto px-3 lg:px-8 py-3 lg:py-6 ${isWideLayout ? 'max-w-full' : 'max-w-lg lg:max-w-5xl xl:max-w-6xl'}`}>
           <Outlet />
         </div>
       </main>
 
-      {/* MOBILE ONLY: Bottom tab navigation (uses `lg:hidden` internally) */}
-      <BottomNav />
+      {/* MOBILE ONLY: Bottom tab navigation (hidden on settings page) */}
+      {!isSettingsPage && <BottomNav />}
     </div>
   );
 }

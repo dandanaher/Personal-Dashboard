@@ -12,7 +12,7 @@
  */
 import { useMemo, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { CheckSquare, Target, Grid, Dumbbell, Home, ChevronLeft, StickyNote } from 'lucide-react';
+import { CheckSquare, Target, Grid, Dumbbell, Home, ChevronLeft, StickyNote, Settings } from 'lucide-react';
 import { shallow } from 'zustand/shallow';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { useThemeStore } from '@/stores/themeStore';
@@ -21,7 +21,6 @@ import { useSidebarStore } from '@/stores/sidebarStore';
 import { formatTime } from '@/features/workout/lib/workoutEngine';
 import { preloadRoute } from '@/lib/preloadRoute';
 import { DynamicLogo } from '@/components/ui/DynamicLogo';
-import { SettingsMenu } from './SettingsMenu';
 
 interface NavItem {
   path: string;
@@ -88,9 +87,8 @@ function Sidebar() {
     shallow
   );
 
-  const safeActiveIndex = useMemo(() => {
-    const activeIndex = navItems.findIndex((item) => location.pathname.startsWith(item.path));
-    return activeIndex === -1 ? 0 : activeIndex;
+  const activeIndex = useMemo(() => {
+    return navItems.findIndex((item) => location.pathname.startsWith(item.path));
   }, [location.pathname]);
 
   const handleResume = useCallback(() => {
@@ -134,7 +132,7 @@ function Sidebar() {
       <nav className="flex-1 p-4">
         <ul className="space-y-1">
           {navItems.map((item, index) => {
-            const isActiveItem = index === safeActiveIndex;
+            const isActiveItem = index === activeIndex;
             return (
               <li key={item.path}>
                 <NavLink
@@ -199,9 +197,42 @@ function Sidebar() {
         </div>
       )}
 
-      {/* Settings at the absolute bottom */}
-      <div className="p-4 border-t border-secondary-200 dark:border-secondary-800 mt-auto lg:mt-0">
-        <SettingsMenu isSidebar isCollapsed={isCollapsed} />
+      {/* Settings at bottom */}
+      <div className="p-4 border-t border-secondary-200 dark:border-secondary-800 mt-auto">
+        <NavLink
+          to="/settings"
+          onMouseEnter={() => preloadRoute('/settings')}
+          onFocus={() => preloadRoute('/settings')}
+          className={`
+            flex items-center rounded-xl transition-colors py-3
+            ${location.pathname === '/settings'
+              ? 'font-medium'
+              : 'text-secondary-600 dark:text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800'
+            }
+          `}
+          style={{
+            paddingLeft: '14px',
+            paddingRight: '16px',
+            ...(location.pathname === '/settings' && {
+              backgroundColor: `${accentColor}15`,
+              color: accentColor,
+            }),
+          }}
+          title={isCollapsed ? 'Settings' : undefined}
+        >
+          <div className="flex items-center justify-center w-5 flex-shrink-0">
+            <Settings className="h-5 w-5 flex-shrink-0" />
+          </div>
+          <span
+            className="whitespace-nowrap overflow-hidden transition-opacity duration-300 ml-3"
+            style={{
+              opacity: isCollapsed ? 0 : 1,
+              width: isCollapsed ? 0 : 'auto',
+            }}
+          >
+            Settings
+          </span>
+        </NavLink>
       </div>
     </aside>
   );

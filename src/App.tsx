@@ -18,6 +18,7 @@ const GoalsPage = lazy(() => import('@/features/goals/GoalsPage'));
 const HabitsPage = lazy(() => import('@/features/habits/HabitsPage'));
 const WorkoutPage = lazy(() => import('@/features/workout/WorkoutPage'));
 const NotesPage = lazy(() => import('@/features/notes/NotesPage'));
+const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 
 // Loading fallback for lazy routes
 function PageLoader() {
@@ -128,6 +129,7 @@ function App() {
               <Route path="/habits" element={<HabitsPage />} />
               <Route path="/workout" element={<WorkoutPage />} />
               <Route path="/notes" element={<NotesPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Route>
 
             {/* 404 route */}

@@ -14,7 +14,8 @@ import {
   sortableKeyboardCoordinates,
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Plus, LayoutGrid, Check } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, LayoutGrid, Check, Settings } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProfile } from '@/hooks/useProfile';
 import { useHomepageStore, type CardId } from '@/stores/homepageStore';
@@ -23,7 +24,6 @@ import { useSidebarStore } from '@/stores/sidebarStore';
 import { CARD_REGISTRY } from '@/features/homepage/cardRegistry';
 import { CardWrapper } from '@/features/homepage/components/CardWrapper';
 import { AddCardModal } from '@/features/homepage/components/AddCardModal';
-import { SettingsMenu } from '@/components/layout/SettingsMenu';
 import { DynamicLogo } from '@/components/ui/DynamicLogo';
 import { PixelClock } from '@/components/ui/PixelClock';
 import { WeatherWidget } from '@/components/ui/WeatherWidget';
@@ -157,7 +157,7 @@ function HomePage() {
     <>
       {/* Mobile View */}
       <div className="lg:hidden space-y-6">
-        {/* Top Bar - Settings & Edit */}
+        {/* Top Bar - Edit & Settings */}
         <div className="flex items-center justify-end gap-2">
           <button
             type="button"
@@ -172,7 +172,12 @@ function HomePage() {
           >
             {isEditMode ? <Check size={18} /> : <LayoutGrid size={18} />}
           </button>
-          <SettingsMenu />
+          <Link
+            to="/settings"
+            className="flex items-center justify-center w-9 h-9 rounded-xl text-secondary-600 dark:text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors"
+          >
+            <Settings size={18} />
+          </Link>
         </div>
 
         {/* Header - Centered greeting with logo */}
