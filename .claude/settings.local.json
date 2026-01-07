@@ -19,7 +19,9 @@
       "Bash(dir:*)",
       "Bash(findstr:*)",
       "Bash(ls:*)",
-      "Skill(docs)"
+      "Skill(docs)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
