@@ -41,6 +41,12 @@ export function StandaloneNoteEditor({ noteId }: StandaloneNoteEditorProps) {
   const contentEditableRef = useRef<HTMLDivElement>(null);
   const lastSavedContent = useRef('');
   const savedSelectionRef = useRef<Range | null>(null);
+  const hasSetInitialContent = useRef(false);
+
+  // Reset initial content flag when noteId changes
+  useEffect(() => {
+    hasSetInitialContent.current = false;
+  }, [noteId]);
 
   // Load note data
   useEffect(() => {
@@ -53,17 +59,21 @@ export function StandaloneNoteEditor({ noteId }: StandaloneNoteEditorProps) {
         const sanitizedContent = fetchedNote.content.replace(/\u200B/g, '');
         setContent(sanitizedContent);
         lastSavedContent.current = sanitizedContent;
-
-        // Set contenteditable content
-        if (contentEditableRef.current) {
-          contentEditableRef.current.innerHTML = sanitizedContent || '';
-        }
       }
       setLoading(false);
     };
 
     void loadNote();
   }, [noteId, fetchNote]);
+
+  // Set content after loading completes and contentEditable is mounted
+  useEffect(() => {
+    if (!loading && note && contentEditableRef.current && !hasSetInitialContent.current) {
+      const sanitizedContent = note.content.replace(/\u200B/g, '');
+      contentEditableRef.current.innerHTML = sanitizedContent || '';
+      hasSetInitialContent.current = true;
+    }
+  }, [loading, note]);
 
   // Auto-save debounced function
   const debouncedSave = useMemo(
